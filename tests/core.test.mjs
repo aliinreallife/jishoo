@@ -11,6 +11,8 @@ import {
   distanceKm,
   cleanSocialLinks,
   premium,
+  normalizeHandle,
+  cleanAvatarImage,
 } from "../lib/core.js";
 
 process.env.APP_SECRET =
@@ -62,11 +64,34 @@ test("testing grants everyone premium while normal operation respects active tri
   assert.equal(premium({}), true);
   process.env.TESTING_MODE = "false";
   assert.equal(premium({}), false);
+  assert.equal(premium({ lifetime: true }), true);
   assert.equal(premium({ trial_until: new Date(Date.now() + 86400000) }), true);
   assert.equal(
     premium({ trial_until: new Date(Date.now() - 86400000) }),
     false,
   );
+});
+test("public handles have at least three ASCII characters and normalize case", () => {
+  assert.equal(normalizeHandle("@Sara_42"), "sara_42");
+  for (const value of [
+    "al",
+    "3sara",
+    "a b",
+    "../../ali",
+    "سارا",
+    "a".repeat(25),
+  ])
+    assert.throws(() => normalizeHandle(value));
+});
+test("avatar uploads accept removal and reject SVG, external URLs and oversized payloads", () => {
+  assert.equal(cleanAvatarImage(null), null);
+  for (const value of [
+    "https://example.com/photo.jpg",
+    "data:image/svg+xml;base64,PHN2Zz4=",
+    "data:image/jpeg;base64,aGVsbG8=",
+    "data:image/jpeg;base64," + "A".repeat(90001),
+  ])
+    assert.throws(() => cleanAvatarImage(value));
 });
 test("Blobatar generates stable but distinct characters from Persian names", () => {
   assert.equal(blobatar("سارا"), blobatar("سارا"));

@@ -14,7 +14,7 @@ import {
   Sparkle,
 } from "@phosphor-icons/react";
 import { api, relativeTime, fa } from "../api";
-import { Character } from "./Character";
+import { Avatar } from "./Character";
 
 export default function Nearby({ me, onSharingChanged, notify }) {
   const container = useRef(),
@@ -130,11 +130,24 @@ export default function Nearby({ me, onSharingChanged, notify }) {
       const element = document.createElement("div");
       element.className = `live-map-marker ${item.status} ${item.isFriend ? "friend-marker" : ""}`;
       const figure = document.createElement("span");
-      figure.innerHTML = blobatar(item.avatarSeed, {
-        size: 38,
-        tone: 0.23,
-        expression: item.status === "need" ? shy : happy,
-      });
+      if (item.avatarImage) {
+        const photo = document.createElement("img");
+        photo.src = item.avatarImage;
+        photo.alt = "";
+        photo.className = "map-profile-photo";
+        figure.append(photo);
+      } else if (item.isFriend || item.isMe)
+        figure.innerHTML = blobatar(item.avatarSeed, {
+          size: 38,
+          tone: 0.23,
+          expression: item.status === "need" ? shy : happy,
+        });
+      else {
+        const mascot = document.createElement("img");
+        mascot.src = `${import.meta.env.BASE_URL}assets/${item.status === "need" ? "shy-drop.webp" : "happy-drop.webp"}`;
+        mascot.alt = "";
+        figure.append(mascot);
+      }
       element.append(figure);
       if (item.isFriend || item.isMe) {
         const label = document.createElement("strong");
@@ -257,7 +270,7 @@ export default function Nearby({ me, onSharingChanged, notify }) {
           </label>
           {selected ? (
             <div className="selected-neighbor">
-              <Character
+              <Avatar
                 person={selected}
                 size={43}
                 mood={selected.status === "need" ? "shy" : "happy"}

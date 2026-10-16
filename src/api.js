@@ -1,6 +1,6 @@
-export async function api(action, body) {
+export async function api(action, body, query = {}) {
   const response = await fetch(
-    `/api/app?action=${encodeURIComponent(action)}`,
+    `/api/app?${new URLSearchParams({ action, ...query })}`,
     {
       method: body === undefined ? "GET" : "POST",
       credentials: "include",

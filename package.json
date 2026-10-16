@@ -21,7 +21,8 @@
     "qrcode": "^1.5.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "undici": "^8.12.2"
+    "undici": "^8.12.2",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "vite": "^7.0.0"

@@ -12,7 +12,7 @@ import {
   CrownSimple,
   Copy,
 } from "@phosphor-icons/react";
-import { Character } from "./Character";
+import { Mascot, PairArt } from "./Mascot";
 import { fa, inviteUrl, copyText } from "../api";
 import vazirRegular from "@fontsource/vazirmatn/files/vazirmatn-arabic-400-normal.woff2?url";
 import vazirBold from "@fontsource/vazirmatn/files/vazirmatn-arabic-700-normal.woff2?url";
@@ -46,13 +46,40 @@ function embeddedFonts() {
       throw error;
     }));
 }
-export function StoryCanvas({ kind, format, data, moment, code, qr }) {
+const headlines = {
+  need: "جیش دارم.\nولی هنوز دارم اسکرول می‌کنم!",
+  checkin: "آخیش!\nیه بار دیگه نجات پیدا کردم.",
+  together: "ما حتی جیشمونم سینکه!",
+  "back-to-back": "اول اون، بعد من.\nچه تیمی شدیم!",
+  invite: "بیا تو جمعمون.\nاینجا خبرهای کوچیک مهمن.",
+};
+export function StoryCanvas({
+  kind,
+  format,
+  data,
+  moment,
+  code,
+  qr,
+  theme = "lemon",
+  caption = "",
+}) {
   const me = data.me,
     s = data.stats,
     count = kind === "weekly" ? s.week : s.today;
-  const pair = kind === "together" || kind === "back-to-back";
+  const pair = ["together", "back-to-back"].includes(kind);
+  const stamps = {
+    need: "خبر فوری از من",
+    checkin: "ماموریت با موفقیت انجام شد",
+    weekly: "کارنامه‌ی سبک‌شدن",
+    invite: "این دعوت مال توئه",
+    together: "رفاقت در یک سطح تازه",
+    "back-to-back": "تایمینگمون حرف نداره",
+  };
   return (
-    <div className={`story-canvas story-${kind} format-${format}`} dir="rtl">
+    <div
+      className={`story-canvas story-${kind} story-theme-${theme} format-${format}`}
+      dir="rtl"
+    >
       <div className="story-brand">
         <Drop size={52} weight="duotone" />
         <span>jishoo</span>
@@ -61,16 +88,16 @@ export function StoryCanvas({ kind, format, data, moment, code, qr }) {
       <div className="story-content">
         {kind === "weekly" ? (
           <div className="weekly-polaroid">
+            <span className="story-stamp">{stamps.weekly}</span>
             <h2>{me.registered ? me.name : "من"} این هفته</h2>
             <div className={`story-character-grid count-${Math.min(count, 3)}`}>
               {Array.from(
-                { length: Math.min(Math.max(count, 1), 18) },
+                { length: Math.min(Math.max(count, 1), 15) },
                 (_, i) => (
-                  <Character
+                  <Mascot
                     key={i}
-                    person={me}
-                    size={103}
-                    mood={i % 3 === 0 ? "shy" : "happy"}
+                    size={125}
+                    mood={count && i % 3 !== 1 ? "happy" : "shy"}
                   />
                 ),
               )}
@@ -79,50 +106,42 @@ export function StoryCanvas({ kind, format, data, moment, code, qr }) {
               {fa(count)}
               <span>بار</span>
             </strong>
-            <p>جیش کردم.</p>
-            <Sparkle size={76} weight="fill" className="polaroid-star" />
+            <p>{count ? "گفتم آخیش!" : "هنوز شروع نکردم."}</p>
+            <small className="weekly-punchline">
+              {caption || "لحظه‌های کوچیک، حس‌های بزرگ."}
+            </small>
+            <Sparkle size={86} weight="fill" className="polaroid-star" />
             <div className="story-wordmark">جیشو</div>
           </div>
         ) : (
           <>
+            <span className="story-stamp">{stamps[kind]}</span>
             <div className={`story-hero-characters ${pair ? "pair" : ""}`}>
-              <Character
-                person={me}
-                size={pair ? 340 : 520}
-                mood={pair ? "love" : "happy"}
-              />
-              {pair && (
-                <>
-                  <Heart size={93} weight="fill" className="story-pair-heart" />
-                  <Character
-                    person={moment?.friend || { name: "دوستم" }}
-                    size={340}
-                    mood="love"
-                  />
-                </>
+              {pair ? (
+                <PairArt kind={kind} size={820} />
+              ) : kind === "invite" ? (
+                <PairArt size={790} />
+              ) : (
+                <Mascot size={680} mood={kind === "need" ? "shy" : "happy"} />
               )}
+              <Sparkle size={78} weight="fill" className="story-art-sparkle" />
+              <Heart size={64} weight="fill" className="story-art-heart" />
             </div>
-            <h2>
-              {kind === "invite"
-                ? "یه خبر کوچیک، یه جمع خوب"
-                : kind === "together"
-                  ? "ما با هم جیش کردیم!"
-                  : kind === "back-to-back"
-                    ? "پشت سر هم سبک شدیم!"
-                    : "آخیش! جیش کردم."}
-            </h2>
+            <h2>{caption || headlines[kind] || headlines.checkin}</h2>
             <p>
               {pair
                 ? `${me.name} و ${moment?.friend?.name || "دوستم"}`
-                : kind === "invite"
-                  ? "با دعوت من، هر دومون ۷ روز پرمیوم می‌گیریم."
-                  : `جیش‌های امروز من: ${fa(s.today)}`}
+                : kind === "need"
+                  ? "کی همراهمه؟ بیا تو جمع دوستام."
+                  : kind === "invite"
+                    ? "یه بهونه برای با هم بودن، هر روز."
+                    : `آخیش‌های امروز من: ${fa(s.today)}`}
             </p>
             {pair && (
               <small>
                 {kind === "together"
-                  ? "کمتر از یک دقیقه فاصله، یه خاطره‌ی مشترک."
-                  : "یکی بعد از اون یکی، یه اتفاق کوچولو."}
+                  ? "یه دقیقه فاصله، یه خاطره‌ی مشترک."
+                  : "یکی بعد از اون یکی؛ همین‌قدر بامزه."}
               </small>
             )}
           </>
@@ -132,24 +151,36 @@ export function StoryCanvas({ kind, format, data, moment, code, qr }) {
         <div>
           {code ? (
             <>
-              <span>با کد من بیا تو جمعمون</span>
+              <span>
+                {me.registered ? "با دعوت من بیا تو جمع" : "تو هم بیا تو جمع"}
+              </span>
               <strong dir="ltr">{code}</strong>
-              <p>۷ روز پرمیوم برای هر دومون</p>
+              <p>
+                {me.registered
+                  ? "۷ روز پرمیوم برای هر دومون"
+                  : "بدون حساب هم می‌تونی شروع کنی"}
+              </p>
             </>
           ) : (
             <>
-              <strong>بدون حساب هم می‌شه جیش کرد.</strong>
-              <p>جیش کن، به دوستات خبر بده.</p>
+              <strong>تو هم یه آخیش ثبت کن!</strong>
+              <p>بدون حساب هم می‌شه جیش کرد.</p>
             </>
           )}
-          <span dir="ltr" className="story-domain">
+          {me.handle && (
+            <span className="story-owner-handle" dir="ltr">
+              @{me.handle}
+            </span>
+          )}
+          <span className="story-domain" dir="ltr">
             jishoo.vercel.app
           </span>
         </div>
         {qr && <img className="story-qr" src={qr} alt="QR لینک جیشو" />}
       </div>
       <div className="story-bottom-line">
-        <Heart size={30} weight="fill" /> زندگی همین لحظه‌های کوچیکه.
+        <Heart size={30} weight="fill" />
+        جیش کردی، خبر بده. دوستاتو بیار.
       </div>
     </div>
   );
@@ -167,6 +198,12 @@ export default function Stories({
       initialMoment?.kind || initialKind || "weekly",
     ),
     [format, setFormat] = useState("story"),
+    [theme, setTheme] = useState(
+      !initialMoment && (!initialKind || initialKind === "weekly")
+        ? "lavender"
+        : "lemon",
+    ),
+    [caption, setCaption] = useState(""),
     [selected, setSelected] = useState(Boolean(initialMoment || initialKind)),
     [qr, setQr] = useState(""),
     [image, setImage] = useState(null),
@@ -175,8 +212,15 @@ export default function Stories({
   const card = useRef(),
     generation = useRef(0);
   const moment = initialMoment || data.moments[0];
-  const code = data.me.inviteCode || pendingInvite?.code;
-  const url = inviteUrl(data, code);
+  const code =
+    data.invitationQuota?.remaining === 0
+      ? null
+      : data.me.inviteCode ||
+        (pendingInvite?.remaining !== 0 ? pendingInvite?.code : null);
+  const url =
+    !code && data.me.handle
+      ? `${data.publicUrl}/u/${data.me.handle}`
+      : inviteUrl(data, code);
   useEffect(() => {
     let active = true;
     QRCode.toDataURL(url, {
@@ -225,6 +269,8 @@ export default function Stories({
     selected,
     qr,
     kind,
+    theme,
+    caption,
     format,
     data.stats.week,
     data.stats.today,
@@ -250,7 +296,7 @@ export default function Stories({
         await navigator.share({
           files: [file],
           title: "جیشو",
-          text: code ? `دعوت من به جیشو: ${code}` : "جیش کردم، خبر دادم!",
+          text: `${caption || headlines[kind] || "خبرهای کوچیک، دوستای نزدیک."}\n${url}`,
         });
         return;
       } catch (error) {
@@ -283,7 +329,7 @@ export default function Stories({
         <header className="page-title">
           <div>
             <h1>خبرتو استوری کن</h1>
-            <p>کارت آماده، شخصیت خودت، یه دعوت کوچولو</p>
+            <p>کارت آماده، یه حس بامزه، یه دعوت کوچولو</p>
           </div>
           <ShareNetwork size={26} weight="duotone" />
         </header>
@@ -291,6 +337,11 @@ export default function Stories({
           {[
             ["weekly", "اینهفته‌ی من", "تعداد جیش‌های این هفته"],
             ["checkin", "آخیش، جیش کردم!", "یه خبر کوچولو برای دوستات"],
+            [
+              "need",
+              "جیش دارم، همراه می‌خوام!",
+              "رفیقات رو با یه استوری صدا کن",
+            ],
             ["invite", "دعوت به جمعمون", "کد دعوت و ۷ روز پرمیوم"],
           ].map(([key, title, description]) => (
             <button
@@ -302,11 +353,7 @@ export default function Stories({
               }}
             >
               <div className="story-thumb">
-                <Character
-                  person={data.me}
-                  size={65}
-                  mood={key === "invite" ? "love" : "happy"}
-                />
+                <Mascot size={65} mood={key === "invite" ? "love" : "happy"} />
                 {key === "weekly" && <strong>{fa(data.stats.week)}</strong>}
                 {key === "invite" && <Heart size={22} weight="fill" />}
               </div>
@@ -327,8 +374,8 @@ export default function Stories({
               setSelected(true);
             }}
           >
-            <Character person={data.me} size={45} mood="love" />
-            <Character person={moment.friend} size={45} mood="love" />
+            <Mascot person={data.me} size={45} mood="love" />
+            <Mascot size={45} mood="love" />
             <span>خاطره‌ی مشترکت با {moment.friend.name}</span>
             <ShareNetwork size={17} />
           </button>
@@ -381,10 +428,28 @@ export default function Stories({
           پست ۱:۱
         </button>
       </div>
+      <div className="story-style-controls" aria-label="حال و هوای کارت">
+        {[
+          ["lemon", "آفتابی"],
+          ["lavender", "یاسی"],
+          ["sky", "آسمونی"],
+        ].map(([key, label]) => (
+          <button
+            key={key}
+            className={theme === key ? "active" : ""}
+            aria-pressed={theme === key}
+            onClick={() => setTheme(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       <div className={`story-preview-wrap ${format}`}>
         <div className="story-preview-scale" ref={card}>
           <StoryCanvas
             kind={kind}
+            theme={theme}
+            caption={caption}
             format={format}
             data={data}
             moment={moment}
@@ -393,6 +458,20 @@ export default function Stories({
           />
         </div>
       </div>
+      <label className="story-caption-field">
+        حرف خودتو روش بنویس
+        <input
+          aria-label="متن کارت اشتراک"
+          value={caption}
+          onChange={(e) => setCaption(e.target.value)}
+          maxLength={100}
+          placeholder={
+            kind === "weekly"
+              ? "لحظه‌های کوچیک، حس‌های بزرگ."
+              : headlines[kind]?.replace(/\n/g, " ")
+          }
+        />
+      </label>
       <div className="story-export-controls">
         <span className="export-state" role="status">
           {preparing

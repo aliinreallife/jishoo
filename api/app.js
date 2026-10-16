@@ -1,4 +1,11 @@
 import { randomUUID } from "node:crypto";
+import { provisionOwner } from "../lib/provision.js";
+import {
+  getCommunity,
+  communityAction,
+  publicProfile,
+} from "../lib/community.js";
+import { notifyFriends, notifyUser } from "../lib/notifications.js";
 import { query, transaction, initialize } from "../lib/database.js";
 import {
   testingMode,
@@ -16,6 +23,8 @@ import {
   approximateLocation,
   distanceKm,
   cleanSocialLinks,
+  cleanAvatarImage,
+  normalizeHandle,
 } from "../lib/core.js";
 
 class AppError extends Error {
@@ -53,17 +62,20 @@ async function session(req, res) {
   let token = cookies(req).jishoo_session;
   if (token) {
     const rows = await query(
-      "SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>NOW()",
+      "SELECT u.*,s.admin_access AS session_admin_access FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>NOW()",
       [hashToken(token)],
     );
     if (rows[0]) {
       let user = rows[0];
+      if (user.banned)
+        fail(403, "این حساب فعلاً غیرفعاله.", "account_suspended");
       if (!testingMode() && user.trial_days_bank > 0) {
         const active = await query(
           `UPDATE users SET trial_until=GREATEST(COALESCE(trial_until,NOW()),COALESCE(paid_until,NOW()),NOW())+trial_days_bank*INTERVAL '1 day',trial_days_bank=0 WHERE id=$1 AND trial_days_bank>0 RETURNING *`,
           [user.id],
         );
         user = active[0] || user;
+        user.session_admin_access = rows[0].session_admin_access;
       }
       return { user, tokenHash: hashToken(token) };
     }
@@ -104,11 +116,17 @@ function profile(user, own = false) {
     id: user.id,
     name: user.name,
     avatarSeed: user.avatar_seed,
+    avatarImage: user.avatar_image || null,
+    handle: user.handle || null,
+    lifetime: Boolean(user.lifetime),
     registered: user.registered,
     premium: premium(user),
   };
   if (own)
     Object.assign(p, {
+      isAdmin: user.role === "admin" && user.session_admin_access === true,
+      discoverable: user.discoverable,
+      notificationsEnabled: user.notifications_enabled,
       inviteCode: user.invite_code,
       trialUntil: user.trial_until,
       trialDaysSaved: user.trial_days_bank,
@@ -135,7 +153,7 @@ async function stats(userId) {
 async function friends(user) {
   if (!user.registered) return [];
   const rows = await query(
-    `SELECT c.*, u.id AS friend_id, u.name, u.avatar_seed, u.trial_until, u.paid_until, u.social_links, e.status AS latest_status,e.created_at AS latest_at FROM connections c JOIN users u ON u.id=CASE WHEN c.user_a=$1 THEN c.user_b ELSE c.user_a END LEFT JOIN LATERAL (SELECT status,created_at FROM checkins WHERE user_id=u.id AND visibility='friends' ORDER BY created_at DESC LIMIT 1) e ON TRUE WHERE c.user_a=$1 OR c.user_b=$1 ORDER BY c.created_at DESC`,
+    `SELECT c.*, u.id AS friend_id, u.name, u.handle, u.avatar_seed, u.avatar_image, u.lifetime, u.trial_until, u.paid_until, u.social_links, e.status AS latest_status,e.created_at AS latest_at FROM connections c JOIN users u ON u.id=CASE WHEN c.user_a=$1 THEN c.user_b ELSE c.user_a END LEFT JOIN LATERAL (SELECT status,created_at FROM checkins WHERE user_id=u.id AND visibility='friends' ORDER BY created_at DESC LIMIT 1) e ON TRUE WHERE c.user_a=$1 OR c.user_b=$1 ORDER BY c.created_at DESC`,
     [user.id],
   );
   return rows.map((r) => {
@@ -144,7 +162,9 @@ async function friends(user) {
       connectionId: r.id,
       id: r.friend_id,
       name: r.name,
+      handle: r.handle,
       avatarSeed: r.avatar_seed,
+      avatarImage: r.avatar_image || null,
       status: r.status,
       incoming: r.requested_by !== user.id,
       sharing: user.id === r.user_a ? r.share_a : r.share_b,
@@ -160,14 +180,19 @@ async function friends(user) {
 async function moments(user) {
   if (!user.registered || !premium(user)) return [];
   const rows = await query(
-    `SELECT m.*,u.id AS friend_id,u.name,u.avatar_seed FROM pair_moments m JOIN users u ON u.id=CASE WHEN m.user_a=$1 THEN m.user_b ELSE m.user_a END WHERE m.user_a=$1 OR m.user_b=$1 ORDER BY m.created_at DESC LIMIT 30`,
+    `SELECT m.*,u.id AS friend_id,u.name,u.avatar_seed,u.avatar_image FROM pair_moments m JOIN users u ON u.id=CASE WHEN m.user_a=$1 THEN m.user_b ELSE m.user_a END WHERE m.user_a=$1 OR m.user_b=$1 ORDER BY m.created_at DESC LIMIT 30`,
     [user.id],
   );
   return rows.map((r) => ({
     id: r.id,
     kind: r.kind,
     createdAt: r.created_at,
-    friend: { id: r.friend_id, name: r.name, avatarSeed: r.avatar_seed },
+    friend: {
+      id: r.friend_id,
+      name: r.name,
+      avatarSeed: r.avatar_seed,
+      avatarImage: r.avatar_image || null,
+    },
   }));
 }
 async function circles(user) {
@@ -179,11 +204,12 @@ async function circles(user) {
   return rows.map((r) => ({ id: r.id, name: r.name, members: r.members }));
 }
 async function bootstrap(user) {
-  const [s, f, m, c] = await Promise.all([
+  const [s, f, m, c, community] = await Promise.all([
     stats(user.id),
     friends(user),
     moments(user),
     circles(user),
+    getCommunity(user),
   ]);
   return {
     me: profile(user, true),
@@ -194,11 +220,12 @@ async function bootstrap(user) {
     testing: testingMode(),
     inviteOnly: inviteOnly(),
     publicUrl: process.env.PUBLIC_APP_URL || "https://jishoo.vercel.app",
+    ...community,
   };
 }
 async function inviteInfo(code) {
   const rows = await query(
-    `SELECT i.code,u.id,u.name,u.avatar_seed FROM invites i LEFT JOIN users u ON u.id=i.inviter_id WHERE i.code=$1 AND i.active`,
+    `SELECT i.code,i.uses,i.max_uses,i.grant_admin,u.id,u.name,u.handle,u.avatar_seed,u.avatar_image FROM invites i LEFT JOIN users u ON u.id=i.inviter_id WHERE i.code=$1 AND i.active`,
     [normalizeCode(code)],
   );
   if (!rows[0])
@@ -209,8 +236,19 @@ async function inviteInfo(code) {
     );
   return {
     code: rows[0].code,
+    adminInvitation: Boolean(rows[0].grant_admin),
+    remaining:
+      rows[0].max_uses === null
+        ? null
+        : Math.max(0, rows[0].max_uses - rows[0].uses),
     inviter: rows[0].id
-      ? { id: rows[0].id, name: rows[0].name, avatarSeed: rows[0].avatar_seed }
+      ? {
+          id: rows[0].id,
+          name: rows[0].name,
+          avatarSeed: rows[0].avatar_seed,
+          avatarImage: rows[0].avatar_image || null,
+          handle: rows[0].handle,
+        }
       : null,
     bonusDays: 7,
   };
@@ -224,7 +262,7 @@ async function detectMoments(user, event) {
   )
     return [];
   const peers = await query(
-    `SELECT u.*,e.id AS event_id,e.created_at AS event_at FROM connections c JOIN users u ON u.id=CASE WHEN c.user_a=$1 THEN c.user_b ELSE c.user_a END JOIN LATERAL (SELECT id,created_at FROM checkins WHERE user_id=u.id AND status='done' AND visibility='friends' AND created_at>=NOW()-INTERVAL '5 minutes' ORDER BY created_at DESC LIMIT 1) e ON TRUE WHERE c.status='accepted' AND (c.user_a=$1 OR c.user_b=$1)`,
+    `SELECT u.*,e.id AS event_id,e.created_at AS event_at FROM connections c JOIN users u ON u.id=CASE WHEN c.user_a=$1 THEN c.user_b ELSE c.user_a END JOIN LATERAL (SELECT id,created_at FROM checkins WHERE user_id=u.id AND status='done' AND visibility='friends' AND created_at>=NOW()-INTERVAL '5 minutes' ORDER BY created_at DESC LIMIT 1) e ON TRUE WHERE c.status='accepted' AND NOT u.banned AND (c.user_a=$1 OR c.user_b=$1)`,
     [user.id],
   );
   const result = [];
@@ -278,7 +316,8 @@ export default async function handler(req, res) {
         fail(400, "درخواست معتبر نیست.");
       }
     }
-    if (JSON.stringify(body).length > 16000) fail(413, "درخواست خیلی بزرگه.");
+    if (JSON.stringify(body).length > (action === "avatar" ? 100000 : 16000))
+      fail(413, "درخواست خیلی بزرگه.");
     await initialize();
     if (action === "health") {
       await query("SELECT 1");
@@ -291,9 +330,27 @@ export default async function handler(req, res) {
     }
     if (action === "invite" && req.method === "GET")
       return json(res, 200, await inviteInfo(url.searchParams.get("code")));
+    if (action === "owner-bootstrap")
+      return json(res, 200, await provisionOwner(req, body, fail));
+    if (action === "profile-public" && req.method === "GET")
+      return json(
+        res,
+        200,
+        await publicProfile(url.searchParams.get("handle"), fail),
+      );
     const auth = await session(req, res);
     const user = auth.user;
     if (action === "bootstrap") return json(res, 200, await bootstrap(user));
+    const extra = await communityAction({
+      action,
+      body,
+      user,
+      auth,
+      url,
+      req,
+      fail,
+    });
+    if (extra !== undefined) return json(res, 200, extra);
     if (req.method !== "POST") fail(405, "این کار به درخواست امن نیاز داره.");
 
     if (action === "auth-start") {
@@ -338,9 +395,10 @@ export default async function handler(req, res) {
         rows[0].phone_hash,
       ]);
       if (existing[0]) {
+        if (existing[0].banned) fail(403, "این حساب فعلاً غیرفعاله.");
         await transaction([
           [
-            "UPDATE sessions SET user_id=$1 WHERE token_hash=$2",
+            "UPDATE sessions SET user_id=$1,admin_access=FALSE WHERE token_hash=$2",
             [existing[0].id, auth.tokenHash],
           ],
           [
@@ -378,9 +436,17 @@ export default async function handler(req, res) {
           "برای عضویت توی این مرحله، کد دعوت لازمه.",
           "invite_required",
         );
-      if (code) await inviteInfo(code);
+      if (code) {
+        const info = await inviteInfo(code);
+        if (info.remaining === 0)
+          fail(
+            410,
+            "این دعوت پر شده؛ از دوستت یه دعوت تازه بگیر.",
+            "invite_exhausted",
+          );
+      }
       const registered = await query(
-        `WITH valid_invite AS (SELECT * FROM invites WHERE code=$1 AND active), ticket AS (SELECT * FROM auth_challenges WHERE id=$2 AND user_id=$3 AND verified_at IS NOT NULL AND consumed_at IS NULL AND expires_at>NOW()), joined AS (UPDATE users SET registered=TRUE,name=$4,avatar_seed=$4,phone_hash=ticket.phone_hash,phone_cipher=ticket.phone_cipher,invite_code=$5,invited_by=(SELECT inviter_id FROM valid_invite),trial_days_bank=CASE WHEN $7::boolean THEN CASE WHEN EXISTS(SELECT 1 FROM valid_invite) THEN 7 ELSE 3 END ELSE 0 END,trial_until=CASE WHEN $7::boolean THEN NULL ELSE NOW()+CASE WHEN EXISTS(SELECT 1 FROM valid_invite) THEN INTERVAL '7 days' ELSE INTERVAL '3 days' END END FROM ticket WHERE users.id=$3 AND NOT users.registered AND (NOT $6::boolean OR EXISTS(SELECT 1 FROM valid_invite)) RETURNING users.*), reward AS (UPDATE users SET trial_days_bank=CASE WHEN $7::boolean THEN trial_days_bank+7 ELSE trial_days_bank END,trial_until=CASE WHEN $7::boolean THEN trial_until ELSE GREATEST(COALESCE(trial_until,NOW()),COALESCE(paid_until,NOW()),NOW())+INTERVAL '7 days' END WHERE id=(SELECT invited_by FROM joined) RETURNING id), consume AS (UPDATE auth_challenges SET consumed_at=NOW() WHERE id=$2 AND EXISTS(SELECT 1 FROM joined) RETURNING id), personal_invite AS (INSERT INTO invites(code,inviter_id) SELECT $5,id FROM joined ON CONFLICT DO NOTHING RETURNING code), auto_connect AS (INSERT INTO connections(id,user_a,user_b,requested_by,status) SELECT $9,LEAST(id,invited_by),GREATEST(id,invited_by),invited_by,'accepted' FROM joined WHERE invited_by IS NOT NULL AND $8::boolean ON CONFLICT(user_a,user_b) DO UPDATE SET status='accepted' RETURNING id) SELECT * FROM joined`,
+        `WITH candidate AS MATERIALIZED (SELECT id FROM users WHERE id=$3 AND NOT registered FOR UPDATE), ticket AS MATERIALIZED (SELECT * FROM auth_challenges WHERE id=$2 AND user_id=$3 AND verified_at IS NOT NULL AND consumed_at IS NULL AND expires_at>NOW() AND EXISTS(SELECT 1 FROM candidate)), valid_invite AS (UPDATE invites SET uses=uses+1 WHERE code=$1 AND active AND (max_uses IS NULL OR uses<max_uses) AND EXISTS(SELECT 1 FROM ticket) RETURNING *), joined AS (UPDATE users SET registered=TRUE,name=$4,avatar_seed=$4,handle=CASE WHEN COALESCE((SELECT grant_admin FROM valid_invite),FALSE) AND (SELECT reserved_handle FROM valid_invite)='ali' THEN 'ali' ELSE 'u'||SUBSTRING(REPLACE(users.id,'-',''),1,10) END,role=CASE WHEN COALESCE((SELECT grant_admin FROM valid_invite),FALSE) THEN 'admin' ELSE 'member' END,phone_hash=ticket.phone_hash,phone_cipher=ticket.phone_cipher,invite_code=$5,invited_by=(SELECT inviter_id FROM valid_invite),trial_days_bank=CASE WHEN $7::boolean THEN CASE WHEN EXISTS(SELECT 1 FROM valid_invite) THEN 7 ELSE 3 END ELSE 0 END,trial_until=CASE WHEN $7::boolean THEN NULL ELSE NOW()+CASE WHEN EXISTS(SELECT 1 FROM valid_invite) THEN INTERVAL '7 days' ELSE INTERVAL '3 days' END END FROM ticket WHERE users.id=$3 AND NOT users.registered AND (NOT $6::boolean OR EXISTS(SELECT 1 FROM valid_invite)) RETURNING users.*), reward AS (UPDATE users SET trial_days_bank=CASE WHEN $7::boolean THEN trial_days_bank+7 ELSE trial_days_bank END,trial_until=CASE WHEN $7::boolean THEN trial_until ELSE GREATEST(COALESCE(trial_until,NOW()),COALESCE(paid_until,NOW()),NOW())+INTERVAL '7 days' END WHERE id=(SELECT invited_by FROM joined) RETURNING id), consume AS (UPDATE auth_challenges SET consumed_at=NOW() WHERE id=$2 AND EXISTS(SELECT 1 FROM joined) RETURNING id), personal_invite AS (INSERT INTO invites(code,inviter_id,max_uses) SELECT $5,id,CASE WHEN role='admin' THEN 1 WHEN $7::boolean THEN 3 ELSE NULL END FROM joined ON CONFLICT DO NOTHING RETURNING code), auto_connect AS (INSERT INTO connections(id,user_a,user_b,requested_by,status) SELECT $9,LEAST(id,invited_by),GREATEST(id,invited_by),invited_by,CASE WHEN $8::boolean THEN 'accepted' ELSE 'pending' END FROM joined WHERE invited_by IS NOT NULL ON CONFLICT(user_a,user_b) DO NOTHING RETURNING id), admin_session AS(UPDATE sessions SET admin_access=TRUE WHERE token_hash=$10 AND EXISTS(SELECT 1 FROM joined WHERE role='admin') RETURNING token_hash) SELECT * FROM joined`,
         [
           code,
           body.ticket,
@@ -391,10 +457,31 @@ export default async function handler(req, res) {
           testingMode(),
           body.connectInviter === true,
           randomUUID(),
+          auth.tokenHash,
         ],
       );
       if (!registered[0]) fail(400, "درخواست عضویت منقضی شده؛ دوباره وارد شو.");
       const fresh = registered[0];
+      if (fresh.role === "admin") fresh.session_admin_access = true;
+      if (fresh.invited_by)
+        await Promise.all([
+          notifyUser(fresh.invited_by, {
+            actorId: fresh.id,
+            kind: "invite",
+            title: `${fresh.name} با دعوتت اومد!`,
+            body: "جمعمون یه نفر قشنگ‌تر شد.",
+            route: "/#/invite",
+            dedupe: `joined:${fresh.id}`,
+          }),
+          notifyUser(fresh.id, {
+            actorId: fresh.invited_by,
+            kind: "request",
+            title: "یه دعوت، یه شروع دوستی",
+            body: "دعوت‌کننده‌ت منتظره به هم وصل بشین.",
+            route: "/#/friends",
+            dedupe: `inviter:${fresh.invited_by}`,
+          }),
+        ]);
       return json(res, 200, {
         bonusDays: code ? 7 : 3,
         ...(await bootstrap(fresh)),
@@ -429,6 +516,7 @@ export default async function handler(req, res) {
         ],
       );
       const matched = await detectMoments(user, rows[0]);
+      await notifyFriends(user, rows[0]);
       return json(res, 200, {
         event: {
           id: rows[0].id,
@@ -439,6 +527,21 @@ export default async function handler(req, res) {
         stats: await stats(user.id),
       });
     }
+    if (action === "avatar") {
+      requireAccount(user);
+      let image;
+      try {
+        image = cleanAvatarImage(body.image);
+      } catch (error) {
+        fail(400, error.message);
+      }
+      const rows = await query(
+        "UPDATE users SET avatar_image=$2 WHERE id=$1 RETURNING *",
+        [user.id, image],
+      );
+      rows[0].session_admin_access = user.session_admin_access;
+      return json(res, 200, await bootstrap(rows[0]));
+    }
     if (action === "profile") {
       requireAccount(user);
       let links;
@@ -448,16 +551,47 @@ export default async function handler(req, res) {
         fail(400, error.message);
       }
       const name = normalizeName(body.name || user.name);
+      let handle = user.handle;
+      if (body.handle !== undefined) {
+        try {
+          handle = normalizeHandle(body.handle);
+        } catch (error) {
+          fail(400, error.message);
+        }
+        if (
+          ["ali", "admin", "jishoo", "api"].includes(handle) &&
+          !(handle === "ali" && user.role === "admin" && user.handle === "ali")
+        )
+          fail(409, "این شناسه رزرو شده.", "handle_taken");
+        if (user.role === "admin" && user.handle === "ali" && handle !== "ali")
+          fail(400, "شناسه‌ی ali برای حساب مالک ثابته.");
+        const conflict = await query(
+          "SELECT id FROM users WHERE LOWER(handle)=$1 AND id<>$2",
+          [handle, user.id],
+        );
+        if (conflict[0])
+          fail(409, "این شناسه قبلاً انتخاب شده.", "handle_taken");
+      }
       if (name.length < 2 || name.length > 40) fail(400, "اسم معتبر نیست.");
       const rows = await query(
-        "UPDATE users SET name=$2,avatar_seed=$2,social_links=$3::jsonb WHERE id=$1 RETURNING *",
-        [user.id, name, JSON.stringify(links)],
+        "UPDATE users SET name=$2,avatar_seed=$2,social_links=$3::jsonb,handle=$4 WHERE id=$1 RETURNING *",
+        [user.id, name, JSON.stringify(links), handle],
       );
+      rows[0].session_admin_access = user.session_admin_access;
       return json(res, 200, await bootstrap(rows[0]));
     }
     if (action === "connection-request") {
       requireAccount(user);
-      const info = await inviteInfo(body.code);
+      const info = body.handle
+        ? {
+            inviter: (
+              await query(
+                "SELECT id,name FROM users WHERE LOWER(handle)=$1 AND registered AND NOT banned",
+                [String(body.handle).toLowerCase()],
+              )
+            )[0],
+          }
+        : await inviteInfo(body.code);
       if (!info.inviter || info.inviter.id === user.id)
         fail(400, "کد دوستت رو وارد کن.");
       const [a, b] = [user.id, info.inviter.id].sort();
@@ -465,6 +599,14 @@ export default async function handler(req, res) {
         `INSERT INTO connections(id,user_a,user_b,requested_by) VALUES($1,$2,$3,$4) ON CONFLICT(user_a,user_b) DO UPDATE SET status=CASE WHEN connections.requested_by<>$4 THEN 'accepted' ELSE connections.status END`,
         [randomUUID(), a, b, user.id],
       );
+      await notifyUser(info.inviter.id, {
+        actorId: user.id,
+        kind: "request",
+        title: `${user.name} می‌خواد وصل بشین`,
+        body: "یه رفیق تازه پشت دره.",
+        route: "/#/friends",
+        dedupe: `request:${user.id}`,
+      });
       return json(res, 200, { friends: await friends(user) });
     }
     if (action === "connection-respond") {
@@ -497,7 +639,7 @@ export default async function handler(req, res) {
       if (!body.enabled) {
         await transaction([
           [
-            "UPDATE users SET share_location=FALSE,location_lat=NULL,location_lng=NULL,location_updated_at=NULL WHERE id=$1",
+            "UPDATE users SET share_location=FALSE,discoverable=FALSE,location_lat=NULL,location_lng=NULL,location_updated_at=NULL WHERE id=$1",
             [user.id],
           ],
           [
@@ -527,7 +669,7 @@ export default async function handler(req, res) {
         fail(400, error.message);
       }
       const rows = await query(
-        `SELECT e.*,u.name,u.avatar_seed,c.id AS connection_id FROM checkins e JOIN users u ON u.id=e.user_id LEFT JOIN connections c ON c.status='accepted' AND ((c.user_a=$1 AND c.user_b=u.id) OR (c.user_b=$1 AND c.user_a=u.id)) WHERE u.share_location AND u.location_updated_at>NOW()-INTERVAL '1 hour' AND e.created_at>NOW()-INTERVAL '30 minutes' AND e.location_lat BETWEEN $2-.04 AND $2+.04 AND e.location_lng BETWEEN $3-.05 AND $3+.05 ORDER BY e.created_at DESC LIMIT 150`,
+        `SELECT e.*,u.name,u.avatar_seed,u.avatar_image,c.id AS connection_id FROM checkins e JOIN users u ON u.id=e.user_id LEFT JOIN connections c ON c.status='accepted' AND ((c.user_a=$1 AND c.user_b=u.id) OR (c.user_b=$1 AND c.user_a=u.id)) WHERE NOT u.banned AND u.share_location AND u.location_updated_at>NOW()-INTERVAL '1 hour' AND e.created_at>NOW()-INTERVAL '30 minutes' AND e.location_lat BETWEEN $2-.04 AND $2+.04 AND e.location_lng BETWEEN $3-.05 AND $3+.05 ORDER BY e.created_at DESC LIMIT 150`,
         [user.id, p.lat, p.lng],
       );
       const seen = new Set();
@@ -559,6 +701,10 @@ export default async function handler(req, res) {
             r.connection_id || r.user_id === user.id
               ? r.avatar_seed
               : "neighbor:" + r.id,
+          avatarImage:
+            r.connection_id || r.user_id === user.id
+              ? r.avatar_image || null
+              : null,
         }));
       return json(res, 200, { activity, approximate: true });
     }
@@ -588,6 +734,8 @@ export default async function handler(req, res) {
       return json(res, 200, { circles: await circles(user) });
     }
     if (action === "delete-account") {
+      if (user.role === "admin" && user.handle === "ali")
+        fail(400, "حساب مدیر رو نمی‌شه از اینجا پاک کرد.");
       await transaction([
         ["DELETE FROM pair_moments WHERE user_a=$1 OR user_b=$1", [user.id]],
         ["DELETE FROM connections WHERE user_a=$1 OR user_b=$1", [user.id]],

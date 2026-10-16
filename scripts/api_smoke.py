@@ -4,6 +4,7 @@ import http.cookiejar
 import json
 import os
 from pathlib import Path
+from provision_admin import create_invite
 import secrets
 import time
 import urllib.error
@@ -64,7 +65,7 @@ class Client:
 def main():
     starter = os.environ.get("JISHOO_TEST_INVITE_CODE")
     if not starter:
-        starter = json.loads((ROOT / ".vercel/founder-invite.json").read_text())["inviteCode"]
+        starter = create_invite("qa-member")["code"]
     clients = [Client() for _ in range(4)]
     a, b, c, returning = clients
     try:
@@ -96,7 +97,7 @@ def main():
         passed("Both sides receive referral credit once and can consent to connecting")
 
         _, ticket_c = c.new_ticket()
-        rc = c.call("register", {"ticket": ticket_c, "name": "آزمایش نیما", "inviteCode": starter})
+        rc = c.call("register", {"ticket": ticket_c, "name": "آزمایش نیما", "inviteCode": create_invite("qa-member")["code"]})
         assert rc["friends"] == []
         a.call("profile", {"socialLinks": {"instagram": "jishoo_test"}})
         assert b.bootstrap()["friends"][0]["socialLinks"] == {}

@@ -1,41 +1,55 @@
-# Jishoo visual and interaction verification
+# Jishoo visual and interaction review
 
-## Current scope
+final result: passed
 
-The updated web app follows both supplied Persian mobile references: warm cream surfaces, yellow check-in actions, lavender sharing accents, rounded cards, a shy guest character at the WC door, friendship moments and a purple weekly polaroid story. Personal characters now use the explicitly requested Blobatar library rather than identical droplet artwork. This changes their silhouette and facial detail deliberately; the original shy blue mascot remains in the desktop brand panel.
+## Source and comparison evidence
 
-No sample friends, fabricated counters, simulated conversations or illustrated map are shown as live data. The current product uses real guest/account sessions and database history. Chat was removed as requested. PWA/TWA support and payment checkout are deferred.
+The source visual truth is the user's original Persian mobile references in this conversation, with the retained canonical blue shy mascot at `public/assets/shy-drop.webp` (1280×1280). The follow-up brief explicitly restores that illustration language to actions, reactions and story cards, limits Blobatar to profile identity, removes the sharing tab and adds nearby discovery, invitations, achievements and administration. New community/admin screens are intentional extensions rather than pixel clones of an absent reference screen.
 
-## Visual evidence
+`artifacts/v3-design-comparison.png` is a single combined comparison: the canonical original mascot, the rejected avatar-based home screen (`artifacts/v2-home.png`), and the revised illustrated home (`artifacts/v3-home.png`). The comparison is 1259×920 pixels; both screen captures are 393×852 pixels at deviceScaleFactor 1. The standalone reference art is fitted into a 393px-wide reference panel rather than presented as an original full-screen mock. The old/new counters and guest seeds differ because these are isolated real sessions, not seeded sample history. No pixel-difference score or 1:1 full-screen reference match is claimed.
 
-Screenshots live in ignored `artifacts/` and can be regenerated with `scripts/smoke.py`:
+The source art and combined comparison were opened visually. Focused full-size captures were also opened for the need-result screen and story, profile upload, discovery, admin controls, invitation slots and social preview. The scene art (`happy-drop.webp`, `together-drops.webp`, `back-to-back-drops.webp`) was generated from the canonical raster reference; the paired blue/yellow and relieved-blue assets were visually inspected at full size. No handcrafted SVG/CSS drawings replace the illustration assets. Phosphor supplies interface icons; the requested Blobatar library supplies fallback profile avatars only.
 
-- `v2-welcome.png`: optional account entry, generated yellow guest character and no name input.
-- `v2-home.png`, `v2-home-320.png`, `v2-home-1440.png`: current activity, distinct Blobatar expressions, honest empty states and responsive brand panel.
-- `v2-success.png`, `v2-together.png`: completed check-in and two connected, differently shaped characters in a real pair moment.
-- `v2-otp.png`, `v2-signup.png`: visible demo phone verification followed by a name-generated character and invitation field.
-- `v2-profile.png`, `v2-stats.png`, `v2-invite.png`, `v2-friends.png`, `v2-connection.png`: persisted profile, statistics, personal invitation and per-friend consent.
-- `v2-story-editor.png`, `v2-invite-story.png`, `v2-together-story.png`: weekly, invitation and pair cards with QR links and export controls.
-- `v2-story-export.png`, `v2-post-export.png`: actual PNG files verified at 1080×1920 and 1080×1080 pixels with embedded Persian fonts.
-- `v2-nearby.png`, `v2-map-friend.png`: browser geolocation, separate publication opt-in and a labeled connected-friend marker.
+## Findings and iteration history
 
-Representative welcome, home, profile, signup, weekly export, pair moment, pair story and map-marker screenshots were visually opened during implementation. Primary viewport is 393×852 CSS pixels, with additional checks at 320×640, 375×667, 768×1024 and 1440×1000. This is a visual review against the references, not a pixel-difference score.
+1. **P1 — Avatar shapes replaced the brand characters.** The old home and stories used Blobatar as hero illustrations. Replaced action, result, story and promotional figures with the original shy droplet and matching relieved/paired raster illustrations. Identity areas retain uploaded photos or name-based avatars. Evidence: combined comparison, `v3-home.png`, `v3-need.png`, `v3-together.png`, `v3-together-story.png`.
+2. **P1 — “I need to pee” had no useful result/share state.** Added a full illustrated reaction, playful copy, a direct share-card action and a nearby-buddy action. “I just peed” also opens its own illustrated reaction and matching card. Evidence: `v3-need.png`, `v3-need-story.png`, `v3-success.png`, `v3-done-story.png`. Both paths and keyboard dismissal passed in the browser.
+3. **P2 — The sharing tab displaced the desired discovery flow.** Removed it from navigation and placed sharing in result screens, statistics, invitations and pair history. The central tab now finds opted-in nearby buddies. Evidence: `v3-home.png`, `v3-discover.png`; browser assertions verify five tabs and no share tab.
+4. **P2 — A generic span rule faded the restored home art.** The first capture inherited `opacity:.53` from action subtitles (`v3-home-first.png`). Added an explicit opacity rule for mascot spans. The combined comparison and `v3-home.png` show the corrected full-color art.
+5. **P2 — Invitation counts were below persistent navigation.** `v3-invitation-quota.png` placed the usage/remaining text below the initial visible area. Shortened the pair hero and moved the quota card ahead of the code card. The revised same-size capture `v3-invitation-quota-fixed.png` shows all three slots, usage, remaining count and share action above navigation. A focused browser assertion confirms that the count is in the viewport.
+6. **P2 — The handle inherited RTL placement.** Applied an LTR direction to the handle label while preserving Persian layout. Public profiles and discovery already use explicit LTR handles. Profile sharing and server-rendered social metadata passed production verification.
 
-## Findings resolved
+All identified P1/P2 findings were fixed and recaptured. The final focused invitation review passed after the layout change. There are no remaining actionable P0/P1/P2 findings in the reviewed scope.
 
-- A weekly story with a single check-in initially showed a tiny avatar. Single-character and two-character layouts now use larger figures.
-- At common mobile heights, the story preview initially pushed secondary export controls below navigation. The preview now fits the available area; smaller screens retain scrolling.
-- Invitation, check-in and weekly-statistics shortcuts initially opened the general card picker. They now open the matching card directly.
-- The full-screen pair story needed keyboard containment and Escape dismissal. Its own dialog now traps focus and restores the prior focus on close.
-- Initial map-centering code used Leaflet internal fields. The revised implementation uses the public map API and a maintained current-location marker.
+## Required fidelity surfaces
 
-## Verification and limits
+- **Fonts/typography:** Local Vazirmatn provides Persian shaping, clear 400–900 weight hierarchy and readable wrapping; Lalezar remains the display brand. Large reaction/story headings, smaller supporting copy and LTR handles are distinct. Exported PNGs embed local Persian fonts and preserve shaping.
+- **Spacing/layout:** Cream rounded cards, subtle borders, fixed bottom navigation and safe-area spacing follow the references. Sharing uses a full-screen dialog with Escape/focus containment. Quota counts are visible in the initial mobile viewport. Larger admin/profile content scrolls while navigation remains available. No horizontal page overflow was observed at 320, 375, 393, 768 or 1440px widths.
+- **Colors/tokens:** Warm cream, yellow, pastel blue, lavender, navy outlines and pink blush preserve the original palette. Story themes intentionally allow lemon, lavender or sky variations. Meaningful empty/locked/earned states use subdued or highlighted colors without fabricated activity.
+- **Images/asset quality:** The blue shy silhouette, inward hands, blush, dark outline and yellow puddle are retained. The relieved mascot and differently colored pairs match that watercolor language. Raster art has transparent edges and uses contain sizing. Avatar photos are cropped separately and remain identity imagery. The app icon and 1200×630 social preview use the same brand art.
+- **Copy/content:** Casual Persian reactions, invitation limits, inviter identity and both status stories are explicit. Three-slot usage reflects real successful registrations; admin invitations are individually one-use. Gift days are clearly described as saved during the free-premium test period. Profiles, invitation history, achievements and administration display database state. Phone verification is visibly a demo.
 
-- Seven pure logic tests verify phone normalization/encryption, pair timing boundaries, approximate coordinates, social URL validation, premium gating and deterministic/distinct Blobatar names.
-- Ten API scenarios passed against the live Neon-backed Vercel API: guest access, invite-only demo signup, both referral gifts, mutual connections, link consent/revocation, collection membership, idempotent check-ins, approximate anonymous map activity, location revocation, existing-phone login and both real together/back-to-back intervals. The back-to-back scenario waits for the actual interval; it does not alter timestamps. Tests remove only their own disposable accounts.
-- Ten browser scenarios passed locally against the real deployed testing API: guest flow/persistence, full-resolution PNG exports, geolocation/consent, phone/OTP/signup, profile/statistics/invites, removal of chat, invitation-link signup with both rewards, social consent, named map markers, real pair story/dialog behavior, five responsive widths and application-error checks. Results are in `artifacts/smoke-results.json`.
-- Production browser verification uses the same suite against the public Vercel origin. In this managed proxy, a transport adapter fetches real HTTPS responses using the system CA trust store and forwards them to Chromium. It does not disable certificate checks or replace application data with fixtures.
-- The cloud's active network policy blocks `tile.openstreetmap.org`; therefore **external basemap imagery is not visually verified here**. Browser geolocation, real nearby API data, friend labels, map controls and opt-in/revocation are verified. The application loads standard OpenStreetMap tiles with visible attribution; the saved cloud configuration draft includes the tile host for later activation.
-- Native operating-system share sheets depend on device/browser support. Automated verification covers downloadable PNGs and the application fallbacks. Real SMS verification and subscription charging are intentionally inactive in testing.
+## Interaction evidence
 
-No page JavaScript errors or failed application assets/API requests were observed in the passing suite. External map-tile requests are reported separately from application asset checks. No actionable blocking UI issue remains in the reviewed scope.
+- Locked dependency installation, production build and **nine logic tests passed**.
+- **Ten baseline API scenarios passed**, including guest persistence, phone normalization/login, both referral gifts, authorization, social consent, check-in idempotency, approximate anonymous map activity, location revocation and both real pair timing intervals. The back-to-back test waits for the actual interval.
+- **Ten community API scenarios passed**, including three-slot exhaustion, child slots, incoming inviter requests, one-use admin links (including personal links), reserved/unique handles, uploads, anti-farming achievement progress, per-friend/collection notification preferences, nearby opt-in/revocation, lifetime gifts, suspension, private admin elevation and one-use recovery/claims. Tests use and remove only their own disposable accounts.
+- **Nine browser scenarios passed locally and against the production origin**: both contextual share flows; editable themes/captions and 1080×1920/1080×1080 PNGs; explicit invite-required signup; photos and fallback avatars; inviter cards and requests; discovery and friend markers; actual pair-story artwork; achievements/notifications/public profile metadata; admin invite creation and lifetime gifts; keyboard handling and five responsive widths. No page JavaScript errors or failed application assets/API requests were observed. Results are in `artifacts/smoke-results.json`.
+- Production verification uses real HTTPS responses verified against the system CA and fulfilled to Chromium, whose trust store lacks the managed cloud proxy CA. It preserves the public origin, cookies, actual assets and live database responses. Certificate verification is not disabled.
+- A focused local browser check registers `/sw.js` and confirms the active worker. The published icon/preview image and profile Open Graph metadata are present.
+
+## Limits and P3 follow-up
+
+- The active cloud network policy blocks external OpenStreetMap tile imagery. Real geolocation, activity, discovery, friend labels and location controls are tested; **basemap imagery is not visually verified here**. The saved cloud draft includes the tile host for later activation.
+- Actual OS push delivery needs a real permitted browser/device and was not claimed by automated checks. VAPID configuration, the push worker, subscription validation and notification preferences are implemented. OS/browser settings control banners; iOS requires an installed web app. Arbitrary overlays over other apps are outside browser capabilities.
+- Generated poses are an artistic continuation of the original mascot. Minor pose/texture differences are P3. Native share sheets depend on device support; PNG download is verified.
+- SMS ownership verification, payment checkout, PWA installation/offline support and TWA packaging remain later stages.
+
+## Implementation checklist
+
+- [x] Restore canonical mascot art and generate matching activity/pair scenes.
+- [x] Separate profile avatars/photos from story/hero illustrations.
+- [x] Verify both status reactions, contextual sharing and actual PNG dimensions.
+- [x] Verify invitation limits, admin permissions, profiles, achievements and notification controls.
+- [x] Compare screenshots, fix P1/P2 findings and recapture focused evidence.
+- [x] Keep the local preview available and verify the published application.

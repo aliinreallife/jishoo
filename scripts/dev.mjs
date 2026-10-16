@@ -60,7 +60,13 @@ const server = createServer(async (req, res) => {
     const chunks = [];
     for await (const chunk of req) {
       bytes += chunk.length;
-      if (bytes > 16000) {
+      if (
+        bytes >
+        (new URL(req.url, "http://localhost").searchParams.get("action") ===
+        "avatar"
+          ? 100000
+          : 16000)
+      ) {
         res.statusCode = 413;
         res.end("Request too large");
         return;
