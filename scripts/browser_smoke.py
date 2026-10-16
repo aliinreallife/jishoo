@@ -16,7 +16,8 @@ owned=set()
 def phone():return f"+1{secrets.randbelow(789)+201}55501{secrets.randbelow(100):02}"
 
 def signup(page,name,code=None):
-    page.get_by_role("button",name="ورود یا ساخت حساب").click()
+    if page.get_by_role("button",name="با این دعوت عضو بشم",exact=True).count():page.get_by_role("button",name="با این دعوت عضو بشم",exact=True).click()
+    else:page.get_by_role("button",name="ورود یا ساخت حساب").click()
     page.get_by_label("شماره موبایل",exact=True).fill(phone())
     page.get_by_role("button",name="دریافت کد ورود").click()
     expect(page.get_by_role("heading",name="کد ورودت")).to_be_visible(timeout=15000)
@@ -24,6 +25,8 @@ def signup(page,name,code=None):
     page.get_by_label("اسمت",exact=True).fill(name)
     if code:page.get_by_label("کد دعوت",exact=True).fill(code)
     page.get_by_role("button",name="ساخت حساب من").click()
+    expect(page.locator(".bottom-nav, .invite-connect-step").first).to_be_visible(timeout=25000)
+    if page.locator(".invite-connect-step").count():page.get_by_role("button",name="فعلاً نه؛ بعداً از درخواست‌های دوستی",exact=True).click()
     expect(page.locator(".bottom-nav")).to_be_visible(timeout=25000)
     me=api(page,"bootstrap")["me"]
     assert me["registered"] and me["name"]==name
@@ -75,7 +78,7 @@ def main():
             page.locator(".done-card").click()
             expect(page.locator(".personal-success img")).to_have_attribute("src","/assets/happy-drop.webp",timeout=15000)
             capture(page,"v3-success.png")
-            page.get_by_role("button",name="این آخیش رو استوری کن").click()
+            page.get_by_role("button",name="این لحظه رو استوری کن").click()
             expect(page.locator(".story-checkin")).to_be_visible()
             expect(page.get_by_role("button",name="اشتراک تصویر",exact=True)).to_be_enabled(timeout=30000)
             capture(page,"v3-done-story.png")
@@ -104,6 +107,7 @@ def main():
             page.get_by_label("شناسه‌ی یکتا").fill("qa_"+secrets.token_hex(4))
             page.get_by_label("اینستاگرام",exact=True).fill("jishoo_test")
             page.locator('input[type="file"]').set_input_files(str(ROOT/"public/assets/app-icon-192.png"))
+            page.get_by_role("button",name="همین عکس خوبه",exact=True).click()
             expect(page.locator(".avatar-upload-row .uploaded-avatar")).to_be_visible(timeout=15000)
             capture(page,"v3-avatar-upload.png")
             page.get_by_role("button",name="ذخیره تغییرات").click()
@@ -124,7 +128,7 @@ def main():
             capture(page,"v3-invitation-quota.png")
             peer_ctx,peer=context(browser,geo=True);contexts.append((peer_ctx,peer))
             peer.goto(BASE+"?invite="+me["inviteCode"],wait_until="domcontentloaded")
-            expect(peer.locator(".welcome-invite-banner")).to_contain_text("آزمایش نگار",timeout=30000)
+            expect(peer.locator(".inviter-spotlight")).to_contain_text("آزمایش نگار",timeout=30000)
             capture(peer,"v3-invited-by.png")
             peer_me=signup(peer,"آزمایش سارا")
             expect(peer.locator(".pending-home")).to_contain_text("منتظر جوابته")
@@ -197,13 +201,13 @@ def main():
             with urllib.request.urlopen("https://jishoo.vercel.app/u/"+me["handle"],timeout=30) as response:
                 html=response.read().decode()
             assert 'property="og:title"' in html and me["handle"] in html and 'property="og:image"' in html
-            assert "/assets/social-preview.png" in html
+            assert "/assets/social-shy-v2.png" in html
             passed("Leveled achievements, notification settings, public handle profiles and the local push worker render and work")
 
             admin_code=create_invite("qa-admin")["code"]
             admin_ctx,admin=context(browser);contexts.append((admin_ctx,admin))
             admin.goto(BASE+"?invite="+admin_code,wait_until="domcontentloaded")
-            expect(admin.get_by_role("button",name="ورود یا ساخت حساب")).to_be_visible(timeout=25000)
+            expect(admin.get_by_role("button",name="با این دعوت عضو بشم")).to_be_visible(timeout=25000)
             admin_me=signup(admin,"مدیر آزمایش مرورگر")
             assert admin_me["isAdmin"]
             expect(admin.get_by_role("heading",name="پشت‌صحنه‌ی جیشو")).to_be_visible(timeout=20000)

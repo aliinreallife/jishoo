@@ -48,7 +48,7 @@ function embeddedFonts() {
 }
 const headlines = {
   need: "جیش دارم.\nولی هنوز دارم اسکرول می‌کنم!",
-  checkin: "آخیش!\nیه بار دیگه نجات پیدا کردم.",
+  checkin: "جیش کردم!\nیه کم سبک‌تر، یه کم خوشحال‌تر.",
   together: "ما حتی جیشمونم سینکه!",
   "back-to-back": "اول اون، بعد من.\nچه تیمی شدیم!",
   invite: "بیا تو جمعمون.\nاینجا خبرهای کوچیک مهمن.",
@@ -106,7 +106,7 @@ export function StoryCanvas({
               {fa(count)}
               <span>بار</span>
             </strong>
-            <p>{count ? "گفتم آخیش!" : "هنوز شروع نکردم."}</p>
+            <p>{count ? "سبک شدم!" : "هنوز شروع نکردم."}</p>
             <small className="weekly-punchline">
               {caption || "لحظه‌های کوچیک، حس‌های بزرگ."}
             </small>
@@ -135,7 +135,7 @@ export function StoryCanvas({
                   ? "کی همراهمه؟ بیا تو جمع دوستام."
                   : kind === "invite"
                     ? "یه بهونه برای با هم بودن، هر روز."
-                    : `آخیش‌های امروز من: ${fa(s.today)}`}
+                    : `خبرهای امروز من: ${fa(s.today)}`}
             </p>
             {pair && (
               <small>
@@ -163,7 +163,7 @@ export function StoryCanvas({
             </>
           ) : (
             <>
-              <strong>تو هم یه آخیش ثبت کن!</strong>
+              <strong>خبر کوچولوت رو ثبت کن!</strong>
               <p>بدون حساب هم می‌شه جیش کرد.</p>
             </>
           )}
@@ -176,7 +176,9 @@ export function StoryCanvas({
             jishoo.vercel.app
           </span>
         </div>
-        {qr && <img className="story-qr" src={qr} alt="QR لینک جیشو" />}
+        {kind === "invite" && qr && (
+          <img className="story-qr" src={qr} alt="QR لینک جیشو" />
+        )}
       </div>
       <div className="story-bottom-line">
         <Heart size={30} weight="fill" />
@@ -213,16 +215,22 @@ export default function Stories({
     generation = useRef(0);
   const moment = initialMoment || data.moments[0];
   const code =
-    data.invitationQuota?.remaining === 0
+    kind !== "invite"
       ? null
-      : data.me.inviteCode ||
-        (pendingInvite?.remaining !== 0 ? pendingInvite?.code : null);
+      : data.invitationQuota?.remaining === 0
+        ? null
+        : data.me.inviteCode ||
+          (pendingInvite?.remaining !== 0 ? pendingInvite?.code : null);
   const url =
     !code && data.me.handle
       ? `${data.publicUrl}/u/${data.me.handle}`
       : inviteUrl(data, code);
   useEffect(() => {
     let active = true;
+    if (kind !== "invite") {
+      setQr("");
+      return;
+    }
     QRCode.toDataURL(url, {
       width: 180,
       margin: 1,
@@ -231,9 +239,9 @@ export default function Stories({
     return () => {
       active = false;
     };
-  }, [url]);
+  }, [url, kind]);
   useEffect(() => {
-    if (!selected || !qr || !card.current) return;
+    if (!selected || (kind === "invite" && !qr) || !card.current) return;
     const version = ++generation.current;
     setImage(null);
     setPreparing(true);
@@ -296,7 +304,7 @@ export default function Stories({
         await navigator.share({
           files: [file],
           title: "جیشو",
-          text: `${caption || headlines[kind] || "خبرهای کوچیک، دوستای نزدیک."}\n${url}`,
+          text: `${caption || headlines[kind] || "خبرهای کوچیک، دوستای نزدیک."}${kind === "invite" ? "\n" + url : ""}`,
         });
         return;
       } catch (error) {
@@ -336,7 +344,7 @@ export default function Stories({
         <div className="story-selection-list">
           {[
             ["weekly", "اینهفته‌ی من", "تعداد جیش‌های این هفته"],
-            ["checkin", "آخیش، جیش کردم!", "یه خبر کوچولو برای دوستات"],
+            ["checkin", "جیش کردم، سبک شدم!", "یه خبر کوچولو برای دوستات"],
             [
               "need",
               "جیش دارم، همراه می‌خوام!",
@@ -410,9 +418,13 @@ export default function Stories({
           <X size={22} />
         </button>
         <h1>کارت خبر من</h1>
-        <button onClick={shareLink} aria-label="اشتراک لینک دعوت">
-          <ShareNetwork size={20} />
-        </button>
+        {kind === "invite" ? (
+          <button onClick={shareLink} aria-label="اشتراک لینک دعوت">
+            <ShareNetwork size={20} />
+          </button>
+        ) : (
+          <span aria-hidden="true" />
+        )}
       </header>
       <div className="segmented story-format">
         <button
@@ -493,23 +505,23 @@ export default function Stories({
           <button onClick={download} disabled={!image}>
             <DownloadSimple size={17} /> ذخیره PNG
           </button>
-          <button
-            onClick={async () => {
-              try {
-                await copyText(url);
-                notify("لینک دعوت کپی شد.");
-              } catch (error) {
-                notify(error.message);
-              }
-            }}
-          >
-            <Copy size={17} /> کپی لینک
-          </button>
+          {kind === "invite" && (
+            <button
+              onClick={async () => {
+                try {
+                  await copyText(url);
+                  notify("لینک دعوت کپی شد.");
+                } catch (error) {
+                  notify(error.message);
+                }
+              }}
+            >
+              <Copy size={17} /> کپی لینک دعوت
+            </button>
+          )}
         </div>
-        {!data.me.registered && !code && (
-          <small>
-            کارت مهمان لینک جیشو داره؛ کد شخصی بعد از عضویت ساخته می‌شه.
-          </small>
+        {kind === "invite" && !data.me.registered && !code && (
+          <small>کد دعوت شخصی بعد از عضویت ساخته می‌شه.</small>
         )}
       </div>
     </section>

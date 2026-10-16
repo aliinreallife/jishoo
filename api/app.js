@@ -1,4 +1,7 @@
 import { randomUUID } from "node:crypto";
+import { waitUntil } from "@vercel/functions";
+import { sanitizeAvatar } from "../lib/avatar.js";
+import { rateLimit } from "../lib/security.js";
 import { provisionOwner } from "../lib/provision.js";
 import {
   getCommunity,
@@ -23,7 +26,6 @@ import {
   approximateLocation,
   distanceKm,
   cleanSocialLinks,
-  cleanAvatarImage,
   normalizeHandle,
 } from "../lib/core.js";
 
@@ -81,6 +83,14 @@ async function session(req, res) {
     }
   }
   token = randomToken();
+  if (
+    !(await rateLimit(
+      `new-session:${String(req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "unknown").split(",")[0]}`,
+      120,
+      3600,
+    ))
+  )
+    fail(429, "یه کم بعد دوباره سر بزن.");
   const id = randomUUID();
   const result = await transaction([
     [
@@ -130,6 +140,7 @@ function profile(user, own = false) {
       inviteCode: user.invite_code,
       trialUntil: user.trial_until,
       trialDaysSaved: user.trial_days_bank,
+      adminPasswordEnabled: Boolean(process.env.ADMIN_PASSWORD_HASH),
       socialLinks: user.social_links,
       shareLocation: user.share_location,
     });
@@ -295,6 +306,8 @@ export default async function handler(req, res) {
     if (!["GET", "POST"].includes(req.method))
       fail(405, "این درخواست پشتیبانی نمی‌شود.");
     if (req.method === "POST") {
+      if (req.headers["sec-fetch-site"] === "cross-site")
+        fail(403, "درخواست از آدرس مجاز نیست.");
       if (
         !String(req.headers["content-type"] || "").includes("application/json")
       )
@@ -316,9 +329,20 @@ export default async function handler(req, res) {
         fail(400, "درخواست معتبر نیست.");
       }
     }
+    if (!body || typeof body !== "object" || Array.isArray(body))
+      fail(400, "درخواست معتبر نیست.");
     if (JSON.stringify(body).length > (action === "avatar" ? 100000 : 16000))
       fail(413, "درخواست خیلی بزرگه.");
     await initialize();
+    if (
+      action === "admin-login" &&
+      !(await rateLimit(
+        `admin-ip:${String(req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "unknown").split(",")[0]}`,
+        12,
+        900,
+      ))
+    )
+      fail(429, "چند بار تلاش شد؛ ۱۵ دقیقه دیگه امتحان کن.");
     if (action === "health") {
       await query("SELECT 1");
       return json(res, 200, {
@@ -488,6 +512,8 @@ export default async function handler(req, res) {
       });
     }
     if (action === "checkin") {
+      if (!(await rateLimit(`checkin:${user.id}`, 20, 60)))
+        fail(429, "خبرت ثبت شده؛ یه کم صبر کن، بعد دوباره خبر بده.");
       if (
         !["need", "done"].includes(body.status) ||
         typeof body.nonce !== "string" ||
@@ -516,7 +542,13 @@ export default async function handler(req, res) {
         ],
       );
       const matched = await detectMoments(user, rows[0]);
-      await notifyFriends(user, rows[0]);
+      // Keep real provider delivery alive after the response without making
+      // recording a check-in wait for every friend's push service.
+      waitUntil(
+        notifyFriends(user, rows[0]).catch(() =>
+          console.warn("[jishoo-push] background delivery failed"),
+        ),
+      );
       return json(res, 200, {
         event: {
           id: rows[0].id,
@@ -531,7 +563,7 @@ export default async function handler(req, res) {
       requireAccount(user);
       let image;
       try {
-        image = cleanAvatarImage(body.image);
+        image = await sanitizeAvatar(body.image);
       } catch (error) {
         fail(400, error.message);
       }

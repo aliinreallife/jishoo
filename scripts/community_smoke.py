@@ -84,8 +84,10 @@ def main():
         import base64
         image="data:image/jpeg;base64,"+base64.b64encode(content.getvalue()).decode()
         result=a.call("avatar",{"image":image})
-        assert result["me"]["avatarImage"]==image
-        assert peer(b.bootstrap(),ra["me"]["id"])["avatarImage"]==image
+        stored=result["me"]["avatarImage"]
+        decoded=Image.open(io.BytesIO(base64.b64decode(stored.split(",")[1])))
+        assert decoded.size==(320,320) and decoded.format=="JPEG"
+        assert peer(b.bootstrap(),ra["me"]["id"])["avatarImage"]==stored
         a.call("avatar",{"image":"data:image/svg+xml;base64,PHN2Zz4="},expected=400)
         a.call("avatar",{"image":None})
         assert a.bootstrap()["me"]["avatarImage"] is None

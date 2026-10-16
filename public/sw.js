@@ -1,3 +1,10 @@
+self.addEventListener("install", (event) =>
+  event.waitUntil(self.skipWaiting()),
+);
+self.addEventListener("activate", (event) =>
+  event.waitUntil(self.clients.claim()),
+);
+// No offline caching: friend activity and private account data stay current.
 self.addEventListener("push", (event) => {
   let payload = {
     title: "جیشو",
@@ -12,7 +19,7 @@ self.addEventListener("push", (event) => {
       body: payload.body,
       icon: "/assets/app-icon-192.png",
       badge: "/assets/app-icon-192.png",
-      tag: payload.tag || "jishoo",
+      tag: payload.tag || "jishoo-update",
       data: { url: payload.url },
       renotify: false,
     }),

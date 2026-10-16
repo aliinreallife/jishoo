@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   Bell,
   BellSlash,
@@ -21,7 +21,15 @@ import {
 import { Avatar } from "./Character";
 import { Mascot, PairArt } from "./Mascot";
 import { api, copyText, fa, relativeTime } from "../api";
-import { enablePush, disablePush, pushSupported } from "../push";
+import {
+  enablePush,
+  disablePush,
+  pushSupported,
+  pushEnvironment,
+  pushStatus,
+  syncPush,
+  testPush,
+} from "../push";
 
 const Button = ({ children, ...props }) => (
   <button className="button button-lilac" {...props}>
@@ -41,45 +49,6 @@ function useWork(notify) {
     }
   };
   return [busy, run];
-}
-export function InvitationQuota({ data, onShare }) {
-  const quota = data.invitationQuota;
-  if (!quota) return null;
-  return (
-    <div className="invitation-quota-card">
-      <div className="quota-top">
-        <Heart size={24} weight="duotone" />
-        <strong>
-          {quota.limit === null
-            ? "دعوت برای جمعِ بزرگ‌تر"
-            : quota.limit === 3
-              ? "سه دعوت، سه رفیق تازه"
-              : "یه دعوت، یه رفیق تازه"}
-        </strong>
-      </div>
-      {quota.limit !== null && (
-        <div className="invite-slot-characters">
-          {Array.from({ length: quota.limit }, (_, i) => (
-            <span key={i} className={i < quota.used ? "used" : "available"}>
-              <Mascot size={63} mood={i < quota.used ? "happy" : "shy"} />
-              <small>{i < quota.used ? "اومده تو جمع" : "منتظر رفیق"}</small>
-            </span>
-          ))}
-        </div>
-      )}
-      <p>
-        {quota.limit === null
-          ? `${fa(quota.used)} دوست با دعوتت اومدن`
-          : `${fa(quota.used)} دعوت استفاده شده · ${fa(quota.remaining)} دعوت باقی مونده`}
-      </p>
-      {onShare && (
-        <button onClick={onShare} disabled={quota.remaining === 0}>
-          <ShareNetwork size={17} />
-          {quota.remaining === 0 ? "هر سه رفیقت رسیدن!" : "دعوت بعدی رو بفرستم"}
-        </button>
-      )}
-    </div>
-  );
 }
 export function Achievements({ data, onBack, onShare }) {
   const icons = { drop: Drop, sun: Sun, fire: Flame, heart: Heart, star: Star };
@@ -254,7 +223,7 @@ export function Discover({ data, refresh, notify, onMap, onAuth }) {
                     {person.activity === "need"
                       ? "جیش داره؛ شاید همراهمون بشه!"
                       : person.activity === "done"
-                        ? "تازه یه آخیش گفته"
+                        ? "تازه جیش کرده"
                         : "یه رفیق این نزدیکی"}
                   </p>
                   <small>{person.distance}</small>
@@ -306,15 +275,34 @@ export function Discover({ data, refresh, notify, onMap, onAuth }) {
   );
 }
 export function Notifications({ data, refresh, notify, onBack, onNavigate }) {
-  const [push, setPush] = useState(false);
+  const [push, setPush] = useState(false),
+    [explain, setExplain] = useState(false),
+    [delivery, setDelivery] = useState("");
+  const permissionDialog = useRef();
   const [busy, run] = useWork(notify);
+  const environment = pushEnvironment();
   useEffect(() => {
-    if (pushSupported())
-      navigator.serviceWorker
-        .getRegistration("/")
-        .then((r) => r?.pushManager.getSubscription())
-        .then((s) => setPush(Boolean(s)));
+    let active = true;
+    pushStatus()
+      .then((value) => {
+        if (active) setPush(value);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
   }, []);
+  useEffect(() => {
+    if (explain) permissionDialog.current?.showModal();
+  }, [explain]);
+  async function sendTest() {
+    setDelivery("");
+    await syncPush();
+    await testPush();
+    setDelivery(
+      "سرویس اعلان، پیام تست رو قبول کرد. اعلانش رو روی گوشی ببین؛ نمایش نهایی به تنظیمات گوشی بستگی داره.",
+    );
+  }
   return (
     <section className="page notification-page">
       <header className="community-heading">
@@ -330,7 +318,7 @@ export function Notifications({ data, refresh, notify, onBack, onNavigate }) {
       <div className="notification-settings">
         <label>
           <span>
-            خبرهای دوستام<small>اعلان‌های داخل جیشو</small>
+            خبرهای دوستام<small>روشن یا خاموش برای داخل جیشو و روی گوشی</small>
           </span>
           <input
             type="checkbox"
@@ -347,39 +335,130 @@ export function Notifications({ data, refresh, notify, onBack, onNavigate }) {
             }
           />
         </label>
-        <label>
-          <span>
-            اعلان روی گوشی و کامپیوتر
-            <small>
-              {push
-                ? "فعاله؛ حتی وقتی جیشو باز نیست"
-                : pushSupported()
-                  ? "با اجازه‌ی مرورگر فعال می‌شه"
-                  : "اعلان سیستم روی این مرورگر در دسترس نیست"}
-            </small>
+        <div className="device-push-card">
+          <Mascot size={86} />
+          <div>
+            <h2>رفیقت خبر بده، گوشیت بگه</h2>
+            <p>وقتی جیشو بسته‌ست هم خبر جیش‌کردن دوست‌های متصلت می‌رسه.</p>
+          </div>
+          <span className={`push-device-state ${push ? "active" : ""}`}>
+            {push
+              ? "اشتراک این دستگاه فعاله"
+              : environment === "install"
+                ? "یه قدم تا اعلان روی آیفون"
+                : "اعلان این دستگاه خاموشه"}
           </span>
-          <input
-            type="checkbox"
-            checked={push}
-            disabled={busy || !pushSupported() || !data.vapidPublicKey}
-            onChange={(e) => {
-              const enabled = e.target.checked;
-              run(async () => {
-                if (enabled) await enablePush(data.vapidPublicKey);
-                else await disablePush();
-                setPush(enabled);
-                notify(
-                  enabled ? "اعلان‌های جیشو روشن شد." : "اعلان سیستم خاموش شد.",
-                );
-              });
-            }}
-          />
-        </label>
+          <Button
+            disabled={busy || !data.vapidPublicKey}
+            onClick={() => setExplain(true)}
+          >
+            {push ? "راهنما و تنظیم اعلان" : "خبر رفیقام رو برسون"}
+            <Bell size={18} />
+          </Button>
+          {push && (
+            <>
+              <button
+                className="button button-secondary"
+                disabled={busy}
+                onClick={() => run(sendTest)}
+              >
+                یه اعلان تستی بفرست
+              </button>
+              <button
+                className="text-link"
+                disabled={busy}
+                onClick={() =>
+                  run(async () => {
+                    await disablePush();
+                    setPush(false);
+                    setDelivery("");
+                    notify("اعلان این دستگاه خاموش شد.");
+                  })
+                }
+              >
+                خاموش‌کردن روی این دستگاه
+              </button>
+            </>
+          )}
+          {delivery && (
+            <p className="push-delivery-result" role="status">
+              {delivery}
+            </p>
+          )}
+          {!data.me.notificationsEnabled && (
+            <p className="form-error">
+              خبرهای دوستات خاموشه؛ گزینهٔ بالایی رو هم روشن کن.
+            </p>
+          )}
+        </div>
       </div>
       <p className="soft-note">
-        نمایش روی صفحه یا روی برنامه‌های دیگه رو تنظیمات گوشی و مرورگر تعیین
-        می‌کنه. برای هر دوست و هر جمع هم می‌تونی اعلان‌ها رو جدا خاموش کنی.
+        فقط دوست‌های متصلت، با اجازهٔ خودت. هر دوست یا جمع رو هم می‌تونی جدا
+        بی‌صدا کنی. برای نمایش روی صفحهٔ قفل، اعلان‌های جیشو رو در تنظیمات گوشی
+        مجاز کن.
       </p>
+      {explain && (
+        <dialog
+          ref={permissionDialog}
+          className="push-permission-dialog"
+          aria-labelledby="push-permission-title"
+          onCancel={() => setExplain(false)}
+        >
+          <Mascot size={126} />
+          <h2 id="push-permission-title">یه خبر کوچولو، حتی وقتی نیستی 💧</h2>
+          <p>
+            وقتی دوستت می‌گه «جیش کردم» یا دنبال هم‌جیشه، یه اعلان روی گوشی
+            می‌گیری؛ لازم نیست جیشو باز باشه.
+          </p>
+          <ul>
+            <li>فقط خبر آدمایی که بهشون وصلی</li>
+            <li>بدون دسترسی به پیام‌ها یا برنامه‌های دیگه</li>
+            <li>هر وقت بخوای، خاموش یا بی‌صداش کن</li>
+          </ul>
+          {environment === "install" ? (
+            <div className="push-install-guide">
+              <strong>روی آیفون این دو قدم لازمه</strong>
+              <ol>
+                <li>در Safari، دکمهٔ Share و بعد Add to Home Screen رو بزن.</li>
+                <li>از آیکن جیشو روی صفحهٔ اصلی بیا و اعلان رو روشن کن.</li>
+              </ol>
+              <small>نیاز به iOS 16.4 یا جدیدتر داره.</small>
+            </div>
+          ) : environment === "blocked" ? (
+            <p className="push-install-guide">
+              اجازهٔ اعلان قبلاً بسته شده. در تنظیمات سایت مرورگر، Notifications
+              رو روی Allow بذار، بعد برگرد.
+            </p>
+          ) : environment === "unsupported" ? (
+            <p className="push-install-guide">
+              این مرورگر اعلان پس‌زمینه رو پشتیبانی نمی‌کنه؛ روی اندروید از
+              Chrome یا روی آیفون از نسخهٔ صفحهٔ اصلی استفاده کن.
+            </p>
+          ) : (
+            <Button
+              disabled={busy}
+              onClick={() =>
+                run(async () => {
+                  await enablePush(data.vapidPublicKey);
+                  setPush(true);
+                  setExplain(false);
+                  notify("اعلان این دستگاه روشن شد. حالا یه اعلان تستی بفرست.");
+                })
+              }
+            >
+              باشه، خبر رفیقام رو برسون
+              <Bell size={19} />
+            </Button>
+          )}
+          <button
+            className="text-link"
+            disabled={busy}
+            onClick={() => setExplain(false)}
+          >
+            {environment === "ready" ? "فعلاً نه" : "فهمیدم"}
+          </button>
+        </dialog>
+      )}
       {!!data.notifications?.length && (
         <button
           className="text-link"
@@ -430,7 +509,8 @@ export function Admin({ data, notify, refresh }) {
   const [dashboard, setDashboard] = useState(null),
     [created, setCreated] = useState(""),
     [search, setSearch] = useState(""),
-    [offset, setOffset] = useState(0);
+    [offset, setOffset] = useState(0),
+    [password, setPassword] = useState("");
   const [busy, run] = useWork(notify);
   const load = async () =>
     setDashboard(await api("admin", undefined, { q: search, offset }));
@@ -445,7 +525,44 @@ export function Admin({ data, notify, refresh }) {
         <div className="empty-state">
           <ShieldCheck size={48} />
           <h1>ورود خصوصی مدیر</h1>
-          <p>این بخش با لینک خصوصیِ یک‌بارمصرف مدیر باز می‌شه.</p>
+          <p>
+            با حساب مدیرت وارد شو و رمز خصوصی رو بنویس. برای اولین بار، دعوت
+            خصوصی مدیر رو باز کن و با شماره‌ت عضو شو.
+          </p>
+          <form
+            className="admin-password-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              run(async () => {
+                await api("admin-login", { password });
+                setPassword("");
+                await refresh();
+                notify("به پشت‌صحنه خوش اومدی.");
+              });
+            }}
+          >
+            <label className="field-label">
+              رمز مدیر
+              <input
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={12}
+                maxLength={200}
+                dir="ltr"
+              />
+            </label>
+            <Button disabled={busy || !data.me.registered || !password}>
+              ورود به داشبورد
+            </Button>
+          </form>
+          {!data.me.registered && (
+            <small>
+              اول با دعوت خصوصی مدیر، حساب بساز یا با شمارهٔ مدیر وارد شو.
+            </small>
+          )}
         </div>
       </section>
     );

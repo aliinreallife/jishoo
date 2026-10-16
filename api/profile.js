@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     const description = escape(
       "یه خبر کوچولو، یه بهونه برای با هم بودن. بیا به جمع دوستای من.",
     );
-    const image = base + "/assets/social-preview.png";
+    const image = base + "/assets/social-shy-v2.png";
     html = html
       .replace(/<title>[\s\S]*?<\/title>/, `<title>${title}</title>`)
       .replace(

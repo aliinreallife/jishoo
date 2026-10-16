@@ -98,3 +98,167 @@ test("Blobatar generates stable but distinct characters from Persian names", () 
   assert.notEqual(blobatar("سارا"), blobatar("علی"));
   assert.notEqual(blobatar("مریم"), blobatar("نیما"));
 });
+
+test("push subscription validation accepts real browser key formats and rejects SSRF targets", async () => {
+  const { createECDH, randomBytes } = await import("node:crypto");
+  const { cleanSubscription } = await import("../lib/notifications.js");
+  const ecdh = createECDH("prime256v1");
+  const keys = {
+    p256dh: ecdh.generateKeys().toString("base64url"),
+    auth: randomBytes(16).toString("base64url"),
+  };
+  for (const endpoint of [
+    "https://fcm.googleapis.com/fcm/send/example",
+    "https://web.push.apple.com/example",
+    "https://updates.push.services.mozilla.com/wpush/v2/example",
+    "https://wns2-example.notify.windows.com/w/?token=example",
+  ])
+    assert.equal(cleanSubscription({ endpoint, keys }).endpoint, endpoint);
+  for (const endpoint of [
+    "https://127.0.0.1/",
+    "https://fcm.googleapis.com.evil.test/",
+    "https://fcm.googleapis.com:8443/",
+    "http://fcm.googleapis.com/",
+    "https://user@web.push.apple.com/",
+    "https://web.push.apple.com/#fragment",
+  ])
+    assert.throws(() => cleanSubscription({ endpoint, keys }));
+  assert.throws(() =>
+    cleanSubscription({
+      endpoint: "https://fcm.googleapis.com/",
+      keys: { ...keys, p256dh: "A".repeat(87) },
+    }),
+  );
+});
+test("admin password verification is salted, timing-safe, and rejects invalid or excessive input", async () => {
+  const { scryptSync } = await import("node:crypto");
+  const { verifyAdminPassword } = await import("../lib/security.js");
+  const salt = "ab".repeat(16),
+    password = "unit-test-private-passphrase";
+  const encoded = salt + ":" + scryptSync(password, salt, 64).toString("hex");
+  assert.equal(await verifyAdminPassword(password, encoded), true);
+  assert.equal(await verifyAdminPassword("a-wrong-passphrase", encoded), false);
+  assert.equal(await verifyAdminPassword(password, "malformed"), false);
+  assert.equal(await verifyAdminPassword("x".repeat(201), encoded), false);
+});
+test("server photo processing decodes actual JPEGs, bounds their dimensions, and strips metadata", async () => {
+  const { default: sharp } = await import("sharp");
+  const { sanitizeAvatar } = await import("../lib/avatar.js");
+  const jpeg = await sharp({
+    create: { width: 500, height: 350, channels: 3, background: "#afd8ff" },
+  })
+    .withMetadata({
+      exif: { IFD0: { Artist: "private location and camera metadata" } },
+    })
+    .jpeg()
+    .toBuffer();
+  const output = await sanitizeAvatar(
+    "data:image/jpeg;base64," + jpeg.toString("base64"),
+  );
+  const meta = await sharp(
+    Buffer.from(output.split(",")[1], "base64"),
+  ).metadata();
+  assert.equal(meta.width, 320);
+  assert.equal(meta.height, 320);
+  assert.equal(meta.exif, undefined);
+  const excessive = await sharp({
+    create: { width: 2000, height: 2000, channels: 3, background: "white" },
+  })
+    .jpeg()
+    .toBuffer();
+  await assert.rejects(
+    sanitizeAvatar("data:image/jpeg;base64," + excessive.toString("base64")),
+  );
+  const fake = Buffer.concat([
+    Buffer.from([255, 216, 255]),
+    Buffer.alloc(120),
+    Buffer.from([255, 217]),
+  ]);
+  await assert.rejects(
+    sanitizeAvatar("data:image/jpeg;base64," + fake.toString("base64")),
+  );
+});
+test("service worker displays a push with no app window open and only navigates to its own origin", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { runInNewContext } = await import("node:vm");
+  const handlers = {},
+    shown = [],
+    opened = [];
+  const origin = "https://jishoo.vercel.app";
+  runInNewContext(
+    readFileSync(new URL("../public/sw.js", import.meta.url), "utf8"),
+    {
+      self: {
+        addEventListener: (name, fn) => (handlers[name] = fn),
+        location: { origin },
+        registration: {
+          showNotification: async (title, options) =>
+            shown.push({ title, options }),
+        },
+      },
+      clients: {
+        matchAll: async () => [],
+        openWindow: async (url) => opened.push(url),
+      },
+      URL,
+    },
+  );
+  let pending;
+  handlers.push({
+    data: {
+      json: () => ({
+        title: "سارا جیش کرد!",
+        body: "یه خبر از رفیقت",
+        tag: "checkin:sara",
+        url: "/#/friends",
+      }),
+    },
+    waitUntil: (p) => (pending = p),
+  });
+  await pending;
+  assert.equal(shown[0].title, "سارا جیش کرد!");
+  assert.equal(shown[0].options.tag, "checkin:sara");
+  handlers.notificationclick({
+    notification: { close() {}, data: { url: "/#/friends" } },
+    waitUntil: (p) => (pending = p),
+  });
+  await pending;
+  assert.equal(opened[0], origin + "/#/friends");
+  handlers.notificationclick({
+    notification: { close() {}, data: { url: "https://evil.test" } },
+    waitUntil: () => assert.fail("Cross-origin notification link accepted"),
+  });
+});
+test("an admin password elevates only the registered, active owner account", async () => {
+  const { scryptSync } = await import("node:crypto");
+  const { authorizeAdminPassword } = await import("../lib/security.js");
+  const original = process.env.ADMIN_PASSWORD_HASH;
+  const salt = "cd".repeat(16),
+    password = "owner-unit-test-passphrase";
+  process.env.ADMIN_PASSWORD_HASH =
+    salt + ":" + scryptSync(password, salt, 64).toString("hex");
+  try {
+    const owner = {
+      role: "admin",
+      handle: "ali",
+      registered: true,
+      banned: false,
+    };
+    assert.equal(await authorizeAdminPassword(owner, password), true);
+    assert.equal(
+      await authorizeAdminPassword({ ...owner, role: "member" }, password),
+      false,
+    );
+    assert.equal(
+      await authorizeAdminPassword({ ...owner, handle: "sara" }, password),
+      false,
+    );
+    assert.equal(
+      await authorizeAdminPassword({ ...owner, banned: true }, password),
+      false,
+    );
+  } finally {
+    if (original === undefined) delete process.env.ADMIN_PASSWORD_HASH;
+    else process.env.ADMIN_PASSWORD_HASH = original;
+  }
+});

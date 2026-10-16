@@ -46,6 +46,8 @@ def verified_https(context):
             return
         headers = {k: v for k, v in request.all_headers().items()
                    if k not in ("host", "accept-encoding", "connection", "content-length")}
+        if os.environ.get("JISHOO_TEST_BYPASS_SECRET"):
+            headers["x-vercel-protection-bypass"] = os.environ["JISHOO_TEST_BYPASS_SECRET"]
         req = urllib.request.Request(request.url, data=request.post_data_buffer, headers=headers, method=request.method)
         try:
             response = urllib.request.urlopen(req, timeout=40)

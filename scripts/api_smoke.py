@@ -29,6 +29,8 @@ class Client:
 
     def call(self, action, body=None, expected=200):
         headers = {"Origin": BASE, "Accept": "application/json"}
+        if os.environ.get("JISHOO_TEST_BYPASS_SECRET"):
+            headers["x-vercel-protection-bypass"] = os.environ["JISHOO_TEST_BYPASS_SECRET"]
         payload = None
         if body is not None:
             headers["Content-Type"] = "application/json"

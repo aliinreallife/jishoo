@@ -43,6 +43,9 @@ if (!remote && !process.env.DATABASE_URL && process.env.VERCEL_TOKEN) {
       "INVITE_ONLY",
       "PUBLIC_APP_URL",
       "BOOTSTRAP_INVITE_CODE",
+      "VAPID_PUBLIC_KEY",
+      "VAPID_PRIVATE_KEY",
+      "ADMIN_PASSWORD_HASH",
     ])
       if (result.env[key]) process.env[key] = result.env[key];
     console.log(
@@ -79,6 +82,8 @@ const server = createServer(async (req, res) => {
       const headers = {};
       for (const key of ["cookie", "content-type", "accept"])
         if (req.headers[key]) headers[key] = req.headers[key];
+      if (process.env.JISHOO_API_BYPASS_SECRET)
+        headers["x-vercel-protection-bypass"] = process.env.JISHOO_API_BYPASS_SECRET;
       if (req.method === "POST") headers.origin = new URL(remote).origin;
       const response = await fetch(target, {
         method: req.method,

@@ -41,15 +41,28 @@ import {
 } from "@phosphor-icons/react";
 import { Avatar } from "./components/Character";
 import { Mascot, PairArt } from "./components/Mascot";
-import { prepareAvatar } from "./avatar-upload";
-import {
-  Admin,
-  Discover,
-  Achievements,
-  InvitationQuota,
-  Notifications,
-  PublicProfile,
-} from "./components/Community";
+import { syncPush, disablePush } from "./push";
+const PhotoEditor = lazy(() => import("./components/PhotoEditor"));
+import InvitationQuota from "./components/InvitationQuota";
+const communityView = (name) => {
+  const View = lazy(() =>
+    import("./components/Community").then((module) => ({
+      default: module[name],
+    })),
+  );
+  return function DeferredCommunity(props) {
+    return (
+      <Suspense fallback={<LoadingSection />}>
+        <View {...props} />
+      </Suspense>
+    );
+  };
+};
+const Admin = communityView("Admin"),
+  Discover = communityView("Discover"),
+  Achievements = communityView("Achievements"),
+  Notifications = communityView("Notifications"),
+  PublicProfile = communityView("PublicProfile");
 const Nearby = lazy(() => import("./components/Nearby"));
 const Stories = lazy(() => import("./components/Stories"));
 import { api, getInvite, fa, relativeTime, inviteUrl, copyText } from "./api";
@@ -271,7 +284,7 @@ function AuthWizard({ invitation, onComplete, notify }) {
     [name, setName] = useState(""),
     [code, setCode] = useState(invitation?.code || ""),
     [invite, setInvite] = useState(invitation),
-    [connect, setConnect] = useState(false),
+    [completed, setCompleted] = useState(null),
     [requiresInvite, setRequiresInvite] = useState(true),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -317,8 +330,13 @@ function AuthWizard({ invitation, onComplete, notify }) {
       });
       if (!mounted.current) return;
       if (result.registered) {
-        onComplete(result);
-        notify("خوش برگشتی!");
+        if (invite?.inviter && invite.inviter.id !== result.me.id) {
+          setCompleted(result);
+          setStage("connect");
+        } else {
+          onComplete(result);
+          notify("خوش برگشتی!");
+        }
       } else {
         setTicket(result.ticket);
         setRequiresInvite(result.inviteOnly);
@@ -348,13 +366,18 @@ function AuthWizard({ invitation, onComplete, notify }) {
         ticket,
         name,
         inviteCode: code,
-        connectInviter: connect,
+        connectInviter: false,
       });
       if (!mounted.current) return;
-      onComplete(result);
-      notify(
-        `خوش اومدی ${result.me.name}! ${fa(result.bonusDays)} روز پرمیوم هدیه گرفتی.`,
-      );
+      if (invite?.inviter) {
+        setCompleted(result);
+        setStage("connect");
+      } else {
+        onComplete(result);
+        notify(
+          `خوش اومدی ${result.me.name}! ${fa(result.bonusDays)} روز پرمیوم هدیه‌ات محفوظه.`,
+        );
+      }
     } catch (e) {
       if (mounted.current) setError(e.message);
     } finally {
@@ -473,6 +496,66 @@ function AuthWizard({ invitation, onComplete, notify }) {
             ویرایش شماره
           </button>
         </>
+      ) : stage === "connect" ? (
+        <div className="invite-connect-step">
+          <PairArt size={230} />
+          <span className="little-pill">قدم دوم · دوستی با اجازهٔ تو</span>
+          <h2>به {invite.inviter.name} وصل بشیم؟</h2>
+          <p>
+            {completed.bonusDays ? "حسابت ساخته شد!" : "خوش برگشتی!"} با
+            وصل‌شدن، خبرهای کوچولوی هم رو می‌بینین. لینک‌های اجتماعی‌ت فقط با
+            اجازهٔ جداگانه به اشتراک گذاشته می‌شن.
+          </p>
+          <Button
+            lilac
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const relation = completed.friends.find(
+                  (f) => f.id === invite.inviter.id,
+                );
+                if (relation?.status === "pending" && relation.incoming)
+                  await api("connection-respond", {
+                    id: relation.connectionId,
+                    accept: true,
+                  });
+                else if (relation?.status !== "accepted")
+                  await api("connection-request", {
+                    handle: invite.inviter.handle,
+                  });
+                const updated = await api("bootstrap");
+                onComplete(updated);
+                notify(
+                  updated.friends.some(
+                    (f) =>
+                      f.id === invite.inviter.id && f.status === "accepted",
+                  )
+                    ? "حالا به هم وصلید!"
+                    : "درخواست دوستیت فرستاده شد.",
+                );
+              } catch (e) {
+                setError(e.message);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            آره، به {invite.inviter.name} وصل بشم <Heart size={19} />
+          </Button>
+          <button
+            className="text-link"
+            disabled={busy}
+            onClick={() => onComplete(completed)}
+          >
+            فعلاً نه؛ بعداً از درخواست‌های دوستی
+          </button>
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+        </div>
       ) : (
         <>
           <div className="name-character-preview">
@@ -533,16 +616,6 @@ function AuthWizard({ invitation, onComplete, notify }) {
                 </p>
               </div>
             )}
-            {invite?.inviter && (
-              <label className="consent-label">
-                <input
-                  type="checkbox"
-                  checked={connect}
-                  onChange={(e) => setConnect(e.target.checked)}
-                />
-                با {invite.inviter.name} هم وصل بشم.
-              </label>
-            )}
             {error && (
               <p className="form-error" role="alert">
                 {error}
@@ -578,7 +651,8 @@ export default function App() {
     [entered, setEntered] = useState(
       () =>
         localStorage.getItem("jishoo:v2-entered") === "true" ||
-        location.pathname.startsWith("/u/"),
+        location.pathname.startsWith("/u/") ||
+        location.hash.startsWith("#/admin"),
     ),
     [screen, setScreen] = useState(readRoute),
     [storyKind, setStoryKind] = useState(readStoryKind),
@@ -600,7 +674,11 @@ export default function App() {
     [profileHandle, setProfileHandle] = useState(""),
     [publicPerson, setPublicPerson] = useState(null),
     [socials, setSocials] = useState({}),
-    [audience, setAudience] = useState("friends");
+    [audience, setAudience] = useState("friends"),
+    [photoFile, setPhotoFile] = useState(null),
+    [inviteLanding, setInviteLanding] = useState(() =>
+      Boolean(new URLSearchParams(location.search).get("invite")),
+    );
   const timer = useRef(),
     adminAccess = useRef(
       new URLSearchParams(location.search).get("adminAccess"),
@@ -680,6 +758,7 @@ export default function App() {
     api("claim-admin", { code })
       .then(async () => {
         await refresh();
+        setInviteLanding(false);
         navigate("admin");
         sessionStorage.removeItem("jishoo:invite");
         history.replaceState(null, "", location.pathname + "#/admin");
@@ -707,7 +786,7 @@ export default function App() {
     if (!entered) return;
     const interval = setInterval(() => {
       if (document.visibilityState === "visible" && !dialog) refresh();
-    }, 20000);
+    }, 60000);
     return () => clearInterval(interval);
   }, [entered, dialog, refresh]);
   useEffect(() => {
@@ -718,6 +797,9 @@ export default function App() {
       .then(setInvitation)
       .catch((error) => setInviteError(error.message));
   }, []);
+  useEffect(() => {
+    if (data?.me.registered) syncPush().catch(() => {});
+  }, [data?.me.id, data?.me.registered]);
   function navigate(next, id) {
     setScreen(next);
     if (next === "stories")
@@ -738,6 +820,7 @@ export default function App() {
     setData(result);
     setEntered(true);
     setDialog(null);
+    setInviteLanding(false);
     navigate(result.me.isAdmin ? "admin" : "home");
   }
   async function perform(action, body) {
@@ -808,7 +891,14 @@ export default function App() {
       notify("پروفایلت ذخیره شد.");
     }
   }
-  async function shareProfile() {
+  function shareProfile() {
+    if (!me.registered) {
+      openAuth();
+      return;
+    }
+    setDialog("profileShare");
+  }
+  async function nativeShareProfile() {
     if (!me.registered) {
       openAuth();
       return;
@@ -838,20 +928,21 @@ export default function App() {
     const value = await perform("notification-pref", { scope, id, enabled });
     if (value) await refresh();
   }
-  async function uploadAvatar(event) {
+  function uploadAvatar(event) {
     const file = event.target.files?.[0];
-    if (!file) return;
+    event.target.value = "";
+    if (file) setPhotoFile(file);
+  }
+  async function saveAvatar(image) {
     setBusy(true);
     try {
-      const image = await prepareAvatar(file);
-      const result = await api("avatar", { image });
-      setData(result);
+      setData(await api("avatar", { image }));
+      setPhotoFile(null);
       notify("عکس پروفایلت آماده‌ست!");
-    } catch (error) {
-      notify(error.message);
+    } catch (e) {
+      notify(e.message);
     } finally {
       setBusy(false);
-      event.target.value = "";
     }
   }
   async function requestFriend(e) {
@@ -905,6 +996,9 @@ export default function App() {
     }
   }
   async function logout() {
+    try {
+      await disablePush();
+    } catch {}
     const result = await perform("logout", {});
     if (result) {
       setEntered(false);
@@ -989,6 +1083,105 @@ export default function App() {
             <Brand small />
             <p>{loadError || "داریم جمعمون رو آماده می‌کنیم…"}</p>
             {loadError && <Button onClick={refresh}>دوباره امتحان کن</Button>}
+          </section>
+        ) : inviteLanding ? (
+          <section className="invite-landing">
+            <Brand small />
+            {invitation ? (
+              <>
+                <div className="inviter-spotlight">
+                  {invitation.inviter ? (
+                    <Avatar person={invitation.inviter} size={90} />
+                  ) : (
+                    <Mascot size={100} />
+                  )}
+                  <span>یه دعوت کوچولو از</span>
+                  <h1>{invitation.inviter?.name || "جیشو"}</h1>
+                  {invitation.inviter?.handle && (
+                    <small dir="ltr">@{invitation.inviter.handle}</small>
+                  )}
+                </div>
+                <h2>
+                  {invitation.inviter
+                    ? `${invitation.inviter.name} دوست داره اینجا باشی`
+                    : "به جمع جیشو خوش اومدی"}{" "}
+                  💛
+                </h2>
+                <PairArt size={225} />
+                <div className="invite-landing-features">
+                  <p>
+                    <Drop size={21} />
+                    جیش کردی، به دوستات خبر بده.
+                  </p>
+                  <p>
+                    <UsersThree size={21} />
+                    هم‌جیش پیدا کن و خاطرهٔ مشترک بساز.
+                  </p>
+                  <p>
+                    <ShareNetwork size={21} />
+                    لحظه‌های کوچیکت رو استوری کن.
+                  </p>
+                </div>
+                <p className="invite-landing-gift">
+                  ۷ روز پرمیوم هدیه؛ بعد از دورهٔ آزمایشی شروع می‌شه.
+                </p>
+                {invitation.remaining === 0 && !me.registered ? (
+                  <p className="form-error">
+                    این دعوت استفاده شده؛ از دوستت یه دعوت تازه بگیر.
+                  </p>
+                ) : (
+                  <Button
+                    lilac
+                    disabled={busy}
+                    onClick={async () => {
+                      setEntered(true);
+                      if (!me.registered) {
+                        openAuth();
+                        return;
+                      }
+                      if (
+                        invitation.inviter &&
+                        invitation.inviter.id !== me.id
+                      ) {
+                        const result = await perform("connection-request", {
+                          handle: invitation.inviter.handle,
+                        });
+                        if (!result) return;
+                        setData((current) => ({
+                          ...current,
+                          friends: result.friends,
+                        }));
+                      }
+                      setInviteLanding(false);
+                      navigate("friends");
+                    }}
+                  >
+                    {me.registered
+                      ? "درخواست دوستی و دیدن جمعمون"
+                      : "با این دعوت عضو بشم"}
+                    <Heart size={19} />
+                  </Button>
+                )}
+              </>
+            ) : inviteError ? (
+              <>
+                <Mascot size={160} />
+                <h1>این دعوت پیدا نشد</h1>
+                <p className="form-error">{inviteError}</p>
+              </>
+            ) : (
+              <LoadingSection />
+            )}
+            <button
+              className="guest-enter-link"
+              onClick={() => {
+                setInviteLanding(false);
+                setEntered(true);
+              }}
+            >
+              فعلاً یه سر به جیشو بزنم <CaretLeft size={16} />
+            </button>
+            <small>عضویت و وصل‌شدن دو قدم جداست؛ انتخاب با توئه.</small>
           </section>
         ) : !entered ? (
           <section className="guest-welcome">
@@ -1157,7 +1350,7 @@ export default function App() {
                     >
                       <Mascot size={132} mood="happy" animate />
                       <strong>جیش کردم</strong>
-                      <span>آخیش! ثبتش کن</span>
+                      <span>انجام شد! ثبتش کن</span>
                       <Sparkle
                         size={19}
                         weight="duotone"
@@ -1612,6 +1805,33 @@ export default function App() {
                         : "برای خودت یه شناسه انتخاب کن"
                       : "شخصیت مهمان؛ اسم لازم نیست"}
                   </p>
+                  {me.registered && me.handle && (
+                    <div className="profile-link-card">
+                      <span>این لینک، مال توئه</span>
+                      <strong dir="ltr">jishoo.vercel.app/u/{me.handle}</strong>
+                      <div>
+                        <button onClick={shareProfile}>
+                          <ShareNetwork size={17} />
+                          اشتراک پروفایل
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await copyText(
+                                `${data.publicUrl}/u/${me.handle}`,
+                              );
+                              notify("لینک پروفایلت کپی شد.");
+                            } catch (e) {
+                              notify(e.message);
+                            }
+                          }}
+                        >
+                          <Copy size={17} />
+                          کپی لینک
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   <div className="stats-row">
                     <span>
                       <strong>{fa(data.stats.week)}</strong>
@@ -1645,7 +1865,7 @@ export default function App() {
                         {me.lifetime
                           ? "یه هدیه‌ی همیشگی از جیشو، برای تو."
                           : data.testing
-                            ? "همه‌ی قابلیت‌ها مهمون مائن."
+                            ? "تا پایان دورهٔ آزمایشی، همهٔ قابلیت‌ها فعاله."
                             : me.trialUntil
                               ? `هدیه‌ی تو تا ${new Date(me.trialUntil).toLocaleDateString("fa-IR")}`
                               : "خبر و نقشه و استوری همیشه رایگانه."}
@@ -1655,14 +1875,16 @@ export default function App() {
                   </button>
                   {data.testing && !me.lifetime && me.trialDaysSaved > 0 && (
                     <div className="saved-premium-card">
-                      <CrownSimple size={23} weight="duotone" />
+                      <span className="saved-premium-number">
+                        {fa(me.trialDaysSaved)}
+                        <small>روز هدیه</small>
+                      </span>
                       <div>
-                        <strong>
-                          {fa(me.trialDaysSaved)} روز هدیه‌ات محفوظه
-                        </strong>
+                        <strong>هدیه‌ات امن و آماده‌ست 💛</strong>
                         <p>
-                          الان همه پرمیومن. روزهای هدیه‌ات بعد از پایان آزمایش
-                          شروع می‌شن.
+                          الان از پرمیوم رایگان لذت ببر. این{" "}
+                          {fa(me.trialDaysSaved)} روز بعد از پایان دورهٔ آزمایشی
+                          شروع می‌شه؛ امروز ازش کم نمی‌شه.
                         </p>
                       </div>
                     </div>
@@ -1702,7 +1924,7 @@ export default function App() {
                       <CaretLeft size={18} />
                     </button>
                   )}
-                  {me.isAdmin && (
+                  {(me.isAdmin || me.handle === "ali") && (
                     <button
                       className="profile-community-link admin-entry"
                       onClick={() => navigate("admin")}
@@ -1954,6 +2176,40 @@ export default function App() {
                 notify={notify}
               />
             )}
+            {dialog === "profileShare" && (
+              <div className="profile-share-dialog">
+                <Avatar person={me} size={95} />
+                <h2>یه لینک، برای پیدا کردن تو</h2>
+                <p>
+                  این لینک، پروفایل عمومیه؛ شماره و لینک‌های خصوصی‌ت توش نیست.
+                </p>
+                <input
+                  aria-label="لینک پروفایل من"
+                  dir="ltr"
+                  readOnly
+                  value={`${data.publicUrl}/u/${me.handle}`}
+                  onFocus={(e) => e.target.select()}
+                />
+                <Button lilac onClick={nativeShareProfile}>
+                  <ShareNetwork size={19} />
+                  اشتراک پروفایلم
+                </Button>
+                <Button
+                  secondary
+                  onClick={async () => {
+                    try {
+                      await copyText(`${data.publicUrl}/u/${me.handle}`);
+                      notify("لینک پروفایلت کپی شد.");
+                    } catch (e) {
+                      notify(e.message);
+                    }
+                  }}
+                >
+                  <Copy size={18} />
+                  کپی لینک پروفایل
+                </Button>
+              </div>
+            )}
             {dialog === "need" && (
               <>
                 <div className="reaction-kicker">
@@ -2011,7 +2267,7 @@ export default function App() {
                     className="success-sparkle s-two"
                   />
                 </div>
-                <h1>آخیش… نجات پیدا کردم!</h1>
+                <h1>جیش کردم، سبک شدم!</h1>
                 <p className="success-subtitle">این حسِ سبک‌شدن باید ثبت شه.</p>
                 <p className="success-time">همین الان · توی جیشو ثبت شد</p>
                 <div className="today-card">
@@ -2032,7 +2288,7 @@ export default function App() {
                       openStory("checkin");
                     }}
                   >
-                    این آخیش رو استوری کن
+                    این لحظه رو استوری کن
                     <ShareNetwork size={19} />
                   </Button>
                   <Button secondary onClick={() => setDialog(null)}>
@@ -2308,6 +2564,17 @@ export default function App() {
                   نمی‌شه.
                 </p>
                 <form onSubmit={saveProfile}>
+                  {photoFile && (
+                    <Suspense fallback={<LoadingSection />}>
+                      <PhotoEditor
+                        file={photoFile}
+                        busy={busy}
+                        onSave={saveAvatar}
+                        onCancel={() => setPhotoFile(null)}
+                        notify={notify}
+                      />
+                    </Suspense>
+                  )}
                   <div className="avatar-upload-row">
                     <Avatar person={me} size={68} />
                     <div>
