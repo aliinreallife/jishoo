@@ -10,9 +10,9 @@ export const headlines = {
   "back-to-back": "اول اون، بعد من.\nچه تیمی شدیم!",
   invite: "بیا تو جمعمون.\nاینجا لحظه‌های ساده مهمن.",
 };
-// User-preferred edge allowance, not measured Instagram UI. Reclaim the larger
-// former margins for space between sections, keeping every existing element.
-export const STORY_SAFE_AREA = Object.freeze({ top: 160, bottom: 160, side: 80 });
+// Within the ordinary-Story ranges supplied from Hootsuite by the user.
+// Keep both edges reserved; spread existing content through the recovered space.
+export const STORY_SAFE_AREA = Object.freeze({ top: 150, bottom: 200, side: 80 });
 const assets = `${import.meta.env.BASE_URL}assets/`;
 const images = new Map();
 let fonts;
@@ -100,7 +100,7 @@ export async function renderStoryImage({ kind, format, theme, caption, data, mom
   text(ctx, "جیشو", 985, square ? 83 : safeTop + 60, square ? 50 : 65, "#8c79a4", 400, "right", "JishooStoryWordmark");
   const me = data.me, count = kind === "weekly" ? data.stats.week : data.stats.today;
   if (kind === "weekly") {
-    ctx.save(); ctx.translate(540, square ? 555 : 975); ctx.rotate(-.055);
+    ctx.save(); ctx.translate(540, square ? 555 : 955); ctx.rotate(-.055);
     const w = 880, h = square ? 800 : 1320;
     ctx.shadowColor = "#70608122"; ctx.shadowBlur = 40; ctx.shadowOffsetY = 18;
     rounded(ctx, -w / 2, -h / 2, w, h, 58, "#fff9e7"); ctx.shadowColor = "transparent";

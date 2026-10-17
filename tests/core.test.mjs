@@ -367,6 +367,35 @@ test("favicon has a transparent outer canvas and keeps visible mascot pixels", a
   assert.ok(data.some((value, i) => i % 4 === 3 && value > 0));
 });
 
+test("browser, Apple and install icons share the yellow character with suitable transparency and mask safety", async () => {
+  const { default: sharp } = await import("sharp");
+  for (const [name,size,transparent] of [
+    ["favicon-v2-32.png",32,true],["favicon-v2-64.png",64,true],
+    ["apple-touch-icon-v2.png",180,false],["app-icon-v2-192.png",192,false],
+    ["app-icon-v2-512.png",512,false],["app-icon-v2-maskable-512.png",512,false],
+  ]) {
+    const {data,info}=await sharp("public/assets/"+name).ensureAlpha().raw().toBuffer({resolveWithObject:true});
+    assert.equal(info.width,size,name); assert.equal(info.height,size,name);
+    assert.equal(data[3],transparent?0:255,name);
+    let yellow=0,blue=0;
+    for(let i=0;i<data.length;i+=4) {
+      const [r,g,b,a]=data.subarray(i,i+4);
+      if(a>100 && r>180 && g>150 && b<Math.min(r,g)-25)yellow++;
+      if(a>100 && b>r+20 && g>r+10 && b>130)blue++;
+      if(name.includes("maskable") && Math.max(Math.abs(r-255),Math.abs(g-249),Math.abs(b-230))>8) {
+        const n=i/4,x=n%size+.5-size/2,y=Math.floor(n/size)+.5-size/2;
+        assert.ok(Math.hypot(x,y)<=size*.4,"Maskable artwork extends beyond Android's safe circle");
+      }
+    }
+    assert.ok(yellow>size*size*.08,name+" lost its yellow droplet");
+    assert.ok(blue<size*size*.025,name+" still contains a blue character");
+  }
+  const {data}=await sharp("public/assets/notification-badge-v2.png").ensureAlpha().raw().toBuffer({resolveWithObject:true});
+  assert.equal(data[3],0);
+  assert.ok(data.some((v,i)=>i%4===3 && v>0));
+  for(let i=0;i<data.length;i+=4)if(data[i+3])assert.deepEqual([...data.subarray(i,i+3)],[255,255,255]);
+});
+
 test("Google identity verification rejects wrong audience, nonce, issuer, expiry and unverified email", async () => {
   const { generateKeyPair, exportJWK, SignJWT, createLocalJWKSet } =
     await import("jose");

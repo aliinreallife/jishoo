@@ -12,9 +12,8 @@ const xml = (value) =>
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "\\'");
-const icon = manifest.icons.find(
-  (icon) => icon.sizes === "512x512" && icon.type === "image/png",
-);
+const icon = manifest.icons.find(icon => icon.sizes === "512x512" && icon.type === "image/png" && icon.purpose?.split(" ").includes("maskable"))
+  || manifest.icons.find(icon => icon.sizes === "512x512" && icon.type === "image/png");
 if (!icon || !icon.src.startsWith("/assets/") || icon.src.includes(".."))
   throw Error("A local public 512px PNG icon is required.");
 await copyFile(

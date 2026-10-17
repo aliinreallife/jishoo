@@ -1,4 +1,4 @@
-const CACHE = "jishoo-public-v1";
+const CACHE = "jishoo-public-v2";
 self.addEventListener("install", (event) =>
   event.waitUntil(
     caches
@@ -6,8 +6,13 @@ self.addEventListener("install", (event) =>
       .then((cache) =>
         cache.addAll([
           "/offline.html",
-          "/assets/app-icon-192.png",
-          "/assets/app-icon-512.png",
+          "/assets/favicon-v2-32.png",
+          "/assets/favicon-v2-64.png",
+          "/assets/apple-touch-icon-v2.png",
+          "/assets/app-icon-v2-192.png",
+          "/assets/app-icon-v2-512.png",
+          "/assets/app-icon-v2-maskable-512.png",
+          "/assets/notification-badge-v2.png",
         ]),
       )
       .then(() => self.skipWaiting()),
@@ -71,8 +76,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title, {
       body: payload.body,
-      icon: "/assets/app-icon-192.png",
-      badge: "/assets/app-icon-192.png",
+      icon: "/assets/app-icon-v2-192.png",
+      badge: "/assets/notification-badge-v2.png",
       tag: payload.tag || "jishoo-update",
       data: { url: payload.url },
       renotify: false,

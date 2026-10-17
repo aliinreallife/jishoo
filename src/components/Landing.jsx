@@ -6,7 +6,7 @@ export default function Landing() {
   return <div className="landing-page" dir="rtl">
     <a className="landing-skip" href="#landing-main">رفتن به محتوای اصلی</a>
     <header className="landing-header">
-      <a href="/" className="landing-brand"><img src="/assets/favicon-transparent.png" width="40" height="40" alt="" />جیشو</a>
+      <a href="/" className="landing-brand"><img src="/assets/favicon-v2-64.png" width="40" height="40" alt="" />جیشو</a>
       <nav aria-label="معرفی جیشو"><a href="#how">چطوریه؟</a><a href="/changelog">تازه‌ها</a><a className="landing-login" href="/?login=1#/home">ورود با گوگل</a></nav>
     </header>
     <main id="landing-main">
