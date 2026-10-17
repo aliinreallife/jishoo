@@ -21,18 +21,30 @@ def main():
    a.mouse.wheel(0,1200);a.wait_for_function('scrollY>20');a.get_by_role('button',name='با این دعوت عضو بشم',exact=True).scroll_into_view_if_needed();capture(a,'current-invite-fullscreen-320.png')
    a.get_by_role('button',name='با این دعوت عضو بشم',exact=True).click();expect(a.get_by_role('button',name='ادامه با Google',exact=True)).to_be_visible();capture(a,'current-google-banner.png');a.keyboard.press('Escape')
    a.get_by_role('button',name='فعلاً یه سر به جیشو بزنم',exact=False).click()
-   for selector,close in [('.done-card','چه حس خوبی!'),('.need-card','باشه، الان برمی‌گردم')]:
-    a.locator(selector).click();expect(a.locator('.undo-inline')).to_be_visible();assert a.get_by_role('dialog').get_by_role('button',name='بستن',exact=True).count()==0
-    undo=a.locator('.undo-inline').bounding_box();button=a.get_by_role('button',name=close,exact=True).bounding_box();assert undo['y']+undo['height']<=button['y']
-    a.get_by_role('button',name='لغو ثبت',exact=True).click();expect(a.get_by_role('dialog')).to_have_count(0)
+   sent=[];a.on('request',lambda r:sent.append(r.url) if '/api/app?action=checkin' in r.url else None)
+   for width,height in [(320,568),(393,852),(1440,900),(812,375)]:
+    a.set_viewport_size({'width':width,'height':height});positions=[]
+    for selector,close in [('.done-card','چه حس خوبی!'),('.need-card','باشه، الان برمی‌گردم')]:
+     a.locator(selector).click();expect(a.locator('.undo-inline')).to_be_visible();assert a.get_by_role('dialog').get_by_role('button',name='بستن',exact=True).count()==0
+     dialog=a.get_by_role('dialog').bounding_box();assert abs(dialog['x'])<1 and abs(dialog['y'])<1 and abs(dialog['width']-width)<1 and abs(dialog['height']-height)<1
+     undo=a.locator('.undo-inline').bounding_box();button=a.get_by_role('button',name=close,exact=True).bounding_box();assert undo['y']+undo['height']<=button['y'] and button['y']+button['height']<=height;positions.append((undo['y'],button['y']))
+     assert a.evaluate('document.body.style.overflow')=='hidden'
+     a.get_by_role('button',name='لغو ثبت',exact=True).click();expect(a.get_by_role('dialog')).to_have_count(0);assert a.evaluate('document.body.style.overflow')!='hidden'
+    assert positions[0]==positions[1],(width,height,positions)
+   assert not sent and api(a,'bootstrap')['stats']['total']==0
    a.set_viewport_size({'width':393,'height':852});a.locator('.done-card').click();capture(a,'current-reaction-undo.png');a.get_by_role('button',name='لغو ثبت',exact=True).click()
-   print('PASS: Full-screen invitation scrolls on a 320px short phone; Google banner visible; reaction close icons removed and undo never overlaps the primary action',flush=True)
+   print('PASS: Invitation scrolls on a short phone; both check-ins fill the viewport at four sizes with identical undo/action positions and no API writes after undo',flush=True)
    for route,title in [('terms','شرایط استفاده'),('privacy','حریم خصوصی')]:
     a.goto(BASE+'/'+route);expect(a.get_by_role('heading',name=title,exact=True)).to_be_visible(timeout=15000);assert a.get_by_role('link',name='پشتیبانی',exact=True).get_attribute('href')=='/support'
    a.goto(BASE+'/support');expect(a.get_by_role('heading',name='اینجاییم که بشنویم')).to_be_visible(timeout=15000)
    a.get_by_label('پیامت',exact=True).fill('Owned browser support check '+secrets.token_hex(8));a.get_by_label('راه تماس برای پاسخ (اختیاری)',exact=True).fill('qa@example.invalid');a.get_by_role('button',name='فرستادن پیام',exact=True).click();expect(a.get_by_role('heading',name='پیامت رسید 💛')).to_be_visible(timeout=20000);reference=a.locator('.support-sent span').inner_text();capture(a,'current-public-support.png')
-   admin=Client();admin.bootstrap();_,ticket=admin.new_ticket();admin.call('register',{'ticket':ticket,'name':'آزمایش مدیریت رابط','inviteCode':create_invite('qa-admin')['code']});support_id=next(r['id'] for r in admin.call('admin-support')['requests'] if r['id'].startswith(reference));admin.call('admin-support-delete',{'id':support_id});support_id=None
-   print('PASS: Public legal links reach a usable private support form, and submitted messages reach management',flush=True)
+   assert a.evaluate("async()=>{const r=await fetch('/api/app?action=admin-support');return r.status}")==403
+   admin=Client();admin.bootstrap();_,ticket=admin.new_ticket();admin.call('register',{'ticket':ticket,'name':'آزمایش مدیریت رابط','inviteCode':create_invite('qa-admin')['code']});support_id=next(r['id'] for r in admin.call('admin-support')['requests'] if r['id'].startswith(reference))
+   adminCtx,adminPage=context(b);token=next(c.value for c in admin.cookies if c.name=='jishoo_session');adminCtx.add_cookies([{'name':'jishoo_session','value':token,'url':BASE,'httpOnly':True,'sameSite':'Lax'}]);adminPage.goto(BASE+'/#/admin')
+   ticketCard=adminPage.locator('.admin-support article').filter(has_text=reference);expect(ticketCard).to_be_attached(timeout=20000);ticketCard.scroll_into_view_if_needed();expect(ticketCard).to_be_visible()
+   ticketCard.get_by_role('button',name='رسیدگی شد',exact=True).click();expect(ticketCard).to_have_class('resolved',timeout=15000);ticketCard.get_by_role('button',name='بازکردن دوباره',exact=True).click();expect(ticketCard).not_to_have_class('resolved',timeout=15000)
+   admin.call('admin-support-delete',{'id':support_id});support_id=None
+   print('PASS: Legal links reach support; messages reach the private admin inbox; resolve/reopen work and regular users are denied access',flush=True)
    a.goto(BASE+'/install');expect(a.get_by_role('heading',name='نصب در Chrome اندروید')).to_be_visible(timeout=15000);capture(a,'current-android-install.png')
    ios=b.new_context(viewport={'width':393,'height':852},user_agent='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1');verified_https(ios);ip=ios.new_page();ip.goto(BASE+'/install');expect(ip.get_by_role('heading',name='نصب روی آیفون و آیپد')).to_be_visible(timeout=15000);expect(ip.get_by_text('Add to Home Screen',exact=True)).to_be_visible();capture(ip,'current-ios-install.png')
    if BASE.startswith('http://'):

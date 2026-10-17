@@ -373,3 +373,185 @@ button.preference-action:focus-visible,
   text-align: center;
   flex-shrink: 0;
 }
+
+/* Both check-ins use the viewport and keep their actions in the same place. */
+.overlay-backdrop.viewport-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  height: 100dvh;
+  padding: 0;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+.success-dialog.checkin-dialog {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  padding: max(18px, env(safe-area-inset-top)) 24px
+    max(20px, env(safe-area-inset-bottom));
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 35%, #fff0b8, #fff9e7 68%);
+}
+.checkin-dialog .reaction-toolbar {
+  width: min(100%, 460px);
+  min-height: 44px;
+  flex-shrink: 0;
+  margin: 0 auto;
+}
+.checkin-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: safe center;
+  gap: 10px;
+  width: min(100%, 460px);
+  flex: 1;
+  min-height: 0;
+  padding: 16px 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  text-align: center;
+}
+.checkin-content > * {
+  flex-shrink: 0;
+}
+.checkin-art {
+  width: clamp(130px, 27dvh, 250px);
+  height: clamp(130px, 27dvh, 250px);
+  display: grid;
+  place-items: center;
+}
+.checkin-art > .mascot-character {
+  width: 100% !important;
+  height: 100% !important;
+}
+.checkin-content h1 {
+  font-family: Vazirmatn, sans-serif;
+  font-size: clamp(27px, 4dvh, 36px);
+  line-height: 1.65;
+  font-weight: 900;
+}
+.checkin-content .success-subtitle {
+  margin: 0;
+  color: #84734e;
+  font-size: 13px;
+  line-height: 1.9;
+}
+.checkin-content .today-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: min(100%, 300px);
+  flex: none;
+  min-height: 64px;
+  max-height: none;
+  padding: 10px 18px;
+  margin-top: 6px;
+  border-width: 1px;
+  border-radius: 21px;
+}
+.checkin-content .today-card > p {
+  color: #81735f;
+  font-size: 12px;
+}
+.checkin-content .today-card > strong {
+  font-size: 26px;
+  margin: 0;
+}
+.checkin-footer {
+  width: min(100%, 460px);
+  margin-inline: auto;
+  flex-shrink: 0;
+  padding-top: 10px;
+}
+.checkin-status-slot {
+  display: grid;
+  align-items: center;
+  min-height: 80px;
+  margin-bottom: 12px;
+}
+.checkin-footer .undo-inline {
+  min-height: 80px;
+  margin: 0;
+  padding: 12px;
+  gap: 10px;
+}
+.undo-checkin .undo-countdown {
+  display: grid;
+  place-items: center;
+  width: 33px;
+  height: 33px;
+  flex-shrink: 0;
+  border: 1px solid #ffffff4a;
+  border-radius: 50%;
+  color: #fff1af;
+  font-size: 17px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.undo-checkin button {
+  justify-content: center;
+  min-width: 89px;
+  padding: 0 9px;
+  border: 1px solid #ffffff35;
+  border-radius: 12px;
+  background: #ffffff0d;
+  flex-shrink: 0;
+}
+.undo-checkin button:focus-visible {
+  outline: 2px solid #ffe18c;
+  outline-offset: 3px;
+}
+.checkin-save-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #7c735f;
+  font-size: 12px;
+  line-height: 1.9;
+}
+.checkin-save-status > svg {
+  color: #8c9866;
+  flex-shrink: 0;
+}
+.checkin-footer .success-buttons {
+  margin: 0;
+  padding: 0;
+}
+.checkin-footer .button {
+  min-height: 52px;
+  border-radius: 19px;
+}
+@media (max-width: 360px) {
+  .success-dialog.checkin-dialog {
+    padding-inline: 16px;
+  }
+  .checkin-footer .undo-inline {
+    gap: 8px;
+    padding-inline: 10px;
+  }
+  .checkin-dialog .reaction-toolbar > span {
+    font-size: 11px;
+  }
+}
+@media (max-height: 600px) {
+  .checkin-content {
+    gap: 7px;
+    padding-block: 8px;
+  }
+  .checkin-art {
+    width: 130px;
+    height: 130px;
+  }
+  .checkin-content h1 {
+    font-size: 25px;
+  }
+  .checkin-content .today-card {
+    min-height: 49px;
+    padding-block: 5px;
+  }
+}

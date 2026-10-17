@@ -1,0 +1,172 @@
+.shared-memories {
+  margin-top: 28px;
+}
+.memories-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+.memories-heading h2 {
+  font-size: 17px;
+  line-height: 1.8;
+}
+.memories-heading p {
+  margin-top: 3px;
+  color: #81786f;
+  font-size: 11px;
+  line-height: 1.9;
+}
+.memories-count {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 7px 9px;
+  border-radius: 20px;
+  background: #f0e9fb;
+  color: #746296;
+  font-size: 11px;
+}
+.memory-cards {
+  display: grid;
+  gap: 12px;
+}
+.memory-card {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr) 27px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 122px;
+  padding: 13px 12px;
+  border: 1px solid #e6e2f0;
+  border-radius: 23px;
+  background: linear-gradient(125deg, #f7f1ff, #fffaf0 80%);
+  text-align: right;
+  color: #303244;
+  box-shadow: 0 3px 0 #ebe6f133;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.memory-together {
+  border-color: #eee3bb;
+  background: linear-gradient(125deg, #fff1bb, #fffaf0 80%);
+}
+.memory-illustration {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  height: 92px;
+  border-radius: 20px;
+  background: #ffffff85;
+}
+.memory-illustration .pair-art {
+  flex-shrink: 0;
+}
+.memory-details {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.memory-details > strong {
+  font-size: 15px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.memory-kind {
+  color: #7f7059;
+  font-size: 10px;
+}
+.memory-person {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #82796e;
+  font-size: 10px;
+}
+.memory-open {
+  display: grid;
+  place-items: center;
+  height: 29px;
+  width: 27px;
+  border-radius: 50%;
+  color: #796798;
+  background: #ffffffc4;
+}
+.memory-card:hover {
+  border-color: #b8a6d0;
+  transform: translateY(-2px);
+}
+.memory-card:active {
+  transform: translateY(1px);
+}
+.memory-card:focus-visible,
+.memories-empty button:focus-visible {
+  outline: 3px solid #a498cd;
+  outline-offset: 3px;
+}
+.memories-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 22px 21px;
+  border: 1px solid #eee2c4;
+  border-radius: 25px;
+  background: radial-gradient(ellipse at 50% 10%, #fff0b8, #fffaf0 70%);
+  text-align: center;
+}
+.memories-empty > .pair-art {
+  max-width: 100%;
+}
+.memories-empty h3 {
+  font-size: 16px;
+  margin-top: 4px;
+}
+.memories-empty p {
+  max-width: 290px;
+  margin-top: 9px;
+  color: #807564;
+  font-size: 12px;
+  line-height: 2;
+}
+.memories-empty button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 15px;
+  margin-top: 17px;
+  border: 1px solid #e1d7ed;
+  border-radius: 16px;
+  background: #f2eafa;
+  color: #665782;
+  font-size: 12px;
+  font-weight: 700;
+}
+@media (max-width: 360px) {
+  .memory-card {
+    grid-template-columns: 66px minmax(0, 1fr) 22px;
+    gap: 8px;
+  }
+  .memory-illustration .pair-art {
+    width: 83px !important;
+    height: 63px !important;
+  }
+  .memories-heading {
+    gap: 6px;
+  }
+  .memories-heading h2 {
+    font-size: 15px;
+  }
+  .memories-count {
+    padding-inline: 7px;
+    font-size: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .memory-card {
+    transition: none;
+  }
+}

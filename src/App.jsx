@@ -6,6 +6,7 @@ import React, {
   lazy,
   Suspense,
 } from "react";
+import { createPortal } from "react-dom";
 import {
   House,
   UsersThree,
@@ -60,6 +61,7 @@ const Legal = lazy(() => import("./components/Legal"));
 const GroupJoin = lazy(() => import("./components/GroupJoin"));
 const PhotoEditor = lazy(() => import("./components/PhotoEditor"));
 import InvitationQuota from "./components/InvitationQuota";
+import SharedMemories from "./components/SharedMemories";
 const communityView = (name) => {
   const View = lazy(() =>
     import("./components/Community").then((module) => ({
@@ -168,8 +170,22 @@ function Header({ title, subtitle, back, action }) {
     </header>
   );
 }
-function Modal({ children, onClose, className = "", hideClose = false }) {
+function Modal({
+  children,
+  onClose,
+  className = "",
+  hideClose = false,
+  fullscreen = false,
+}) {
   const dialog = useRef();
+  useEffect(() => {
+    if (!fullscreen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [fullscreen]);
   useEffect(() => {
     const previous = document.activeElement;
     dialog.current
@@ -184,9 +200,9 @@ function Modal({ children, onClose, className = "", hideClose = false }) {
       previous?.focus();
     };
   }, []);
-  return (
+  const content = (
     <div
-      className={`overlay-backdrop ${className.includes("full") ? "full-overlay" : ""}`}
+      className={`overlay-backdrop ${className.includes("full") ? "full-overlay" : ""} ${fullscreen ? "viewport-overlay" : ""}`}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -226,6 +242,28 @@ function Modal({ children, onClose, className = "", hideClose = false }) {
         )}
         {children}
       </section>
+    </div>
+  );
+  return fullscreen ? createPortal(content, document.body) : content;
+}
+function CheckinUndo({ pending, onUndo, inline = false }) {
+  return (
+    <div
+      className={`undo-checkin ${inline ? "undo-inline" : ""}`}
+      role="status"
+      aria-live="polite"
+    >
+      <span className="undo-countdown" aria-hidden="true">
+        {fa(pending.seconds)}
+      </span>
+      <div>
+        <strong>{pending.status === "done" ? "جیش کردم" : "جیش دارم"}</strong>
+        <span>ثبت تا {fa(pending.seconds)} ثانیهٔ دیگه</span>
+      </div>
+      <button onClick={onUndo}>
+        <ArrowCounterClockwise size={18} />
+        لغو ثبت
+      </button>
     </div>
   );
 }
@@ -1988,35 +2026,16 @@ export default function App() {
                       </Button>
                     </div>
                   )}
-                  <div className="section-heading shared-heading">
-                    <h2>خاطره‌های مشترک</h2>
-                    <Heart size={18} weight="duotone" />
-                  </div>
-                  {data.moments.length ? (
-                    <div className="shared-list">
-                      {data.moments.slice(0, 5).map((item) => (
-                        <button
-                          key={item.id}
-                          onClick={() => {
-                            setMoment(item);
-                            setDialog("moment");
-                          }}
-                        >
-                          <Avatar person={item.friend} size={36} mood="love" />
-                          <strong>{item.friend.name}</strong>
-                          <span>
-                            {item.kind === "together" ? "با هم" : "پشت سر هم"}
-                          </span>
-                          <CaretLeft size={17} />
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="no-moments">
-                      وقتی تو و یه دوست وصل‌شده نزدیک به هم خبر بدین، خاطره‌ی
-                      مشترکتون اینجا میاد.
-                    </p>
-                  )}
+                  <SharedMemories
+                    moments={data.moments}
+                    onOpen={(item) => {
+                      setMoment(item);
+                      setDialog("moment");
+                    }}
+                    onFindFriends={() =>
+                      me.registered ? navigate("friends") : openAuth()
+                    }
+                  />
                 </section>
               )}
               {screen === "stats" && (
@@ -2140,11 +2159,14 @@ export default function App() {
         {dialog && !["story", "momentStory"].includes(dialog) && (
           <Modal
             hideClose={["success", "need"].includes(dialog)}
+            fullscreen={["success", "need"].includes(dialog)}
             onClose={() => setDialog(null)}
             className={
-              ["success", "need", "moment"].includes(dialog)
-                ? "success-dialog full"
-                : ""
+              ["success", "need"].includes(dialog)
+                ? "success-dialog checkin-dialog full"
+                : dialog === "moment"
+                  ? "success-dialog full"
+                  : ""
             }
           >
             {dialog === "auth" && (
@@ -2209,81 +2231,69 @@ export default function App() {
                     }
                   />
                 </div>
-                <div
-                  className={
-                    dialog === "need"
-                      ? "need-reaction-art"
-                      : "success-art personal-success"
-                  }
-                >
-                  <Mascot
-                    size={250}
-                    mood={dialog === "need" ? "shy" : "happy"}
-                    animate
-                  />
-                </div>
-                <h1>
-                  {dialog === "need" ? (
-                    <>
-                      جیش دارم.
-                      <br />
-                      الان برمی‌گردم!
-                    </>
-                  ) : (
-                    <>
-                      جیش کردم.
-                      <br />
-                      سبک شدم!
-                    </>
-                  )}
-                </h1>
-                <p className="success-subtitle">
-                  {audience === "private" || !me.registered
-                    ? "این خبر برای خودت می‌مونه."
-                    : pendingCheckin
-                      ? "بعد از ثبت، دوستات باخبر می‌شن."
-                      : "دوستات ازت باخبر می‌شن."}
-                </p>
-                {dialog === "success" && (
-                  <div className="today-card">
-                    <p>جیش کردم‌های امروز</p>
-                    <strong>
-                      {fa(
-                        data.stats.today +
-                          (pendingCheckin?.status === "done" ? 1 : 0),
-                      )}
-                      <Drop size={27} weight="duotone" />
-                    </strong>
+                <div className="checkin-content">
+                  <div className="checkin-art">
+                    <Mascot
+                      size={250}
+                      mood={dialog === "need" ? "shy" : "happy"}
+                      animate
+                    />
                   </div>
-                )}
-                {pendingCheckin && !pendingCheckin.saving && (
-                  <div
-                    className="undo-checkin undo-inline"
-                    role="status"
-                    aria-live="polite"
-                  >
-                    <Drop size={22} />
-                    <div>
+                  <h1>
+                    {dialog === "need" ? (
+                      <>
+                        جیش دارم.
+                        <br />
+                        الان برمی‌گردم!
+                      </>
+                    ) : (
+                      <>
+                        جیش کردم.
+                        <br />
+                        سبک شدم!
+                      </>
+                    )}
+                  </h1>
+                  <p className="success-subtitle">
+                    {audience === "private" || !me.registered
+                      ? "این خبر برای خودت می‌مونه."
+                      : pendingCheckin
+                        ? "بعد از ثبت، دوستات باخبر می‌شن."
+                        : "دوستات ازت باخبر می‌شن."}
+                  </p>
+                  {dialog === "success" && (
+                    <div className="today-card">
+                      <p>جیش کردم‌های امروز</p>
                       <strong>
-                        {pendingCheckin.status === "done"
-                          ? "جیش کردم"
-                          : "جیش دارم"}
+                        {fa(
+                          data.stats.today +
+                            (pendingCheckin?.status === "done" ? 1 : 0),
+                        )}
+                        <Drop size={27} weight="duotone" />
                       </strong>
-                      <span>
-                        ثبت تا {fa(pendingCheckin.seconds)} ثانیهٔ دیگه
-                      </span>
                     </div>
-                    <button onClick={undoCheckin}>
-                      <ArrowCounterClockwise size={18} />
-                      لغو ثبت
-                    </button>
+                  )}
+                </div>
+                <div className="checkin-footer">
+                  <div className="checkin-status-slot">
+                    {pendingCheckin && !pendingCheckin.saving ? (
+                      <CheckinUndo
+                        pending={pendingCheckin}
+                        onUndo={undoCheckin}
+                        inline
+                      />
+                    ) : (
+                      <p className="checkin-save-status" role="status">
+                        {busy ? <Drop size={18} /> : <Check size={18} />}
+                        {busy ? "داریم خبرت رو ثبت می‌کنیم…" : "خبرت ثبت شد."}
+                      </p>
+                    )}
                   </div>
-                )}
-
-                <div className="success-buttons">
-                  <Button lilac onClick={() => setDialog(null)}>
-                    {dialog === "need" ? "باشه، الان برمی‌گردم" : "چه حس خوبی!"}
-                  </Button>
+                  <div className="success-buttons">
+                    <Button lilac onClick={() => setDialog(null)}>
+                      {dialog === "need" ? "باشه، الان برمی‌گردم" : "چه حس خوبی!"}
+                    </Button>
+                  </div>
                 </div>
               </>
             )}
@@ -2963,19 +2973,7 @@ export default function App() {
         {pendingCheckin &&
           !pendingCheckin.saving &&
           !["need", "success"].includes(dialog) && (
-            <div className="undo-checkin" role="status" aria-live="polite">
-              <Drop size={22} />
-              <div>
-                <strong>
-                  {pendingCheckin.status === "done" ? "جیش کردم" : "جیش دارم"}
-                </strong>
-                <span>ثبت تا {fa(pendingCheckin.seconds)} ثانیهٔ دیگه</span>
-              </div>
-              <button onClick={undoCheckin}>
-                <ArrowCounterClockwise size={18} />
-                لغو ثبت
-              </button>
-            </div>
+            <CheckinUndo pending={pendingCheckin} onUndo={undoCheckin} />
           )}
         <div
           className={`toast ${notice ? "visible" : ""}`}
