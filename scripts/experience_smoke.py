@@ -39,7 +39,9 @@ def main():
    share.click();expect(a.locator('.full-story-overlay')).to_be_visible(timeout=20000)
    for width,height in [(320,568),(393,852),(1440,900)]:
     a.set_viewport_size({'width':width,'height':height});bounds=a.locator('.full-story-overlay').bounding_box();assert abs(bounds['x'])<1 and abs(bounds['y'])<1 and bounds['width']==width and bounds['height']==height
-    a.get_by_role('button',name='اشتراک تصویر',exact=True).scroll_into_view_if_needed();expect(a.get_by_role('button',name='اشتراک تصویر',exact=True)).to_be_visible();capture(a,f'current-story-fullscreen-{width}.png')
+    for label in ['اشتراک تصویر','ذخیره PNG']:
+     action=a.get_by_role('button',name=label,exact=True).bounding_box();assert action['y']>=0 and action['y']+action['height']<=height
+    assert a.locator('.full-story-overlay').evaluate('(e)=>e.scrollHeight<=e.clientHeight+1');capture(a,f'current-story-fullscreen-{width}.png')
    a.keyboard.press('Escape');expect(a.get_by_role('dialog')).to_have_count(0);assert a.evaluate('document.body.style.overflow')!='hidden'
    print('PASS: Saving keeps the primary action still; story sharing fills phone/desktop viewports, export controls remain reachable, and close restores scrolling',flush=True)
    for route,title in [('terms','شرایط استفاده'),('privacy','حریم خصوصی')]:

@@ -13,6 +13,7 @@ import {
   Copy,
 } from "@phosphor-icons/react";
 import { Mascot, PairArt } from "./Mascot";
+import "./Stories.css";
 import { fa, inviteUrl, copyText } from "../api";
 import vazirRegular from "@fontsource/vazirmatn/files/vazirmatn-arabic-400-normal.woff2?url";
 import vazirBold from "@fontsource/vazirmatn/files/vazirmatn-arabic-700-normal.woff2?url";
@@ -77,7 +78,7 @@ export function StoryCanvas({
   };
   return (
     <div
-      className={`story-canvas story-${kind} story-theme-${theme} format-${format}`}
+      className={`story-canvas story-${kind} story-theme-${theme} format-${format} ${caption.length > 60 ? "story-long-caption" : ""}`}
       dir="rtl"
     >
       <div className="story-brand">
@@ -147,38 +148,19 @@ export function StoryCanvas({
           </>
         )}
       </div>
-      <div className="story-invitation">
-        <div>
-          {code ? (
-            <>
-              <span>
-                {me.registered ? "با دعوت من بیا تو جمع" : "تو هم بیا تو جمع"}
-              </span>
-              <strong dir="ltr">{code}</strong>
-              <p>
-                {me.registered
-                  ? "۷ روز پرمیوم برای هر دومون"
-                  : "بدون حساب هم می‌تونی شروع کنی"}
-              </p>
-            </>
-          ) : (
-            <>
-              <strong>یه لحظه از روزت، برای دوستات</strong>
-              <p>یه لحظهٔ ساده، یه لبخند مشترک.</p>
-            </>
-          )}
-          {me.handle && (
-            <span className="story-owner-handle" dir="ltr">
-              @{me.handle}
-            </span>
-          )}
-          <span className="story-domain" dir="ltr">
-            jishoo.vercel.app
-          </span>
+      {kind === "invite" && (
+        <div className="story-invitation">
+          <div>
+            <span>{me.registered ? "با دعوت من بیا تو جمع" : "تو هم بیا تو جمع"}</span>
+            {code && <strong dir="ltr">{code}</strong>}
+            <p>{code && me.registered ? "۷ روز پرمیوم برای هر دومون" : "یه لحظهٔ ساده، یه لبخند مشترک."}</p>
+          </div>
+          {qr && <img className="story-qr" src={qr} alt="QR لینک جیشو" />}
         </div>
-        {kind === "invite" && qr && (
-          <img className="story-qr" src={qr} alt="QR لینک جیشو" />
-        )}
+      )}
+      <div className="story-signature" dir="ltr">
+        {me.handle && <span>@{me.handle}</span>}
+        <span>jishoo.vercel.app</span>
       </div>
       <div className="story-bottom-line">
         <Heart size={30} weight="fill" />
@@ -212,7 +194,35 @@ export default function Stories({
     [exportError, setExportError] = useState(""),
     [preparing, setPreparing] = useState(false);
   const card = useRef(),
+    editor = useRef(),
+    previewStage = useRef(),
     generation = useRef(0);
+  useEffect(() => {
+    if (!selected || !editor.current || !previewStage.current) return;
+    const stage = previewStage.current;
+    const resize = () => {
+      const height = format === "story" ? 1920 : 1080;
+      const bounds = stage.getBoundingClientRect();
+      const scale = Math.max(0.01, Math.min((bounds.width - 4) / 1080, (bounds.height - 4) / height, 0.46));
+      stage.style.setProperty("--preview-width", `${1080 * scale}px`);
+      stage.style.setProperty("--preview-height", `${height * scale}px`);
+      stage.style.setProperty("--preview-scale", String(scale));
+    };
+    const viewport = () => {
+      editor.current?.style.setProperty("--story-editor-height", `${Math.min(innerHeight, window.visualViewport?.height || innerHeight)}px`);
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(stage);
+    viewport();
+    resize();
+    window.addEventListener("resize", viewport);
+    window.visualViewport?.addEventListener("resize", viewport);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", viewport);
+      window.visualViewport?.removeEventListener("resize", viewport);
+    };
+  }, [selected, format]);
   const moment = initialMoment || data.moments[0];
   const code =
     kind !== "invite"
@@ -406,7 +416,7 @@ export default function Stories({
       </section>
     );
   return (
-    <section className="story-editor">
+    <section className="story-editor" ref={editor}>
       <header>
         <button
           aria-label="بستن کارت اشتراک"
@@ -456,18 +466,20 @@ export default function Stories({
           </button>
         ))}
       </div>
-      <div className={`story-preview-wrap ${format}`}>
-        <div className="story-preview-scale" ref={card}>
-          <StoryCanvas
-            kind={kind}
-            theme={theme}
-            caption={caption}
-            format={format}
-            data={data}
-            moment={moment}
-            code={code}
-            qr={qr}
-          />
+      <div className="story-preview-stage" ref={previewStage}>
+        <div className={`story-preview-wrap ${format}`}>
+          <div className="story-preview-scale" ref={card}>
+            <StoryCanvas
+              kind={kind}
+              theme={theme}
+              caption={caption}
+              format={format}
+              data={data}
+              moment={moment}
+              code={code}
+              qr={qr}
+            />
+          </div>
         </div>
       </div>
       <label className="story-caption-field">
@@ -494,17 +506,15 @@ export default function Stories({
                 ? "تصویر باکیفیت آماده‌ست."
                 : "در حال آماده‌سازی…"}
         </span>
-        <button
-          className="button button-lilac"
-          onClick={shareImage}
-          disabled={!image || preparing}
-        >
-          <ShareNetwork size={20} /> اشتراک تصویر
-        </button>
-        <div className="story-secondary-buttons">
-          <button onClick={download} disabled={!image}>
-            <DownloadSimple size={17} /> ذخیره PNG
+        <div className="story-export-actions">
+          <button className="button button-lilac" onClick={shareImage} disabled={!image || preparing}>
+            <ShareNetwork size={20} /> اشتراک تصویر
           </button>
+          <button className="button button-secondary" onClick={download} disabled={!image || preparing}>
+            <DownloadSimple size={19} /> ذخیره PNG
+          </button>
+        </div>
+        <div className="story-secondary-buttons">
           {kind === "invite" && (
             <button
               onClick={async () => {

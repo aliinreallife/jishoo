@@ -12,6 +12,8 @@ import {
   Plus,
   Minus,
   Drop,
+  CaretDown,
+  SlidersHorizontal,
 } from "@phosphor-icons/react";
 import { markerOffsets } from "../map-markers";
 import { api, relativeTime, fa } from "../api";
@@ -39,6 +41,7 @@ export default function Nearby({
     [cluster, setCluster] = useState(null),
     [people, setPeople] = useState([]),
     [peopleOpen, setPeopleOpen] = useState(false),
+    [panelOpen, setPanelOpen] = useState(true),
     [peopleBusy, setPeopleBusy] = useState(false),
     [loading, setLoading] = useState(false),
     [sharing, setSharing] = useState(me.shareLocation);
@@ -168,6 +171,7 @@ export default function Nearby({
         })
           .addTo(markers.current)
           .on("click", () => {
+            setPanelOpen(true);
             setCluster(offset.cluster);
             setSelected(null);
           });
@@ -209,6 +213,7 @@ export default function Nearby({
       L.marker([item.lat, item.lng], { icon, title: item.name })
         .addTo(markers.current)
         .on("click", () => {
+          setPanelOpen(true);
           setCluster(null);
           setSelected(item);
         });
@@ -328,14 +333,19 @@ export default function Nearby({
           <small>فعلاً نقشه‌ی تهران نمایش داده شده؛ این مکان شما نیست.</small>
         </div>
       ) : (
-        <div className="around-panel">
+        <div className="around-panel" id="nearby-map-options" hidden={!panelOpen}>
           <div className="around-panel-top">
             <strong>
               {loading
                 ? "در حال تازه‌کردن…"
                 : `${fa(activity.length)} خبر این نزدیکی`}
             </strong>
-            <button onClick={() => refresh(position)}>تازه‌کردن</button>
+            <div className="map-panel-actions">
+              <button onClick={() => refresh(position)}>تازه‌کردن</button>
+              <button aria-label="جمع‌کردن گزینه‌های نقشه" aria-controls="nearby-map-options" aria-expanded={panelOpen} onClick={() => setPanelOpen(false)}>
+                فقط نقشه <CaretDown size={17} />
+              </button>
+            </div>
           </div>
           <label className="location-choice">
             <span>
@@ -499,6 +509,11 @@ export default function Nearby({
             </p>
           )}
         </div>
+      )}
+      {position && !panelOpen && (
+        <button className="map-options-restore" aria-controls="nearby-map-options" aria-expanded={false} onClick={() => setPanelOpen(true)}>
+          <SlidersHorizontal size={20} /> نمایش گزینه‌های نقشه
+        </button>
       )}
     </section>
   );

@@ -1946,6 +1946,7 @@ export default function App() {
                               ? `هدیه‌ی تو تا ${new Date(me.trialUntil).toLocaleDateString("fa-IR")}`
                               : "خبر و نقشه و استوری همیشه رایگانه."}
                       </p>
+                      <small className="premium-free-hint">ثبت جیش، دوست‌ها، آمار، نقشه و استوری شخصی همیشه رایگانه.</small>
                     </div>
                     <CaretLeft size={17} />
                   </button>
@@ -2171,14 +2172,14 @@ export default function App() {
         {dialog && !["story", "momentStory"].includes(dialog) && (
           <Modal
             hideClose={["success", "need"].includes(dialog)}
-            fullscreen={["success", "need", "auth", "friend", "settings", "profileShare", "groupInvite", "moment"].includes(dialog)}
+            fullscreen={["success", "need", "auth", "friend", "settings", "profileShare", "groupInvite", "moment", "premium"].includes(dialog)}
             onClose={() => setDialog(null)}
             className={
               ["success", "need"].includes(dialog)
                 ? "success-dialog checkin-dialog full"
                 : dialog === "moment"
                   ? "success-dialog page-dialog full"
-                  : ["auth", "friend", "settings", "profileShare", "groupInvite"].includes(dialog) ? "page-dialog" : ""
+                  : ["auth", "friend", "settings", "profileShare", "groupInvite", "premium"].includes(dialog) ? "page-dialog" : ""
             }
           >
             {dialog === "auth" && (
@@ -2814,24 +2815,24 @@ export default function App() {
                     ? "تا آزمایش تموم نشده، همه‌ی کاربران و مهمان‌ها به قابلیت‌های پرمیوم دسترسی دارن."
                     : "خبرهای روزانه، آمار، نقشه و استوری عادی همیشه رایگان می‌مونن."}
                 </p>
-                <div className="premium-features">
-                  <p>
-                    <Check size={19} />
-                    جیش، آمار و نقشه — همیشه رایگان
-                  </p>
-                  <p>
-                    <Check size={19} />
-                    استوری و دعوت — همیشه رایگان
-                  </p>
-                  <p>
-                    <CrownSimple size={19} />
-                    اشتراک اختیاری لینک‌های اجتماعی
-                  </p>
-                  <p>
-                    <CrownSimple size={19} />
-                    خاطره‌های باهم و پشت‌سرهم
-                  </p>
-                </div>
+                <section className="premium-feature-group premium-free" aria-label="امکانات همیشه رایگان">
+                  <h3><Check size={21} /> همیشه رایگان می‌مونه</h3>
+                  <p>برای این کارها، حتی بعد از دورهٔ آزمایشی، اشتراک لازم نیست.</p>
+                  <ul>
+                    <li>ثبت «جیش دارم» و «جیش کردم» و لغو ثبت</li>
+                    <li>دوست‌ها، گروه‌ها و خبرهای دوستات</li>
+                    <li>آمار شخصی، نقشه و دیدن خبرهای اطراف</li>
+                    <li>استوری‌های شخصی و فرستادن دعوت</li>
+                  </ul>
+                </section>
+                <section className="premium-feature-group premium-extra" aria-label="امکانات پرمیوم">
+                  <h3><CrownSimple size={21} /> قابلیت‌های اضافهٔ پرمیوم</h3>
+                  <ul>
+                    <li>تبادل حساب‌های اجتماعی با درخواست و قبول هر دو نفر</li>
+                    <li>خاطره‌های «با هم» و «پشت سر هم» و کارت‌های اشتراک‌شون</li>
+                  </ul>
+                  {data.testing && <p>در دورهٔ آزمایشی، این‌ها هم برای همه رایگان فعاله.</p>}
+                </section>
                 <div className="invite-rules">
                   <Heart size={19} weight="fill" />
                   <p>

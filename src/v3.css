@@ -707,3 +707,44 @@ button.preference-action:focus-visible,
 .overlay-backdrop:not(.viewport-overlay) > .dialog {
   width: min(100%, 480px);
 }
+.premium-free-hint {
+  display: block;
+  margin-top: 9px;
+  font-size: 11px;
+  line-height: 1.9;
+  color: #65795d;
+}
+.premium-feature-group {
+  border: 1px solid #e0d9c9;
+  border-radius: 22px;
+  padding: 19px;
+  margin-top: 19px;
+}
+.premium-feature-group h3 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+.premium-feature-group p {
+  margin: 8px 0;
+  font-size: 12px;
+  line-height: 2;
+}
+.premium-feature-group ul {
+  margin: 12px 0 0;
+  padding-inline-start: 20px;
+  font-size: 13px;
+  line-height: 2.3;
+}
+.premium-free {
+  background: #f1f7ee;
+  border-color: #d4e0ca;
+  color: #516747;
+}
+.premium-extra {
+  background: #f4eefb;
+  border-color: #dfd3ee;
+  color: #75638d;
+}

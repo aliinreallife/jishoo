@@ -96,6 +96,18 @@
   color: #849078;
   overflow-wrap: anywhere;
 }
+.account-method .account-phone-number {
+  font-size: 17px;
+  font-weight: 700;
+  color: #52634a;
+  text-align: right;
+  user-select: all;
+}
+.account-method small {
+  font-size: 10px;
+  color: #7f8976;
+  line-height: 1.8;
+}
 .connected-google {
   margin-top: 15px;
 }

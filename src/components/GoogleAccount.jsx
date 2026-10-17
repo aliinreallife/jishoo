@@ -103,7 +103,14 @@ export default function AccountConnections({ data, onUpdate, notify }) {
               ? "شمارهٔ موبایل وصله"
               : "شمارهٔ موبایل وصل نیست"}
           </strong>
-          {auth.phoneMasked && <span dir="ltr">{auth.phoneMasked}</span>}
+          {auth.phoneConnected && (
+            <>
+              <span className="account-phone-number" dir="ltr" aria-label="شماره موبایل من">
+                {auth.phoneNumber || auth.phoneMasked}
+              </span>
+              <small>این شماره فقط برای خودت نمایش داده می‌شه.</small>
+            </>
+          )}
         </div>
         {auth.phoneConnected && <CheckCircle size={21} />}
       </div>
