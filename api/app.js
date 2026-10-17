@@ -1,3 +1,11 @@
+import {
+  authMethods,
+  startGoogle,
+  claimPendingGoogle,
+  removeGoogle,
+} from "../lib/google-auth.js";
+import { mapConfig } from "../lib/public-config.js";
+import { supportAction } from "../lib/support.js";
 import { listGroups, groupAction, groupInfo } from "../lib/groups.js";
 import { randomUUID } from "node:crypto";
 import { waitUntil } from "@vercel/functions";
@@ -215,16 +223,19 @@ async function moments(user) {
   }));
 }
 const circles = listGroups;
-async function bootstrap(user) {
-  const [s, f, m, c, community] = await Promise.all([
+async function bootstrap(user, sessionHash) {
+  const [s, f, m, c, community, authInfo] = await Promise.all([
     stats(user.id),
     friends(user),
     moments(user),
     circles(user),
     getCommunity(user),
+    authMethods(user, sessionHash),
   ]);
   return {
     me: profile(user, true),
+    map: mapConfig(),
+    auth: authInfo,
     stats: s,
     friends: f,
     moments: m,
@@ -371,7 +382,25 @@ export default async function handler(req, res) {
       );
     const auth = await session(req, res);
     const user = auth.user;
-    if (action === "bootstrap") return json(res, 200, await bootstrap(user));
+    if (action === "bootstrap")
+      return json(res, 200, await bootstrap(user, auth.tokenHash));
+    if (action === "google-start") {
+      if (req.method !== "POST") fail(405, "درخواست معتبر نیست.");
+      return json(res, 200, await startGoogle({ body, user, auth, fail }));
+    }
+    if (action === "google-disconnect") {
+      if (req.method !== "POST") fail(405, "درخواست معتبر نیست.");
+      return json(res, 200, await removeGoogle(user, fail));
+    }
+    if (action === "google-pending-cancel") {
+      if (req.method !== "POST") fail(405, "درخواست معتبر نیست.");
+      await query("DELETE FROM pending_google WHERE session_hash=$1", [
+        auth.tokenHash,
+      ]);
+      return json(res, 200, { ok: true });
+    }
+    const support = await supportAction({ action, body, user, req, fail });
+    if (support !== undefined) return json(res, 200, support);
     const groupResult = await groupAction({ action, body, user, req, fail });
     if (groupResult !== undefined) return json(res, 200, groupResult);
     const extra = await communityAction({
@@ -386,6 +415,57 @@ export default async function handler(req, res) {
     if (extra !== undefined) return json(res, 200, extra);
     if (req.method !== "POST") fail(405, "این کار به درخواست امن نیاز داره.");
 
+    if (action === "phone-link-start") {
+      requireAccount(user);
+      if (!testingMode()) fail(503, "تایید پیامکی هنوز فعال نشده.");
+      if (user.role === "admin" && !user.session_admin_access)
+        fail(403, "اول ورود خصوصی مدیریت رو کامل کن.");
+      let phone;
+      try {
+        phone = normalizePhone(body.phone);
+      } catch (e) {
+        fail(400, e.message);
+      }
+      if (!(await rateLimit("phone-link:" + user.id, 5, 600)))
+        fail(429, "چند دقیقه بعد دوباره امتحان کن.");
+      if (
+        (
+          await query("SELECT id FROM users WHERE phone_hash=$1 AND id<>$2", [
+            phoneHash(phone),
+            user.id,
+          ])
+        )[0]
+      )
+        fail(
+          409,
+          "این شماره به حساب دیگه‌ای وصله؛ حساب‌ها خودکار ادغام نمی‌شن.",
+        );
+      const id = randomToken();
+      await query(
+        "INSERT INTO auth_challenges(id,user_id,phone_hash,phone_cipher,purpose,expires_at) VALUES($1,$2,$3,$4,'link',NOW()+INTERVAL '10 minutes')",
+        [id, user.id, phoneHash(phone), encryptPhone(phone)],
+      );
+      return json(res, 200, {
+        challengeId: id,
+        demo: true,
+        maskedPhone: "•••• " + phone.slice(-4),
+      });
+    }
+    if (action === "phone-link-verify") {
+      requireAccount(user);
+      if (!testingMode()) fail(503, "تایید پیامکی فعال نشده.");
+      if (user.role === "admin" && !user.session_admin_access)
+        fail(403, "اول ورود خصوصی مدیریت رو کامل کن.");
+      if (!/^[0-9۰-۹]{6}$/.test(String(body.code || "")))
+        fail(400, "کد شش‌رقمی وارد کن.");
+      const result = await query(
+        "WITH ticket AS(UPDATE auth_challenges SET consumed_at=NOW(),verified_at=NOW() WHERE id=$1 AND user_id=$2 AND purpose='link' AND expires_at>NOW() AND consumed_at IS NULL RETURNING *) UPDATE users SET phone_hash=ticket.phone_hash,phone_cipher=ticket.phone_cipher FROM ticket WHERE users.id=$2 RETURNING users.*",
+        [body.challengeId, user.id],
+      );
+      if (!result[0]) fail(400, "کد اتصال منقضی شده.");
+      result[0].session_admin_access = user.session_admin_access;
+      return json(res, 200, await bootstrap(result[0], auth.tokenHash));
+    }
     if (action === "auth-start") {
       if (!testingMode())
         fail(
@@ -420,7 +500,7 @@ export default async function handler(req, res) {
       if (!/^[0-9۰-۹]{6}$/.test(String(body.code || "")))
         fail(400, "کد شش‌رقمی وارد کن.");
       const rows = await query(
-        `UPDATE auth_challenges SET verified_at=NOW() WHERE id=$1 AND user_id=$2 AND expires_at>NOW() AND consumed_at IS NULL RETURNING *`,
+        `UPDATE auth_challenges SET verified_at=NOW() WHERE id=$1 AND user_id=$2 AND purpose='login' AND expires_at>NOW() AND consumed_at IS NULL RETURNING *`,
         [body.challengeId, user.id],
       );
       if (!rows[0]) fail(400, "کد ورود منقضی شده؛ دوباره شماره‌ت رو وارد کن.");
@@ -435,17 +515,19 @@ export default async function handler(req, res) {
             [existing[0].id, auth.tokenHash],
           ],
           [
-            "UPDATE checkins SET user_id=$1 WHERE user_id=$2 AND $1<>$2",
-            [existing[0].id, user.id],
+            "UPDATE checkins SET user_id=$1 WHERE user_id=$2 AND $1<>$2 AND $3=FALSE",
+            [existing[0].id, user.id, user.registered],
           ],
           [
             "UPDATE auth_challenges SET consumed_at=NOW() WHERE id=$1",
             [body.challengeId],
           ],
         ]);
+        if (body.linkGoogle === true)
+          await claimPendingGoogle(existing[0].id, auth.tokenHash);
         return json(res, 200, {
           registered: true,
-          ...(await bootstrap(existing[0])),
+          ...(await bootstrap(existing[0], auth.tokenHash)),
         });
       }
       return json(res, 200, {
@@ -479,7 +561,7 @@ export default async function handler(req, res) {
           );
       }
       const registered = await query(
-        `WITH candidate AS MATERIALIZED (SELECT id FROM users WHERE id=$3 AND NOT registered FOR UPDATE), ticket AS MATERIALIZED (SELECT * FROM auth_challenges WHERE id=$2 AND user_id=$3 AND verified_at IS NOT NULL AND consumed_at IS NULL AND expires_at>NOW() AND EXISTS(SELECT 1 FROM candidate)), valid_invite AS (UPDATE invites SET uses=uses+1 WHERE code=$1 AND active AND (max_uses IS NULL OR uses<max_uses) AND EXISTS(SELECT 1 FROM ticket) RETURNING *), joined AS (UPDATE users SET registered=TRUE,terms_version='2026-10-17',terms_accepted_at=NOW(),name=$4,avatar_seed=$4,handle=CASE WHEN COALESCE((SELECT grant_admin FROM valid_invite),FALSE) AND (SELECT reserved_handle FROM valid_invite)='ali' THEN 'ali' ELSE 'u'||SUBSTRING(REPLACE(users.id,'-',''),1,10) END,role=CASE WHEN COALESCE((SELECT grant_admin FROM valid_invite),FALSE) THEN 'admin' ELSE 'member' END,phone_hash=ticket.phone_hash,phone_cipher=ticket.phone_cipher,invite_code=$5,invited_by=(SELECT inviter_id FROM valid_invite),trial_days_bank=CASE WHEN $7::boolean THEN CASE WHEN EXISTS(SELECT 1 FROM valid_invite) THEN 7 ELSE 3 END ELSE 0 END,trial_until=CASE WHEN $7::boolean THEN NULL ELSE NOW()+CASE WHEN EXISTS(SELECT 1 FROM valid_invite) THEN INTERVAL '7 days' ELSE INTERVAL '3 days' END END FROM ticket WHERE users.id=$3 AND NOT users.registered AND (NOT $6::boolean OR EXISTS(SELECT 1 FROM valid_invite)) RETURNING users.*), reward AS (UPDATE users SET trial_days_bank=CASE WHEN $7::boolean THEN trial_days_bank+7 ELSE trial_days_bank END,trial_until=CASE WHEN $7::boolean THEN trial_until ELSE GREATEST(COALESCE(trial_until,NOW()),COALESCE(paid_until,NOW()),NOW())+INTERVAL '7 days' END WHERE id=(SELECT invited_by FROM joined) RETURNING id), consume AS (UPDATE auth_challenges SET consumed_at=NOW() WHERE id=$2 AND EXISTS(SELECT 1 FROM joined) RETURNING id), personal_invite AS (INSERT INTO invites(code,inviter_id,max_uses) SELECT $5,id,CASE WHEN role='admin' THEN 1 WHEN $7::boolean THEN 3 ELSE NULL END FROM joined ON CONFLICT DO NOTHING RETURNING code), auto_connect AS (INSERT INTO connections(id,user_a,user_b,requested_by,status) SELECT $9,LEAST(id,invited_by),GREATEST(id,invited_by),invited_by,CASE WHEN $8::boolean THEN 'accepted' ELSE 'pending' END FROM joined WHERE invited_by IS NOT NULL ON CONFLICT(user_a,user_b) DO NOTHING RETURNING id), admin_session AS(UPDATE sessions SET admin_access=TRUE WHERE token_hash=$10 AND EXISTS(SELECT 1 FROM joined WHERE role='admin') RETURNING token_hash) SELECT * FROM joined`,
+        `WITH candidate AS MATERIALIZED (SELECT id FROM users WHERE id=$3 AND NOT registered FOR UPDATE), ticket AS MATERIALIZED (SELECT id,phone_hash,phone_cipher FROM auth_challenges WHERE id=$2 AND user_id=$3 AND purpose='login' AND verified_at IS NOT NULL AND consumed_at IS NULL AND expires_at>NOW() AND NOT $11::boolean AND EXISTS(SELECT 1 FROM candidate) UNION ALL SELECT session_hash AS id,NULL::text AS phone_hash,NULL::text AS phone_cipher FROM pending_google WHERE session_hash=$10 AND expires_at>NOW() AND $11::boolean AND EXISTS(SELECT 1 FROM candidate)), valid_invite AS (UPDATE invites SET uses=uses+1 WHERE code=$1 AND active AND (max_uses IS NULL OR uses<max_uses) AND EXISTS(SELECT 1 FROM ticket) RETURNING *), joined AS (UPDATE users SET registered=TRUE,terms_version='2026-10-17',terms_accepted_at=NOW(),name=$4,avatar_seed=$4,handle=CASE WHEN COALESCE((SELECT grant_admin FROM valid_invite),FALSE) AND (SELECT reserved_handle FROM valid_invite)='ali' THEN 'ali' ELSE 'u'||SUBSTRING(REPLACE(users.id,'-',''),1,10) END,role=CASE WHEN COALESCE((SELECT grant_admin FROM valid_invite),FALSE) THEN 'admin' ELSE 'member' END,phone_hash=ticket.phone_hash,phone_cipher=ticket.phone_cipher,invite_code=$5,invited_by=(SELECT inviter_id FROM valid_invite),trial_days_bank=CASE WHEN $7::boolean THEN CASE WHEN EXISTS(SELECT 1 FROM valid_invite) THEN 7 ELSE 3 END ELSE 0 END,trial_until=CASE WHEN $7::boolean THEN NULL ELSE NOW()+CASE WHEN EXISTS(SELECT 1 FROM valid_invite) THEN INTERVAL '7 days' ELSE INTERVAL '3 days' END END FROM ticket WHERE users.id=$3 AND NOT users.registered AND (NOT $6::boolean OR EXISTS(SELECT 1 FROM valid_invite)) RETURNING users.*), google_identity AS (INSERT INTO auth_identities(provider,subject,user_id,email_cipher) SELECT 'google',p.subject,j.id,p.email_cipher FROM pending_google p CROSS JOIN joined j WHERE p.session_hash=$10 AND $11::boolean RETURNING user_id), google_consume AS (DELETE FROM pending_google WHERE session_hash=$10 AND EXISTS(SELECT 1 FROM google_identity) RETURNING session_hash), reward AS (UPDATE users SET trial_days_bank=CASE WHEN $7::boolean THEN trial_days_bank+7 ELSE trial_days_bank END,trial_until=CASE WHEN $7::boolean THEN trial_until ELSE GREATEST(COALESCE(trial_until,NOW()),COALESCE(paid_until,NOW()),NOW())+INTERVAL '7 days' END WHERE id=(SELECT invited_by FROM joined) RETURNING id), consume AS (UPDATE auth_challenges SET consumed_at=NOW() WHERE id=$2 AND EXISTS(SELECT 1 FROM joined) RETURNING id), personal_invite AS (INSERT INTO invites(code,inviter_id,max_uses) SELECT $5,id,CASE WHEN role='admin' THEN 1 WHEN $7::boolean THEN 3 ELSE NULL END FROM joined ON CONFLICT DO NOTHING RETURNING code), auto_connect AS (INSERT INTO connections(id,user_a,user_b,requested_by,status) SELECT $9,LEAST(id,invited_by),GREATEST(id,invited_by),invited_by,CASE WHEN $8::boolean THEN 'accepted' ELSE 'pending' END FROM joined WHERE invited_by IS NOT NULL ON CONFLICT(user_a,user_b) DO NOTHING RETURNING id), admin_session AS(UPDATE sessions SET admin_access=TRUE WHERE token_hash=$10 AND EXISTS(SELECT 1 FROM joined WHERE role='admin') RETURNING token_hash) SELECT * FROM joined`,
         [
           code,
           body.ticket,
@@ -491,10 +573,13 @@ export default async function handler(req, res) {
           body.connectInviter === true,
           randomUUID(),
           auth.tokenHash,
+          body.provider === "google",
         ],
       );
       if (!registered[0]) fail(400, "درخواست عضویت منقضی شده؛ دوباره وارد شو.");
       const fresh = registered[0];
+      if (body.linkGoogle === true && body.provider !== "google")
+        await claimPendingGoogle(fresh.id, auth.tokenHash);
       if (fresh.role === "admin") fresh.session_admin_access = true;
       if (fresh.invited_by)
         await Promise.all([

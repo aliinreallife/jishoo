@@ -161,6 +161,7 @@ def main():
         ordinary=returning.verify(root_phone)
         assert ordinary["registered"] and not ordinary["me"]["isAdmin"]
         returning.call("admin",expected=403)
+        returning.call("google-start",{"intent":"link"},expected=403)
         recovery=admin.call("admin-recovery",{})["url"]
         token=urllib.parse.parse_qs(urllib.parse.urlsplit(recovery).query)["adminAccess"][0]
         returning.call("admin-redeem",{"token":token})

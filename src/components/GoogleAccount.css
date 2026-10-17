@@ -1,0 +1,144 @@
+.google-banner {
+  background: linear-gradient(125deg, #f2edf9, #fff8df);
+  border: 1px solid #e0d7eb;
+  border-radius: 22px;
+  padding: 17px;
+  margin: 20px 0;
+  text-align: right;
+}
+.google-banner-copy {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.google-mark {
+  display: grid;
+  place-items: center;
+  background: #fff;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  color: #6c78a3;
+  flex-shrink: 0;
+}
+.google-banner-copy > div {
+  display: grid;
+  gap: 7px;
+}
+.google-banner strong {
+  font-size: 13px;
+  color: #51485f;
+}
+.google-banner small {
+  font-size: 11px;
+  line-height: 1.9;
+  color: #8c7c8c;
+}
+.google-auth-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  border: 1px solid #c9c5d4;
+  background: #fffdf9;
+  border-radius: 14px;
+  padding: 13px 10px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: #51485e;
+  box-shadow: 0 2px 0 #dcd5e5;
+}
+.google-auth-button > svg:last-child {
+  margin-inline-start: auto;
+  color: #91829e;
+}
+.google-auth-button > svg:first-child {
+  margin-inline-end: auto;
+}
+.account-connections {
+  margin: 24px 0;
+  padding-top: 22px;
+  border-top: 1px solid #e8dfd3;
+  text-align: right;
+}
+.account-connections > h3 {
+  font-size: 17px;
+}
+.account-connections > p {
+  font-size: 12px;
+  line-height: 2.2;
+  color: #8c7c89;
+  margin: 12px 0 18px;
+}
+.account-method {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f2f3ed;
+  border: 1px solid #e0e3d7;
+  border-radius: 16px;
+  padding: 15px;
+  color: #86917a;
+}
+.account-method > div {
+  display: grid;
+  gap: 7px;
+  flex: 1;
+  min-width: 0;
+}
+.account-method strong {
+  font-size: 12px;
+  color: #626b5d;
+}
+.account-method span {
+  font-size: 11px;
+  color: #849078;
+  overflow-wrap: anywhere;
+}
+.connected-google {
+  margin-top: 15px;
+}
+.connected-google > .text-link {
+  margin: 12px auto;
+  display: block;
+  font-size: 11px;
+}
+.phone-link-form {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+}
+.phone-link-form label {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+}
+.phone-link-form input {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid #e3d8cd;
+  border-radius: 13px;
+  background: #fffdf7;
+}
+.phone-link-form small {
+  font-size: 10px;
+  color: #9e8b79;
+  line-height: 2;
+}
+.pending-google-note {
+  background: #edf4eb;
+  border: 1px solid #d6e4d1;
+  border-radius: 17px;
+  padding: 14px;
+  text-align: right;
+  line-height: 2;
+  font-size: 12px;
+  color: #738368;
+  margin: 15px 0;
+}
+.pending-google-note span {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}

@@ -97,6 +97,11 @@ def main():
     target = os.environ.get("VERCEL_TARGET", "production")
     if target != "preview":
         deployment_body["target"] = target
+    if os.environ.get("JISHOO_QA_GOOGLE_FIXTURES") == "1":
+        if target != "preview":
+            raise SystemExit("Google integration fixtures are restricted to preview deployments.")
+        fixture = ROOT / "scripts/fixtures/google_identity.js"
+        deployment_body["files"].append({"file": "api/qa-google-fixture.js", "data": base64.b64encode(fixture.read_bytes()).decode("ascii"), "encoding": "base64"})
     deployment = request("/v13/deployments" + suffix, "POST", deployment_body)
     deployment_id = deployment["id"]
     print("Deployment:", deployment_id, flush=True)

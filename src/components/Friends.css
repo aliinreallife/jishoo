@@ -1,12 +1,24 @@
 .friends-hub .community-heading h1 {
   font-size: 26px;
 }
-.friends-hub .community-heading > button {
+.friends-hub .community-heading > .add-friend-header {
+  width: auto;
+  height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 10px 12px;
   background: #f0edfb;
-  border-radius: 15px;
-  padding: 11px;
-  color: #7d7fac;
+  border: 1px solid #ddd6ee;
+  border-radius: 14px;
+  color: #74658e;
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 1.6;
 }
+
 .friends-overview {
   display: flex;
   align-items: center;

@@ -253,8 +253,13 @@ export default function Friends({
           <p>خبرهای کوچولو، آدم‌های آشنا.</p>
         </div>
         {data.me.registered && (
-          <button aria-label="افزودن دوست با شناسه" onClick={onAdd}>
-            <UserPlus size={25} />
+          <button
+            className="add-friend-header"
+            aria-label="افزودن دوست با شناسه"
+            onClick={onAdd}
+          >
+            <UserPlus size={20} />
+            <span>دوست تازه</span>
           </button>
         )}
       </header>
@@ -277,10 +282,6 @@ export default function Friends({
             <span>
               {fa(data.circles.filter((g) => !g.pending).length)} گروه
             </span>
-            <button onClick={onAdd}>
-              <Plus size={18} />
-              دوست تازه
-            </button>
           </div>
           {incoming.length + pendingGroups.length > 0 && (
             <button

@@ -19,6 +19,7 @@
     "@vercel/functions": "^3.10.1",
     "blobatar": "^2.7.0",
     "html-to-image": "^1.11.13",
+    "jose": "^6.2.12",
     "leaflet": "^1.9.4",
     "qrcode": "^1.5.4",
     "react": "^19.1.0",

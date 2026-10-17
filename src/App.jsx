@@ -43,6 +43,17 @@ import {
 import { Avatar } from "./components/Character";
 import { Mascot, PairArt } from "./components/Mascot";
 import { syncPush, disablePush } from "./push";
+const AccountConnections = lazy(() => import("./components/GoogleAccount"));
+const GoogleBanner = lazy(() =>
+  import("./components/GoogleAccount").then((m) => ({
+    default: m.GoogleBanner,
+  })),
+);
+const Install = lazy(() => import("./components/Install"));
+const InstallCard = lazy(() =>
+  import("./components/Install").then((m) => ({ default: m.InstallCard })),
+);
+const Support = lazy(() => import("./components/Support"));
 const Friends = lazy(() => import("./components/Friends"));
 const Stats = lazy(() => import("./components/Stats"));
 const Legal = lazy(() => import("./components/Legal"));
@@ -96,9 +107,13 @@ const routes = [
   "groupJoin",
   "privacy",
   "terms",
+  "support",
+  "install",
 ];
 const readRoute = () => {
-  if (location.pathname === "/privacy" || location.pathname === "/terms")
+  if (
+    ["/privacy", "/terms", "/support", "/install"].includes(location.pathname)
+  )
     return location.pathname.slice(1);
   if (new URLSearchParams(location.search).get("group") && !location.hash)
     return "groupJoin";
@@ -153,11 +168,13 @@ function Header({ title, subtitle, back, action }) {
     </header>
   );
 }
-function Modal({ children, onClose, className = "" }) {
+function Modal({ children, onClose, className = "", hideClose = false }) {
   const dialog = useRef();
   useEffect(() => {
     const previous = document.activeElement;
-    dialog.current?.querySelector("button,input")?.focus();
+    dialog.current
+      ?.querySelector("button:not(:disabled),input:not(:disabled)")
+      ?.focus();
     const escape = (e) => {
       if (e.key === "Escape") onClose();
     };
@@ -198,13 +215,15 @@ function Modal({ children, onClose, className = "" }) {
           }
         }}
       >
-        <button
-          className="icon-button close-dialog"
-          onClick={onClose}
-          aria-label="بستن"
-        >
-          <X size={21} />
-        </button>
+        {!hideClose && (
+          <button
+            className="icon-button close-dialog"
+            onClick={onClose}
+            aria-label="بستن"
+          >
+            <X size={21} />
+          </button>
+        )}
         {children}
       </section>
     </div>
@@ -254,12 +273,14 @@ function StoryDialog({ children, onClose, label = "کارت اشتراک جیش�
     </div>
   );
 }
-function AuthWizard({ invitation, onComplete, notify }) {
-  const [stage, setStage] = useState("phone"),
+function AuthWizard({ invitation, onComplete, notify, authInfo }) {
+  const [stage, setStage] = useState(
+      authInfo?.pendingGoogle ? "register" : "phone",
+    ),
     [phone, setPhone] = useState(""),
     [challenge, setChallenge] = useState(null),
     [otp, setOtp] = useState(""),
-    [ticket, setTicket] = useState(""),
+    [ticket, setTicket] = useState(authInfo?.pendingGoogle ? "google" : ""),
     [name, setName] = useState(""),
     [code, setCode] = useState(invitation?.code || ""),
     [invite, setInvite] = useState(invitation),
@@ -306,6 +327,7 @@ function AuthWizard({ invitation, onComplete, notify }) {
       const result = await api("auth-verify", {
         challengeId: challenge.challengeId,
         code: value,
+        linkGoogle: Boolean(authInfo?.pendingGoogle),
       });
       if (!mounted.current) return;
       if (result.registered) {
@@ -342,6 +364,8 @@ function AuthWizard({ invitation, onComplete, notify }) {
     setError("");
     try {
       const result = await api("register", {
+        linkGoogle: Boolean(authInfo?.pendingGoogle),
+        provider: ticket === "google" ? "google" : "phone",
         ticket,
         name,
         inviteCode: code,
@@ -385,8 +409,8 @@ function AuthWizard({ invitation, onComplete, notify }) {
           </div>
           <h2>با شماره‌ت بیا تو جمع</h2>
           <p className="dialog-description">
-            ورود با موبایل. اگه عضو جدیدی، دعوت دوستت رو لازم داری. مهمان هم
-            همیشه می‌تونه جیش کنه.
+            ورود با گوگل یا شماره. اگه عضو جدیدی، دعوت دوستت رو لازم داری. مهمان
+            هم همیشه می‌تونه جیش کنه.
           </p>
           {!invitation && (
             <div className="invitation-required">
@@ -399,6 +423,17 @@ function AuthWizard({ invitation, onComplete, notify }) {
                 </p>
               </div>
             </div>
+          )}
+          {authInfo?.pendingGoogle ? (
+            <div className="pending-google-note">
+              گوگلت تایید شد.<span dir="ltr">{authInfo.pendingGoogle}</span>برای
+              اتصال به حساب، شماره‌ت رو تایید کن. عضویت تازه هنوز به دعوت نیاز
+              داره.
+            </div>
+          ) : (
+            <Suspense fallback={null}>
+              <GoogleBanner auth={authInfo} notify={notify} />
+            </Suspense>
           )}
           <form onSubmit={start}>
             <label className="field-label">
@@ -420,7 +455,11 @@ function AuthWizard({ invitation, onComplete, notify }) {
               </p>
             )}
             <Button lilac type="submit" disabled={busy || !phone.trim()}>
-              {busy ? "در حال آماده‌کردن ورود…" : "دریافت کد ورود"}
+              {busy
+                ? "در حال آماده‌کردن ورود…"
+                : authInfo?.pendingGoogle
+                  ? "ادامه با شماره و اتصال گوگل"
+                  : "دریافت کد ورود"}
               <ArrowRight size={18} />
             </Button>
           </form>
@@ -537,6 +576,13 @@ function AuthWizard({ invitation, onComplete, notify }) {
         </div>
       ) : (
         <>
+          {ticket === "google" && (
+            <div className="pending-google-note">
+              گوگلت تایید شده. برای عضویت فقط اسمت و دعوت لازمه.
+              <span dir="ltr">{authInfo?.pendingGoogle}</span>شمارهٔ موبایل رو
+              هر وقت خواستی از پروفایل وصل کن.
+            </div>
+          )}
           <div className="name-character-preview">
             <Avatar
               name={name.trim() || "دوست تازه"}
@@ -549,6 +595,17 @@ function AuthWizard({ invitation, onComplete, notify }) {
           <p className="dialog-description">
             شخصیتت از روی اسمت ساخته می‌شه؛ یه کوچولوی مخصوص خودت.
           </p>
+          {ticket === "google" && (
+            <button
+              className="text-link"
+              onClick={() => {
+                setStage("phone");
+                setTicket("");
+              }}
+            >
+              از قبل با شماره عضو شدم؛ همون حساب رو وصل کنم
+            </button>
+          )}
           <form onSubmit={register}>
             <label className="field-label">
               اسمت
@@ -704,7 +761,8 @@ export default function App() {
     }
   }, []);
   useEffect(() => {
-    if (!["terms", "privacy"].includes(readRoute())) refresh();
+    if (!["terms", "privacy", "support", "install"].includes(readRoute()))
+      refresh();
     return () => {
       clearTimeout(timer.current);
       clearTimeout(pendingTimer.current);
@@ -820,6 +878,30 @@ export default function App() {
       .then(setInvitation)
       .catch((error) => setInviteError(error.message));
   }, []);
+  useEffect(() => {
+    const params = new URLSearchParams(location.search),
+      outcome = params.get("google");
+    if (!outcome || !data) return;
+    params.delete("google");
+    history.replaceState(
+      null,
+      "",
+      location.pathname +
+        (params.size ? "?" + params.toString() : "") +
+        location.hash,
+    );
+    if (outcome === "continue") {
+      setDialog("auth");
+      notify("گوگلت تایید شد؛ با یه دعوت، حسابت رو بساز.");
+    } else if (outcome === "linked") notify("گوگلت به همین حساب وصل شد.");
+    else if (outcome === "login") {
+      setEntered(true);
+      notify("خوش برگشتی!");
+    } else if (outcome === "cancelled") notify("ورود با گوگل لغو شد.");
+    else if (outcome === "conflict")
+      notify("این گوگل یا این حساب از قبل یه اتصال دیگه داره.");
+    else notify("ورود گوگل کامل نشد. دوباره امتحان کن.");
+  }, [data?.me.id]);
   useEffect(() => {
     if (data?.me.registered) syncPush().catch(() => {});
   }, [data?.me.id, data?.me.registered]);
@@ -1161,6 +1243,18 @@ export default function App() {
       ? "friends"
       : screen;
   const circle = data?.circles.find((x) => x.id === selectedCircle);
+  if (screen === "install")
+    return (
+      <Suspense fallback={<LoadingSection />}>
+        <Install />
+      </Suspense>
+    );
+  if (screen === "support")
+    return (
+      <Suspense fallback={<LoadingSection />}>
+        <Support />
+      </Suspense>
+    );
   if (screen === "privacy" || screen === "terms")
     return (
       <Suspense fallback={<LoadingSection />}>
@@ -1168,7 +1262,9 @@ export default function App() {
       </Suspense>
     );
   return (
-    <div className="desktop-stage">
+    <div
+      className={`desktop-stage ${inviteLanding ? "invite-fullscreen" : ""}`}
+    >
       <aside className="desktop-brand" aria-hidden="true">
         <div className="desktop-brand-top">
           <Brand small />
@@ -1202,7 +1298,7 @@ export default function App() {
         </div>
       </aside>
       <main
-        className={`app-shell ${!entered ? "welcome-shell" : ""}`}
+        className={`app-shell ${!entered ? "welcome-shell" : ""} ${inviteLanding ? "invite-fullscreen-shell" : ""}`}
         dir="rtl"
       >
         {!data ? (
@@ -1773,6 +1869,9 @@ export default function App() {
                       <small>همه‌وقت</small>
                     </span>
                   </div>
+                  <Suspense fallback={null}>
+                    <InstallCard />
+                  </Suspense>
                   <button
                     className="premium-card"
                     onClick={() => setDialog("premium")}
@@ -2040,6 +2139,7 @@ export default function App() {
 
         {dialog && !["story", "momentStory"].includes(dialog) && (
           <Modal
+            hideClose={["success", "need"].includes(dialog)}
             onClose={() => setDialog(null)}
             className={
               ["success", "need", "moment"].includes(dialog)
@@ -2050,6 +2150,7 @@ export default function App() {
             {dialog === "auth" && (
               <AuthWizard
                 invitation={invitation}
+                authInfo={data.auth}
                 onComplete={completeAuth}
                 notify={notify}
               />
@@ -2155,6 +2256,30 @@ export default function App() {
                     </strong>
                   </div>
                 )}
+                {pendingCheckin && !pendingCheckin.saving && (
+                  <div
+                    className="undo-checkin undo-inline"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <Drop size={22} />
+                    <div>
+                      <strong>
+                        {pendingCheckin.status === "done"
+                          ? "جیش کردم"
+                          : "جیش دارم"}
+                      </strong>
+                      <span>
+                        ثبت تا {fa(pendingCheckin.seconds)} ثانیهٔ دیگه
+                      </span>
+                    </div>
+                    <button onClick={undoCheckin}>
+                      <ArrowCounterClockwise size={18} />
+                      لغو ثبت
+                    </button>
+                  </div>
+                )}
+
                 <div className="success-buttons">
                   <Button lilac onClick={() => setDialog(null)}>
                     {dialog === "need" ? "باشه، الان برمی‌گردم" : "چه حس خوبی!"}
@@ -2277,7 +2402,9 @@ export default function App() {
                     </small>
                   </span>
                   <span className="preference-status">
-                    {selectedFriend.sharing ? "باز" : "خصوصی"}
+                    {selectedFriend.sharing
+                      ? "بستن دسترسی"
+                      : "باز کردن لینک‌ها"}
                   </span>
                 </button>
                 <button
@@ -2574,6 +2701,13 @@ export default function App() {
             {dialog === "settings" && (
               <>
                 <h2>پروفایل خودت</h2>
+                <Suspense fallback={null}>
+                  <AccountConnections
+                    data={data}
+                    onUpdate={setData}
+                    notify={notify}
+                  />
+                </Suspense>
                 <p className="dialog-description">
                   اسم و لینک‌ها مال خودتن. هیچ لینکی بدون اجازه‌ی تو نمایش داده
                   نمی‌شه.
@@ -2826,21 +2960,23 @@ export default function App() {
             </Suspense>
           </StoryDialog>
         )}
-        {pendingCheckin && !pendingCheckin.saving && (
-          <div className="undo-checkin" role="status" aria-live="polite">
-            <Drop size={22} />
-            <div>
-              <strong>
-                {pendingCheckin.status === "done" ? "جیش کردم" : "جیش دارم"}
-              </strong>
-              <span>ثبت تا {fa(pendingCheckin.seconds)} ثانیهٔ دیگه</span>
+        {pendingCheckin &&
+          !pendingCheckin.saving &&
+          !["need", "success"].includes(dialog) && (
+            <div className="undo-checkin" role="status" aria-live="polite">
+              <Drop size={22} />
+              <div>
+                <strong>
+                  {pendingCheckin.status === "done" ? "جیش کردم" : "جیش دارم"}
+                </strong>
+                <span>ثبت تا {fa(pendingCheckin.seconds)} ثانیهٔ دیگه</span>
+              </div>
+              <button onClick={undoCheckin}>
+                <ArrowCounterClockwise size={18} />
+                لغو ثبت
+              </button>
             </div>
-            <button onClick={undoCheckin}>
-              <ArrowCounterClockwise size={18} />
-              لغو ثبت
-            </button>
-          </div>
-        )}
+          )}
         <div
           className={`toast ${notice ? "visible" : ""}`}
           role="status"

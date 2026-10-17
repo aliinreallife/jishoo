@@ -262,3 +262,114 @@
     height: min(42dvh, 280px) !important;
   }
 }
+/* Visible action affordances and in-flow reaction undo. */
+button.preference-action {
+  border-color: #d8d0e3;
+  box-shadow: 0 3px 0 #ded6e7;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+button.preference-action:hover {
+  background: #f0ebf8;
+}
+button.preference-action:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #ded6e7;
+}
+button.preference-action:focus-visible,
+.nearby-people-trigger:focus-visible,
+.discovery-visibility:focus-visible {
+  outline: 3px solid #a99aca;
+  outline-offset: 3px;
+}
+.preference-action .preference-status {
+  border: 1px solid #d6ccdf;
+  background: #ede6f5;
+}
+.undo-checkin.undo-inline {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  max-width: none;
+  margin: 18px 0 8px;
+  z-index: auto;
+  box-shadow: none;
+  flex-shrink: 0;
+}
+.success-dialog .success-buttons {
+  margin-top: 18px;
+  flex-shrink: 0;
+}
+.success-dialog:has(.undo-inline) {
+  padding-bottom: 30px;
+}
+.reaction-toolbar {
+  min-height: 44px;
+}
+.preference-action small {
+  display: block;
+}
+.friend-dialog-head {
+  margin-top: 15px;
+}
+
+/* Invitation links are full-screen documents, not clipped app panels. */
+.desktop-stage.invite-fullscreen {
+  display: block;
+  min-height: 100dvh;
+  padding: 0;
+  background: radial-gradient(ellipse at 50% 30%, #fff2bb, #fffaf0 65%);
+}
+.invite-fullscreen > .desktop-brand,
+.invite-fullscreen > .stage-note {
+  display: none;
+}
+.app-shell.invite-fullscreen-shell {
+  width: 100%;
+  max-width: none;
+  min-height: 100dvh;
+  height: auto !important;
+  max-height: none;
+  overflow: visible !important;
+  border-radius: 0;
+  box-shadow: none;
+  border: 0;
+  background: transparent;
+}
+.invite-fullscreen .invite-landing {
+  height: auto;
+  min-height: 100dvh;
+  padding: 28px max(22px, calc((100vw - 520px) / 2))
+    max(35px, env(safe-area-inset-bottom));
+  gap: 18px;
+  overflow: visible;
+  background: none;
+}
+.invite-fullscreen .invite-landing > * {
+  flex-shrink: 0;
+}
+.invite-fullscreen .invite-landing > .pair-art {
+  height: 180px !important;
+  width: 230px !important;
+}
+.invite-fullscreen .invite-landing > .button {
+  min-height: 52px;
+}
+.invite-fullscreen .stage-note {
+  display: none;
+}
+
+.preference-action > span:not(.preference-status) {
+  min-width: 0;
+}
+.preference-action strong {
+  overflow-wrap: anywhere;
+}
+.preference-status {
+  max-width: 110px;
+  text-align: center;
+  flex-shrink: 0;
+}

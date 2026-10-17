@@ -1593,3 +1593,44 @@
 .admin-password-form .button {
   width: 100%;
 }
+.admin-support .admin-section-title {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+}
+.admin-support article {
+  padding: 17px;
+  border: 1px solid #e6ddce;
+  background: #fffaf0;
+  border-radius: 19px;
+  margin: 12px 0;
+  text-align: right;
+}
+.admin-support article.resolved {
+  opacity: 0.65;
+}
+.admin-support header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+.admin-support p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 2.1;
+  margin: 14px 0;
+}
+.admin-support small,
+.admin-support article > div {
+  font-size: 10px;
+  color: #91828b;
+  line-height: 2;
+}
+.admin-support .button {
+  padding: 11px;
+  margin-top: 14px;
+  font-size: 12px;
+}

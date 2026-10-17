@@ -1,10 +1,64 @@
+const CACHE = "jishoo-public-v1";
 self.addEventListener("install", (event) =>
-  event.waitUntil(self.skipWaiting()),
+  event.waitUntil(
+    caches
+      .open(CACHE)
+      .then((cache) =>
+        cache.addAll([
+          "/offline.html",
+          "/assets/app-icon-192.png",
+          "/assets/app-icon-512.png",
+        ]),
+      )
+      .then(() => self.skipWaiting()),
+  ),
 );
 self.addEventListener("activate", (event) =>
-  event.waitUntil(self.clients.claim()),
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((key) => key.startsWith("jishoo-public-") && key !== CACHE)
+            .map((key) => caches.delete(key)),
+        ),
+      )
+      .then(() => self.clients.claim()),
+  ),
 );
-// No offline caching: friend activity and private account data stay current.
+self.addEventListener("fetch", (event) => {
+  const request = event.request,
+    url = new URL(request.url);
+  if (
+    request.method !== "GET" ||
+    url.origin !== self.location.origin ||
+    url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/.well-known/")
+  )
+    return;
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request).catch(() => caches.match("/offline.html")),
+    );
+    return;
+  }
+  if (url.pathname.startsWith("/assets/"))
+    event.respondWith(
+      caches.open(CACHE).then(async (cache) => {
+        const hit = await cache.match(request);
+        if (hit) return hit;
+        const response = await fetch(request);
+        if (response.ok && response.type === "basic") {
+          await cache.put(request, response.clone());
+          const keys = await cache.keys();
+          if (keys.length > 120) await cache.delete(keys[0]);
+        }
+        return response;
+      }),
+    );
+});
+// Private API responses, account pages and OAuth callbacks are never cached.
 self.addEventListener("push", (event) => {
   let payload = {
     title: "جیشو",

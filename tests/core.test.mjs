@@ -317,3 +317,127 @@ test("favicon has a transparent outer canvas and keeps visible mascot pixels", a
   assert.equal(data[3], 0);
   assert.ok(data.some((value, i) => i % 4 === 3 && value > 0));
 });
+
+test("Google identity verification rejects wrong audience, nonce, issuer, expiry and unverified email", async () => {
+  const { generateKeyPair, exportJWK, SignJWT, createLocalJWKSet } =
+    await import("jose");
+  const { verifyGoogleIdentity, googleAuthorization } =
+    await import("../lib/google-protocol.js");
+  const { hashToken } = await import("../lib/core.js");
+  const { publicKey, privateKey } = await generateKeyPair("RS256");
+  const jwk = await exportJWK(publicKey);
+  jwk.kid = "qa-google";
+  const keys = createLocalJWKSet({ keys: [jwk] });
+  const clientId = "qa.apps.googleusercontent.com",
+    nonce = "qa-random-nonce";
+  async function sign(overrides = {}) {
+    const now = Math.floor(Date.now() / 1000);
+    return new SignJWT({
+      iss: "https://accounts.google.com",
+      aud: clientId,
+      sub: "qa-google-identity",
+      email: "qa@example.test",
+      email_verified: true,
+      nonce,
+      iat: now,
+      exp: now + 300,
+      ...overrides,
+    })
+      .setProtectedHeader({ alg: "RS256", kid: "qa-google" })
+      .sign(privateKey);
+  }
+  const options = {
+    clientId,
+    nonceHash: hashToken(nonce),
+    hash: hashToken,
+    keys,
+  };
+  assert.equal(
+    (await verifyGoogleIdentity(await sign(), options)).email,
+    "qa@example.test",
+  );
+  for (const invalid of [
+    { aud: "another-client" },
+    { iss: "https://evil.example" },
+    { nonce: "another-nonce" },
+    { exp: 1 },
+    { email_verified: false },
+    { azp: "another-client" },
+  ])
+    await assert.rejects(verifyGoogleIdentity(await sign(invalid), options));
+  const url = new URL(
+    googleAuthorization({
+      clientId,
+      redirectUri: "https://jishoo.vercel.app/api/auth/google",
+      state: "qa-state",
+      nonce,
+      verifier: "a".repeat(50),
+    }),
+  );
+  assert.equal(url.origin, "https://accounts.google.com");
+  assert.equal(url.searchParams.get("code_challenge_method"), "S256");
+  assert.equal(url.searchParams.get("scope"), "openid email");
+  assert.equal(url.searchParams.has("client_secret"), false);
+});
+test("Google return locations stay on the app and cannot redirect to another site", async () => {
+  const { safeReturnPath } = await import("../lib/google-auth.js");
+  for (const path of [
+    "https://evil.example",
+    "//evil.example/",
+    "/\\evil.example/",
+    "/api/auth/google",
+  ])
+    assert.equal(safeReturnPath(path), "/");
+  assert.equal(safeReturnPath("/?invite=QA#/friends"), "/?invite=QA#/friends");
+});
+test("Android asset links require real valid signing fingerprints", async () => {
+  const { assetLinks } = await import("../lib/android.js");
+  assert.deepEqual(assetLinks({}), []);
+  assert.deepEqual(assetLinks({ ANDROID_SHA256_CERTIFICATES: "invalid" }), []);
+  const sha = Array(32).fill("AF").join(":");
+  const value = assetLinks({ ANDROID_SHA256_CERTIFICATES: sha + "," + sha });
+  assert.equal(value[0].target.package_name, "app.jishoo.twa");
+  assert.deepEqual(value[0].target.sha256_cert_fingerprints, [sha]);
+});
+test("CARTO configuration comes from the environment and retains provider attribution", async () => {
+  const { mapConfig } = await import("../lib/public-config.js");
+  const original = process.env.CARTO_KEY;
+  try {
+    process.env.CARTO_KEY = "qa key";
+    const map = mapConfig();
+    assert.ok(
+      map.url.includes("light_nolabels/{z}/{x}/{y}{r}.png?key=qa%20key"),
+    );
+    assert.equal(map.attribution, "© OpenStreetMap contributors, © CARTO");
+  } finally {
+    if (original === undefined) delete process.env.CARTO_KEY;
+    else process.env.CARTO_KEY = original;
+  }
+});
+test("PWA offline worker never caches API data or Google callbacks", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { runInNewContext } = await import("node:vm");
+  const handlers = {},
+    origin = "https://jishoo.vercel.app";
+  let intercepted = 0;
+  runInNewContext(
+    readFileSync(new URL("../public/sw.js", import.meta.url), "utf8"),
+    {
+      self: {
+        location: { origin },
+        addEventListener: (name, fn) => (handlers[name] = fn),
+      },
+      URL,
+    },
+  );
+  for (const path of [
+    "/api/app?action=bootstrap",
+    "/api/auth/google?code=private",
+    "/.well-known/assetlinks.json",
+  ])
+    handlers.fetch({
+      request: { method: "GET", url: origin + path, mode: "navigate" },
+      respondWith: () => intercepted++,
+    });
+  assert.equal(intercepted, 0);
+});

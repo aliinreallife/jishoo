@@ -50,10 +50,10 @@ export default function Nearby({
       zoomControl: false,
       attributionControl: true,
     }).setView([35.7, 51.4], 14);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution:
-        '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>',
+    L.tileLayer(data.map.url, {
+      maxZoom: data.map.maxZoom,
+      subdomains: data.map.subdomains,
+      attribution: data.map.attribution,
     }).addTo(map.current);
     markers.current = L.layerGroup().addTo(map.current);
     const resize = new ResizeObserver(() => map.current?.invalidateSize());
@@ -382,6 +382,9 @@ export default function Nearby({
                           ? "برای پنهان‌کردن بزن"
                           : "برای نمایش نام و پروفایل به آدم‌های نزدیک بزن"}
                       </small>
+                    </span>
+                    <span className="discovery-action-label">
+                      {me.discoverable ? "پنهان کن" : "نمایش بده"}
                     </span>
                   </button>
                   <div className="nearby-people-list">

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, lazy, Suspense } from "react";
 import {
   Bell,
   BellSlash,
@@ -30,6 +30,8 @@ import {
   syncPush,
   testPush,
 } from "../push";
+
+const AdminSupport = lazy(() => import("./AdminSupport"));
 
 const Button = ({ children, ...props }) => (
   <button className="button button-lilac" {...props}>
@@ -602,6 +604,9 @@ export function Admin({ data, notify, refresh }) {
             لینک ورود مدیر خصوصی و یک‌بارمصرفه؛ برای ورود دوباره از یک دستگاه
             دیگه نگهش دار. بعد از ۳۰ روز منقضی می‌شه.
           </p>
+          <Suspense fallback={null}>
+            <AdminSupport notify={notify} />
+          </Suspense>
           <details className="admin-audit">
             <summary>کارهای اخیر مدیریت</summary>
             {dashboard.audit.map((item, i) => (
