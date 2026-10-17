@@ -296,6 +296,13 @@ export default function Friends({
               <CaretLeft size={18} />
             </button>
           )}
+          {accepted.filter((friend) => friend.linkConnection === "incoming").map((friend) => (
+            <button key={friend.id} className="link-request-notice" onClick={() => onFriend(friend)}>
+              <LinkSimple size={24} />
+              <span>{friend.name} درخواست دیدن حساب‌ها رو فرستاده<small>دیدن درخواست و انتخاب تو</small></span>
+              <CaretLeft size={18} />
+            </button>
+          ))}
           <div className="friends-tabs" role="group" aria-label="بخش‌های دوستی">
             {[
               ["friends", "دوست‌ها"],

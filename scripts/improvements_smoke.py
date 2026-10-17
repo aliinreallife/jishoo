@@ -82,10 +82,12 @@ def main():
         assert reg['active'] in ('activating','activated')
         a.wait_for_function("async()=>{const r=await navigator.serviceWorker.getRegistration('/');return r?.active?.state==='activated'}",timeout=12000)
       else:
-        with urllib.request.urlopen(BASE+'/sw.js',timeout=30) as response:assert 'self.addEventListener("push"' in response.read().decode()
+        import os
+        request=urllib.request.Request(BASE+'/sw.js',headers={'x-vercel-protection-bypass':os.environ['JISHOO_TEST_BYPASS_SECRET']} if os.environ.get('JISHOO_TEST_BYPASS_SECRET') else {})
+        with urllib.request.urlopen(request,timeout=30) as response:assert 'self.addEventListener("push"' in response.read().decode()
       print('PASS: Explanation precedes permission; worker activation checked locally and deployed worker verified',flush=True)
       guest.locator('.need-card').click()
-      expect(guest.locator('.need-reaction-art')).to_be_visible(timeout=20000)
+      expect(guest.locator('.checkin-art')).to_be_visible(timeout=20000)
       guest.get_by_role('button',name='اشتراک این خبر',exact=True).click()
       expect(guest.get_by_role('button',name='اشتراک تصویر',exact=True)).to_be_enabled(timeout=30000)
       assert guest.locator('.story-qr').count()==0

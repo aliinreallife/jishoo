@@ -185,6 +185,7 @@ async function friends(user) {
   );
   return rows.map((r) => {
     const ownerSharing = user.id === r.user_a ? r.share_b : r.share_a;
+    const mySharing = user.id === r.user_a ? r.share_a : r.share_b;
     return {
       connectionId: r.id,
       id: r.friend_id,
@@ -194,9 +195,10 @@ async function friends(user) {
       avatarImage: r.avatar_image || null,
       status: r.status,
       incoming: r.requested_by !== user.id,
-      sharing: user.id === r.user_a ? r.share_a : r.share_b,
+      sharing: mySharing,
+      linkConnection: mySharing && ownerSharing ? "connected" : mySharing ? "outgoing" : ownerSharing ? "incoming" : "none",
       socialLinks:
-        r.status === "accepted" && ownerSharing && premium(user) && premium(r)
+        r.status === "accepted" && mySharing && ownerSharing && premium(user) && premium(r)
           ? r.social_links
           : {},
       latestStatus: r.status === "accepted" ? r.latest_status : null,
@@ -248,7 +250,7 @@ async function bootstrap(user, sessionHash) {
 }
 async function inviteInfo(code) {
   const rows = await query(
-    `SELECT i.code,i.uses,i.max_uses,i.grant_admin,u.id,u.name,u.handle,u.avatar_seed,u.avatar_image FROM invites i LEFT JOIN users u ON u.id=i.inviter_id WHERE i.code=$1 AND i.active`,
+    `SELECT i.code,i.uses,i.max_uses,i.grant_admin,i.premium_days,i.premium_lifetime,u.id,u.name,u.handle,u.avatar_seed,u.avatar_image FROM invites i LEFT JOIN users u ON u.id=i.inviter_id WHERE i.code=$1 AND i.active`,
     [normalizeCode(code)],
   );
   if (!rows[0])
@@ -273,7 +275,8 @@ async function inviteInfo(code) {
           handle: rows[0].handle,
         }
       : null,
-    bonusDays: 7,
+    bonusDays: rows[0].premium_lifetime ? 0 : rows[0].premium_days || 7,
+    lifetimeGift: Boolean(rows[0].premium_lifetime),
   };
 }
 async function detectMoments(user, event) {
@@ -551,8 +554,10 @@ export default async function handler(req, res) {
           "برای عضویت توی این مرحله، کد دعوت لازمه.",
           "invite_required",
         );
+      let registrationGiftDays = 3;
       if (code) {
         const info = await inviteInfo(code);
+        registrationGiftDays = info.bonusDays;
         if (info.remaining === 0)
           fail(
             410,
@@ -561,7 +566,7 @@ export default async function handler(req, res) {
           );
       }
       const registered = await query(
-        `WITH candidate AS MATERIALIZED (SELECT id FROM users WHERE id=$3 AND NOT registered FOR UPDATE), ticket AS MATERIALIZED (SELECT id,phone_hash,phone_cipher FROM auth_challenges WHERE id=$2 AND user_id=$3 AND purpose='login' AND verified_at IS NOT NULL AND consumed_at IS NULL AND expires_at>NOW() AND NOT $11::boolean AND EXISTS(SELECT 1 FROM candidate) UNION ALL SELECT session_hash AS id,NULL::text AS phone_hash,NULL::text AS phone_cipher FROM pending_google WHERE session_hash=$10 AND expires_at>NOW() AND $11::boolean AND EXISTS(SELECT 1 FROM candidate)), valid_invite AS (UPDATE invites SET uses=uses+1 WHERE code=$1 AND active AND (max_uses IS NULL OR uses<max_uses) AND EXISTS(SELECT 1 FROM ticket) RETURNING *), joined AS (UPDATE users SET registered=TRUE,terms_version='2026-10-17',terms_accepted_at=NOW(),name=$4,avatar_seed=$4,handle=CASE WHEN COALESCE((SELECT grant_admin FROM valid_invite),FALSE) AND (SELECT reserved_handle FROM valid_invite)='ali' THEN 'ali' ELSE 'u'||SUBSTRING(REPLACE(users.id,'-',''),1,10) END,role=CASE WHEN COALESCE((SELECT grant_admin FROM valid_invite),FALSE) THEN 'admin' ELSE 'member' END,phone_hash=ticket.phone_hash,phone_cipher=ticket.phone_cipher,invite_code=$5,invited_by=(SELECT inviter_id FROM valid_invite),trial_days_bank=CASE WHEN $7::boolean THEN CASE WHEN EXISTS(SELECT 1 FROM valid_invite) THEN 7 ELSE 3 END ELSE 0 END,trial_until=CASE WHEN $7::boolean THEN NULL ELSE NOW()+CASE WHEN EXISTS(SELECT 1 FROM valid_invite) THEN INTERVAL '7 days' ELSE INTERVAL '3 days' END END FROM ticket WHERE users.id=$3 AND NOT users.registered AND (NOT $6::boolean OR EXISTS(SELECT 1 FROM valid_invite)) RETURNING users.*), google_identity AS (INSERT INTO auth_identities(provider,subject,user_id,email_cipher) SELECT 'google',p.subject,j.id,p.email_cipher FROM pending_google p CROSS JOIN joined j WHERE p.session_hash=$10 AND $11::boolean RETURNING user_id), google_consume AS (DELETE FROM pending_google WHERE session_hash=$10 AND EXISTS(SELECT 1 FROM google_identity) RETURNING session_hash), reward AS (UPDATE users SET trial_days_bank=CASE WHEN $7::boolean THEN trial_days_bank+7 ELSE trial_days_bank END,trial_until=CASE WHEN $7::boolean THEN trial_until ELSE GREATEST(COALESCE(trial_until,NOW()),COALESCE(paid_until,NOW()),NOW())+INTERVAL '7 days' END WHERE id=(SELECT invited_by FROM joined) RETURNING id), consume AS (UPDATE auth_challenges SET consumed_at=NOW() WHERE id=$2 AND EXISTS(SELECT 1 FROM joined) RETURNING id), personal_invite AS (INSERT INTO invites(code,inviter_id,max_uses) SELECT $5,id,CASE WHEN role='admin' THEN 1 WHEN $7::boolean THEN 3 ELSE NULL END FROM joined ON CONFLICT DO NOTHING RETURNING code), auto_connect AS (INSERT INTO connections(id,user_a,user_b,requested_by,status) SELECT $9,LEAST(id,invited_by),GREATEST(id,invited_by),invited_by,CASE WHEN $8::boolean THEN 'accepted' ELSE 'pending' END FROM joined WHERE invited_by IS NOT NULL ON CONFLICT(user_a,user_b) DO NOTHING RETURNING id), admin_session AS(UPDATE sessions SET admin_access=TRUE WHERE token_hash=$10 AND EXISTS(SELECT 1 FROM joined WHERE role='admin') RETURNING token_hash) SELECT * FROM joined`,
+        `WITH candidate AS MATERIALIZED (SELECT id FROM users WHERE id=$3 AND NOT registered FOR UPDATE), ticket AS MATERIALIZED (SELECT id,phone_hash,phone_cipher FROM auth_challenges WHERE id=$2 AND user_id=$3 AND purpose='login' AND verified_at IS NOT NULL AND consumed_at IS NULL AND expires_at>NOW() AND NOT $11::boolean AND EXISTS(SELECT 1 FROM candidate) UNION ALL SELECT session_hash AS id,NULL::text AS phone_hash,NULL::text AS phone_cipher FROM pending_google WHERE session_hash=$10 AND expires_at>NOW() AND $11::boolean AND EXISTS(SELECT 1 FROM candidate)), valid_invite AS (UPDATE invites SET uses=uses+1 WHERE code=$1 AND active AND (max_uses IS NULL OR uses<max_uses) AND EXISTS(SELECT 1 FROM ticket) RETURNING *), joined AS (UPDATE users SET registered=TRUE,terms_version='2026-10-17',terms_accepted_at=NOW(),name=$4,avatar_seed=$4,handle=CASE WHEN COALESCE((SELECT grant_admin FROM valid_invite),FALSE) AND (SELECT reserved_handle FROM valid_invite)='ali' THEN 'ali' ELSE 'u'||SUBSTRING(REPLACE(users.id,'-',''),1,10) END,role=CASE WHEN COALESCE((SELECT grant_admin FROM valid_invite),FALSE) THEN 'admin' ELSE 'member' END,phone_hash=ticket.phone_hash,phone_cipher=ticket.phone_cipher,invite_code=$5,invited_by=(SELECT inviter_id FROM valid_invite),lifetime=COALESCE((SELECT premium_lifetime FROM valid_invite),FALSE),trial_days_bank=CASE WHEN $7::boolean AND NOT COALESCE((SELECT premium_lifetime FROM valid_invite),FALSE) THEN CASE WHEN EXISTS(SELECT 1 FROM valid_invite) THEN COALESCE(NULLIF((SELECT premium_days FROM valid_invite),0),7) ELSE 3 END ELSE 0 END,trial_until=CASE WHEN $7::boolean OR COALESCE((SELECT premium_lifetime FROM valid_invite),FALSE) THEN NULL ELSE NOW()+(CASE WHEN EXISTS(SELECT 1 FROM valid_invite) THEN COALESCE(NULLIF((SELECT premium_days FROM valid_invite),0),7) ELSE 3 END)*INTERVAL '1 day' END FROM ticket WHERE users.id=$3 AND NOT users.registered AND (NOT $6::boolean OR EXISTS(SELECT 1 FROM valid_invite)) RETURNING users.*), google_identity AS (INSERT INTO auth_identities(provider,subject,user_id,email_cipher) SELECT 'google',p.subject,j.id,p.email_cipher FROM pending_google p CROSS JOIN joined j WHERE p.session_hash=$10 AND $11::boolean RETURNING user_id), google_consume AS (DELETE FROM pending_google WHERE session_hash=$10 AND EXISTS(SELECT 1 FROM google_identity) RETURNING session_hash), reward AS (UPDATE users SET trial_days_bank=CASE WHEN $7::boolean THEN trial_days_bank+7 ELSE trial_days_bank END,trial_until=CASE WHEN $7::boolean THEN trial_until ELSE GREATEST(COALESCE(trial_until,NOW()),COALESCE(paid_until,NOW()),NOW())+INTERVAL '7 days' END WHERE id=(SELECT invited_by FROM joined) RETURNING id), consume AS (UPDATE auth_challenges SET consumed_at=NOW() WHERE id=$2 AND EXISTS(SELECT 1 FROM joined) RETURNING id), personal_invite AS (INSERT INTO invites(code,inviter_id,max_uses) SELECT $5,id,CASE WHEN role='admin' THEN 1 WHEN $7::boolean THEN 3 ELSE NULL END FROM joined ON CONFLICT DO NOTHING RETURNING code), auto_connect AS (INSERT INTO connections(id,user_a,user_b,requested_by,status) SELECT $9,LEAST(id,invited_by),GREATEST(id,invited_by),invited_by,CASE WHEN $8::boolean THEN 'accepted' ELSE 'pending' END FROM joined WHERE invited_by IS NOT NULL ON CONFLICT(user_a,user_b) DO NOTHING RETURNING id), admin_session AS(UPDATE sessions SET admin_access=TRUE WHERE token_hash=$10 AND EXISTS(SELECT 1 FROM joined WHERE role='admin') RETURNING token_hash) SELECT * FROM joined`,
         [
           code,
           body.ticket,
@@ -601,7 +606,8 @@ export default async function handler(req, res) {
           }),
         ]);
       return json(res, 200, {
-        bonusDays: code ? 7 : 3,
+        bonusDays: fresh.lifetime ? 0 : registrationGiftDays,
+        lifetimeGift: fresh.lifetime,
         ...(await bootstrap(fresh)),
       });
     }
@@ -784,13 +790,49 @@ export default async function handler(req, res) {
     }
     if (action === "connection-share") {
       requireAccount(user);
-      requirePremium(user);
-      if (typeof body.enabled !== "boolean") fail(400, "انتخاب معتبر نیست.");
+      const relation = (await query(
+        "SELECT * FROM connections WHERE id=$1 AND status='accepted' AND (user_a=$2 OR user_b=$2)",
+        [body.id, user.id],
+      ))[0];
+      if (!relation) fail(404, "این دوست پیدا نشد.");
+      const mine = relation.user_a === user.id ? "share_a" : "share_b";
+      const theirs = mine === "share_a" ? "share_b" : "share_a";
+      let operation = body.operation;
+      // Older clients still require both participants' consent before any link is returned.
+      if (operation === undefined && typeof body.enabled === "boolean")
+        operation = body.enabled ? relation[theirs] ? "accept" : "request" : "withdraw";
+      if (!["request", "accept", "cancel", "decline", "disconnect", "withdraw"].includes(operation))
+        fail(400, "انتخاب معتبر نیست.");
+      const grants = ["request", "accept"].includes(operation);
+      if (grants) {
+        requirePremium(user);
+        if (!(await rateLimit("social-request:" + user.id, 12, 600)))
+          fail(429, "چند دقیقه بعد دوباره امتحان کن.");
+      }
+      const conditions = {
+        request: "NOT share_a AND NOT share_b",
+        accept: `${theirs} AND NOT ${mine}`,
+        cancel: `${mine} AND NOT ${theirs}`,
+        decline: `${theirs} AND NOT ${mine}`,
+        disconnect: "share_a AND share_b",
+        withdraw: "TRUE",
+      };
       const rows = await query(
-        `UPDATE connections SET share_a=CASE WHEN user_a=$2 THEN $3 ELSE share_a END,share_b=CASE WHEN user_b=$2 THEN $3 ELSE share_b END WHERE id=$1 AND status='accepted' AND (user_a=$2 OR user_b=$2) RETURNING id`,
-        [body.id, user.id, Boolean(body.enabled)],
+        `UPDATE connections SET ${grants ? `${mine}=TRUE` : "share_a=FALSE,share_b=FALSE"} WHERE id=$1 AND status='accepted' AND (user_a=$2 OR user_b=$2) AND (${conditions[operation]}) RETURNING id`,
+        [body.id, user.id],
       );
-      if (!rows[0]) fail(404, "اتصال فعال پیدا نشد.");
+      if (!rows[0]) fail(409, "این درخواست تغییر کرده؛ صفحه رو تازه کن.");
+      if (grants) {
+        const peerId = relation.user_a === user.id ? relation.user_b : relation.user_a;
+        await notifyUser(peerId, {
+          actorId: user.id,
+          kind: "social-request",
+          title: operation === "request" ? `${user.name} درخواست دیدن حساب‌ها رو فرستاد` : `${user.name} درخواستت رو قبول کرد`,
+          body: operation === "request" ? "با قبول درخواست، حساب‌های اجتماعی‌تون برای هم قابل دیدن می‌شه." : "حالا هر دوتون می‌تونین حساب‌های اجتماعی هم رو ببینین.",
+          route: "/#/friends",
+          dedupe: `social:${relation.id}:${randomUUID()}`,
+        });
+      }
       return json(res, 200, { friends: await friends(user) });
     }
     if (action === "location") {

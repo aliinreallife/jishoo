@@ -34,6 +34,14 @@ def main():
    assert not sent and api(a,'bootstrap')['stats']['total']==0
    a.set_viewport_size({'width':393,'height':852});a.locator('.done-card').click();capture(a,'current-reaction-undo.png');a.get_by_role('button',name='لغو ثبت',exact=True).click()
    print('PASS: Invitation scrolls on a short phone; both check-ins fill the viewport at four sizes with identical undo/action positions and no API writes after undo',flush=True)
+   a.locator('.done-card').click();primary=a.get_by_role('button',name='چه حس خوبی!',exact=True);before=primary.bounding_box()
+   expect(a.locator('.undo-checkin')).to_have_count(0,timeout=6000);share=a.get_by_role('button',name='اشتراک این خبر',exact=True);expect(share).to_be_enabled(timeout=20000);assert primary.bounding_box()==before
+   share.click();expect(a.locator('.full-story-overlay')).to_be_visible(timeout=20000)
+   for width,height in [(320,568),(393,852),(1440,900)]:
+    a.set_viewport_size({'width':width,'height':height});bounds=a.locator('.full-story-overlay').bounding_box();assert abs(bounds['x'])<1 and abs(bounds['y'])<1 and bounds['width']==width and bounds['height']==height
+    a.get_by_role('button',name='اشتراک تصویر',exact=True).scroll_into_view_if_needed();expect(a.get_by_role('button',name='اشتراک تصویر',exact=True)).to_be_visible();capture(a,f'current-story-fullscreen-{width}.png')
+   a.keyboard.press('Escape');expect(a.get_by_role('dialog')).to_have_count(0);assert a.evaluate('document.body.style.overflow')!='hidden'
+   print('PASS: Saving keeps the primary action still; story sharing fills phone/desktop viewports, export controls remain reachable, and close restores scrolling',flush=True)
    for route,title in [('terms','شرایط استفاده'),('privacy','حریم خصوصی')]:
     a.goto(BASE+'/'+route);expect(a.get_by_role('heading',name=title,exact=True)).to_be_visible(timeout=15000);assert a.get_by_role('link',name='پشتیبانی',exact=True).get_attribute('href')=='/support'
    a.goto(BASE+'/support');expect(a.get_by_role('heading',name='اینجاییم که بشنویم')).to_be_visible(timeout=15000)
@@ -45,6 +53,14 @@ def main():
    ticketCard.get_by_role('button',name='رسیدگی شد',exact=True).click();expect(ticketCard).to_have_class('resolved',timeout=15000);ticketCard.get_by_role('button',name='بازکردن دوباره',exact=True).click();expect(ticketCard).not_to_have_class('resolved',timeout=15000)
    admin.call('admin-support-delete',{'id':support_id});support_id=None
    print('PASS: Legal links reach support; messages reach the private admin inbox; resolve/reopen work and regular users are denied access',flush=True)
+   previousUrl=''
+   for gift,days,lifetime in [('30',30,False),('lifetime',0,True)]:
+    adminPage.get_by_label('پرمیوم همراه دعوت',exact=True).select_option(gift);adminPage.get_by_role('button',name='ساخت لینک یک‌بارمصرف',exact=True).click()
+    link=adminPage.get_by_label('لینک خصوصی ساخته‌شده',exact=True);expect(link).to_be_visible();expect(link).not_to_have_value(previousUrl);previousUrl=link.input_value()
+    from urllib.parse import urlsplit,parse_qs
+    code=parse_qs(urlsplit(previousUrl).query)['invite'][0];offer=admin.call('invite&code='+code);assert offer['lifetimeGift']==lifetime and offer['bonusDays']==days
+    giftCtx,giftPage=context(b);giftPage.goto(BASE+'/?invite='+code);expect(giftPage.locator('.invite-landing-gift')).to_contain_text('پرمیوم همیشگی' if lifetime else '۳۰ روز');owned.append((giftPage,api(giftPage,'bootstrap')['me']['id']));admin.call('admin-invite-revoke',{'code':code})
+   print('PASS: Admin gift picker creates real single-use day/lifetime offers and invitation landing pages display the selected subscription',flush=True)
    a.goto(BASE+'/install');expect(a.get_by_role('heading',name='نصب در Chrome اندروید')).to_be_visible(timeout=15000);capture(a,'current-android-install.png')
    ios=b.new_context(viewport={'width':393,'height':852},user_agent='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1');verified_https(ios);ip=ios.new_page();ip.goto(BASE+'/install');expect(ip.get_by_role('heading',name='نصب روی آیفون و آیپد')).to_be_visible(timeout=15000);expect(ip.get_by_text('Add to Home Screen',exact=True)).to_be_visible();capture(ip,'current-ios-install.png')
    if BASE.startswith('http://'):

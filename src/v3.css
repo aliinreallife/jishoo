@@ -555,3 +555,155 @@ button.preference-action:focus-visible,
     padding-block: 5px;
   }
 }
+
+/* App screens use the viewport; readable content stays comfortably centered. */
+.desktop-stage {
+  display: block;
+  min-height: 100dvh;
+  padding: 0;
+}
+.desktop-stage > .desktop-brand,
+.desktop-stage > .stage-note {
+  display: none;
+}
+.app-shell {
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.page {
+  width: 100%;
+  max-width: 760px;
+  margin-inline: auto;
+}
+.bottom-nav {
+  padding-inline: max(12px, calc((100vw - 760px) / 2));
+}
+.welcome-shell {
+  overflow-y: auto;
+}
+.guest-welcome {
+  width: 100%;
+  max-width: 560px;
+  min-height: 100dvh;
+  height: auto;
+  margin-inline: auto;
+}
+.dialog.page-dialog {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  padding: max(65px, env(safe-area-inset-top)) 24px
+    max(28px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+  box-shadow: none;
+  background: #fffcf4;
+}
+.page-dialog > * {
+  max-width: 520px;
+  margin-inline: auto;
+}
+.page-dialog > .button,
+.page-dialog > .preference-action,
+.page-dialog > .social-connection {
+  width: min(100%, 520px);
+}
+.page-dialog > .close-dialog {
+  left: max(22px, calc((100vw - 520px) / 2));
+  top: max(18px, env(safe-area-inset-top));
+  height: 38px;
+  width: 38px;
+  background: #f2eadb;
+}
+.full-story-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  height: 100dvh;
+  overscroll-behavior: contain;
+  background: #fcf9f1;
+}
+.full-story-overlay .story-editor,
+.full-story-overlay .stories-page {
+  width: 100%;
+  max-width: 760px;
+  margin-inline: auto;
+  min-height: 100dvh;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: max(25px, env(safe-area-inset-bottom));
+}
+.full-story-overlay .story-editor > header > button {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  background: #f2ebdf;
+}
+.v2-home .need-card {
+  background: linear-gradient(145deg, #fff2b3, #ffe69b);
+  border: 1px solid #f2d785;
+}
+.v2-home .done-card {
+  background: linear-gradient(145deg, #e6f2ff, #cce3ff);
+  border: 1px solid #b9d5f7;
+  color: #355c88;
+}
+.undo-checkin {
+  background: #fffaf0;
+  border: 1px solid #e8dcc0;
+  color: #393947;
+  box-shadow: 0 6px 24px #71604912;
+  border-radius: 18px;
+}
+.undo-checkin span {
+  color: #8a7b65;
+}
+.undo-checkin .undo-countdown {
+  color: #8d7235;
+  background: #fff0ba;
+  border-color: #f3dda1;
+}
+.undo-checkin button {
+  color: #6d5b8b;
+  background: #eee7f8;
+  border-color: #dcd1ed;
+}
+.undo-checkin button:focus-visible {
+  outline-color: #a294bf;
+}
+.admin-gift-picker {
+  display: grid;
+  gap: 10px;
+  margin-block: 18px;
+  font-size: 13px;
+}
+.admin-gift-picker select {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px;
+  border: 1px solid #dbcee9;
+  border-radius: 13px;
+  background: #fffdf7;
+  color: #55476c;
+  font: inherit;
+}
+.admin-gift-picker small {
+  color: #8c7f92;
+  font-size: 11px;
+  line-height: 2;
+}
+.friend-dialog-head > .character {
+  margin-inline: auto;
+}
+.overlay-backdrop:not(.viewport-overlay) {
+  position: fixed;
+  z-index: 210;
+}
+.overlay-backdrop:not(.viewport-overlay) > .dialog {
+  width: min(100%, 480px);
+}

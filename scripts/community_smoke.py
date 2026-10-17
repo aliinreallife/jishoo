@@ -92,7 +92,9 @@ def main():
         a.call("avatar",{"image":None})
         assert a.bootstrap()["me"]["avatarImage"] is None
         assert b.bootstrap()["friends"][0]["socialLinks"]=={}
-        a.call("connection-share",{"id":relation["connectionId"],"enabled":True})
+        a.call("connection-share",{"id":relation["connectionId"],"operation":"request"})
+        assert peer(b.bootstrap(),ra["me"]["id"])["socialLinks"]=={}
+        b.call("connection-share",{"id":relation["connectionId"],"operation":"accept"})
         assert peer(b.bootstrap(),ra["me"]["id"])["socialLinks"]["instagram"].endswith("/jishoo_test")
         passed("Unique public handles, persistent photo uploads/removal and per-friend social consent work")
 

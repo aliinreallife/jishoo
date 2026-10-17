@@ -105,12 +105,15 @@ def main():
         assert b.bootstrap()["friends"][0]["socialLinks"] == {}
         c.call("connection-share", {"id": relation_id, "enabled": True}, expected=404)
         a.call("connection-share", {"id": relation_id, "enabled": "true"}, expected=400)
-        a.call("connection-share", {"id": relation_id, "enabled": True})
+        a.call("connection-share", {"id": relation_id, "operation": "request"})
+        assert b.bootstrap()["friends"][0]["socialLinks"] == {}
+        a.call("connection-share", {"id": relation_id, "operation": "accept"}, expected=409)
+        b.call("connection-share", {"id": relation_id, "operation": "accept"})
         assert b.bootstrap()["friends"][0]["socialLinks"]["instagram"] == "https://www.instagram.com/jishoo_test"
         a.call("connection-share", {"id": relation_id, "enabled": False})
         assert b.bootstrap()["friends"][0]["socialLinks"] == {}
         a.call("profile", {"socialLinks": {"website": "javascript:alert(1)"}}, expected=400)
-        passed("Social links stay private until a per-friend grant; revocation and membership checks work")
+        passed("Social links stay private until a mutual acceptance; revocation and membership checks work")
 
         a.call("circle-create", {"name": "جمع آزمایش", "members": [rc["me"]["id"]]}, expected=403)
         circle = a.call("circle-create", {"name": "جمع آزمایش", "members": [rb["me"]["id"]]})

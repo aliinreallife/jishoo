@@ -1,0 +1,48 @@
+import React from "react";
+import { LinkSimple, Check, X, InstagramLogo, TelegramLogo, XLogo, ArrowSquareOut } from "@phosphor-icons/react";
+import "./SocialConnection.css";
+
+const platforms = {
+  instagram: [InstagramLogo, "اینستاگرام"],
+  telegram: [TelegramLogo, "تلگرام"],
+  x: [XLogo, "ایکس"],
+  website: [LinkSimple, "سایت"],
+};
+
+export default function SocialConnection({ friend, premium, busy, onChange }) {
+  const state = friend.linkConnection || "none";
+  const action = (operation) => onChange(friend, operation);
+  return (
+    <section className={`social-connection social-${state}`} aria-label="اشتراک حساب‌های اجتماعی">
+      <header><LinkSimple size={23} /><h3>حساب‌های اجتماعی، با اجازهٔ هر دوتون</h3></header>
+      {state === "none" && <>
+        <p>برای {friend.name} درخواست بفرست. اگر قبول کنه، هر دوتون می‌تونین حساب‌های اجتماعی هم رو ببینین.</p>
+        <button className="button button-lilac" disabled={busy || !premium} onClick={() => action("request")}>درخواست دیدن حساب‌ها</button>
+      </>}
+      {state === "outgoing" && <>
+        <strong>درخواستت برای {friend.name} فرستاده شد</strong>
+        <p>بعد از قبول‌کردنِ دوستت، حساب‌های اجتماعی‌تون برای هم قابل دیدن می‌شه.</p>
+        <button className="button button-secondary" disabled={busy} onClick={() => action("cancel")}>لغو درخواست</button>
+      </>}
+      {state === "incoming" && <>
+        <strong>{friend.name} درخواست دیدن حساب‌ها رو فرستاده</strong>
+        <p>اگر قبول کنی، اون حساب‌های اجتماعی تو رو می‌بینه و تو هم حساب‌های اون رو می‌بینی. دوستی‌تون به این انتخاب وابسته نیست.</p>
+        <div className="social-consent-actions">
+          <button className="button button-lilac" disabled={busy || !premium} onClick={() => action("accept")}><Check size={18} />قبول درخواست</button>
+          <button className="button button-secondary" disabled={busy} onClick={() => action("decline")}><X size={18} />فعلاً نه</button>
+        </div>
+      </>}
+      {state === "connected" && <>
+        <strong>حساب‌های اجتماعی‌تون برای هم قابل دیدنه</strong>
+        <p>هر وقت خواستی می‌تونی فقط اشتراک حساب‌ها رو قطع کنی؛ همچنان دوست می‌مونین و خبرهای هم رو می‌بینین.</p>
+        <div className="friend-socials">
+          {Object.entries(friend.socialLinks).length ? Object.entries(friend.socialLinks).map(([type, url]) => {
+            const [Icon, label] = platforms[type] || platforms.website;
+            return <a key={type} href={url} target="_blank" rel="noreferrer noopener"><Icon size={23} /><span>{label}</span><ArrowSquareOut size={18} /></a>;
+          }) : <p>{premium ? `${friend.name} هنوز حسابی به پروفایلش اضافه نکرده.` : "برای دیدن حساب‌ها، پرمیوم لازمه."}</p>}
+        </div>
+        <button className="button button-secondary" disabled={busy} onClick={() => action("disconnect")}>قطع اشتراک حساب‌ها</button>
+      </>}
+    </section>
+  );
+}

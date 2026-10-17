@@ -357,6 +357,7 @@ export function Admin({ data, notify, refresh }) {
     [created, setCreated] = useState(""),
     [search, setSearch] = useState(""),
     [offset, setOffset] = useState(0),
+    [inviteGift, setInviteGift] = useState("normal"),
     [password, setPassword] = useState("");
   const [busy, run] = useWork(notify);
   const load = async () =>
@@ -445,11 +446,25 @@ export function Admin({ data, notify, refresh }) {
               دعوت‌های مدیر سهمیه‌ی سه‌نفره ندارن؛ هر لینک بعد از یک عضویت مصرف
               می‌شه.
             </p>
+            <label className="admin-gift-picker">
+              پرمیوم همراه این دعوت
+              <select aria-label="پرمیوم همراه دعوت" value={inviteGift} onChange={(e) => setInviteGift(e.target.value)}>
+                <option value="normal">دعوت معمولی · ۷ روز هدیه</option>
+                <option value="30">۳۰ روز پرمیوم</option>
+                <option value="90">۹۰ روز پرمیوم</option>
+                <option value="365">یک سال پرمیوم</option>
+                <option value="lifetime">پرمیوم همیشگی</option>
+              </select>
+              <small>هدیه با عضویت همون یک نفر فعال می‌شه. روزهای مدت‌دار در دورهٔ آزمایشی محفوظ می‌مونن.</small>
+            </label>
             <Button
               disabled={busy}
               onClick={() =>
                 run(async () => {
-                  const value = await api("admin-invite", {});
+                  const value = await api("admin-invite", {
+                    giftDays: ["normal", "lifetime"].includes(inviteGift) ? 0 : Number(inviteGift),
+                    giftLifetime: inviteGift === "lifetime",
+                  });
                   setCreated(value.url);
                   await load();
                 })
@@ -482,6 +497,7 @@ export function Admin({ data, notify, refresh }) {
             {dashboard.invites.map((invite) => (
               <div key={invite.code}>
                 <code>{invite.code}</code>
+                <small>{invite.premium_lifetime ? "پرمیوم همیشگی" : `${fa(invite.premium_days || 7)} روز پرمیوم`}</small>
                 <span>
                   {!invite.active
                     ? "لغوشده"

@@ -163,7 +163,7 @@ export function StoryCanvas({
             </>
           ) : (
             <>
-              <strong>جیش کردی، خبر بده!</strong>
+              <strong>یه لحظه از روزت، برای دوستات</strong>
               <p>یه لحظهٔ ساده، یه لبخند مشترک.</p>
             </>
           )}
@@ -182,7 +182,7 @@ export function StoryCanvas({
       </div>
       <div className="story-bottom-line">
         <Heart size={30} weight="fill" />
-        جیش کردی، خبر بده. دوستاتو بیار.
+        یه لحظه از روزت، برای دوستات.
       </div>
     </div>
   );

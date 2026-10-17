@@ -62,6 +62,7 @@ const GroupJoin = lazy(() => import("./components/GroupJoin"));
 const PhotoEditor = lazy(() => import("./components/PhotoEditor"));
 import InvitationQuota from "./components/InvitationQuota";
 import SharedMemories from "./components/SharedMemories";
+import SocialConnection from "./components/SocialConnection";
 const communityView = (name) => {
   const View = lazy(() =>
     import("./components/Community").then((module) => ({
@@ -82,7 +83,7 @@ const Admin = communityView("Admin"),
   PublicProfile = communityView("PublicProfile");
 const Nearby = lazy(() => import("./components/Nearby"));
 const Stories = lazy(() => import("./components/Stories"));
-import { api, getInvite, fa, relativeTime, inviteUrl, copyText } from "./api";
+import { api, getInvite, fa, relativeTime, inviteUrl, copyText, inviteGiftLabel } from "./api";
 
 const assets = `${import.meta.env.BASE_URL}assets/`;
 function LoadingSection() {
@@ -271,6 +272,8 @@ function StoryDialog({ children, onClose, label = "کارت اشتراک جیش�
   const dialog = useRef();
   useEffect(() => {
     const previous = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     dialog.current?.focus();
     const escape = (event) => {
       if (event.key === "Escape") onClose();
@@ -279,9 +282,10 @@ function StoryDialog({ children, onClose, label = "کارت اشتراک جیش�
     return () => {
       window.removeEventListener("keydown", escape);
       previous?.focus();
+      document.body.style.overflow = previousOverflow;
     };
   }, []);
-  return (
+  return createPortal(
     <div
       className="full-story-overlay"
       ref={dialog}
@@ -292,7 +296,7 @@ function StoryDialog({ children, onClose, label = "کارت اشتراک جیش�
       onKeyDown={(event) => {
         if (event.key !== "Tab") return;
         const controls = event.currentTarget.querySelectorAll(
-          "button:not(:disabled),a[href]",
+          "button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled)",
         );
         if (!controls.length) return;
         if (event.shiftKey && document.activeElement === controls[0]) {
@@ -308,7 +312,8 @@ function StoryDialog({ children, onClose, label = "کارت اشتراک جیش�
       }}
     >
       {children}
-    </div>
+    </div>,
+    document.body,
   );
 }
 function AuthWizard({ invitation, onComplete, notify, authInfo }) {
@@ -558,7 +563,7 @@ function AuthWizard({ invitation, onComplete, notify, authInfo }) {
           <span className="little-pill">قدم دوم · دوستی با اجازهٔ تو</span>
           <h2>به {invite.inviter.name} وصل بشیم؟</h2>
           <p>
-            {completed.bonusDays ? "حسابت ساخته شد!" : "خوش برگشتی!"} با
+            {(completed.bonusDays || completed.lifetimeGift) ? "حسابت ساخته شد!" : "خوش برگشتی!"} با
             وصل‌شدن، خبرهای کوچولوی هم رو می‌بینین. لینک‌های اجتماعی‌ت فقط با
             اجازهٔ جداگانه به اشتراک گذاشته می‌شن.
           </p>
@@ -686,7 +691,7 @@ function AuthWizard({ invitation, onComplete, notify, authInfo }) {
                   {invite.inviter
                     ? `با دعوت ${invite.inviter.name}`
                     : "دعوتِ شروع جیشو"}
-                  <strong>۷ روز پرمیوم برای هر دوتون</strong>
+                  <strong>{inviteGiftLabel(invite)}</strong>
                 </p>
               </div>
             )}
@@ -883,10 +888,14 @@ export default function App() {
   useEffect(() => {
     if (!entered) return;
     const interval = setInterval(() => {
-      if (document.visibilityState === "visible" && !dialog) refresh();
-    }, 60000);
+      if (document.visibilityState === "visible" && (!dialog || dialog === "friend")) refresh();
+    }, dialog === "friend" || screen === "friends" ? 15000 : 60000);
     return () => clearInterval(interval);
-  }, [entered, dialog, refresh]);
+  }, [entered, dialog, screen, refresh]);
+  useEffect(() => {
+    if (!data?.friends) return;
+    setSelectedFriend((current) => current ? data.friends.find((f) => f.id === current.id) || null : null);
+  }, [data?.friends]);
   useEffect(() => {
     if (!entered || !data?.me.registered) return;
     if (["friends", "circle", "notifications"].includes(screen)) refresh();
@@ -1208,19 +1217,21 @@ export default function App() {
       if (!accept) setDialog(null);
     }
   }
-  async function changeSocialSharing(friend, enabled) {
+  async function changeSocialSharing(friend, operation) {
     const result = await perform("connection-share", {
       id: friend.connectionId,
-      enabled,
+      operation,
     });
     if (result) {
       setData((current) => ({ ...current, friends: result.friends }));
       setSelectedFriend(result.friends.find((f) => f.id === friend.id));
-      notify(
-        enabled
-          ? "لینک‌های تو برای این دوست قابل دیدن شد."
-          : "لینک‌های تو برای این دوست پنهان شد.",
-      );
+      notify({
+        request: "درخواستت فرستاده شد؛ منتظر قبول‌کردن دوستت می‌مونیم.",
+        accept: "درخواست قبول شد؛ حالا حساب‌های هم رو می‌بینین.",
+        cancel: "درخواستت لغو شد.",
+        decline: "درخواست رد شد؛ دوستی‌تون سر جاشه.",
+        disconnect: "اشتراک حساب‌ها قطع شد؛ همچنان دوستین.",
+      }[operation]);
     }
   }
   async function createCircle(e) {
@@ -1319,7 +1330,7 @@ export default function App() {
             <span>سادگی.</span>
           </h2>
           <p>
-            جیش کردی، خبر بده.
+            یه لحظه از روزت، برای دوستات.
             <br />
             چیزای کوچیک، ما رو به هم نزدیک می‌کنن.
           </p>
@@ -1394,7 +1405,7 @@ export default function App() {
                 <div className="invite-landing-features">
                   <p>
                     <Drop size={21} />
-                    جیش کردی، به دوستات خبر بده.
+                    لحظه‌های روزت رو با دوستات شریک شو.
                   </p>
                   <p>
                     <UsersThree size={21} />
@@ -1406,7 +1417,8 @@ export default function App() {
                   </p>
                 </div>
                 <p className="invite-landing-gift">
-                  ۷ روز پرمیوم هدیه؛ بعد از دورهٔ آزمایشی شروع می‌شه.
+                  {inviteGiftLabel(invitation)}
+                  {!invitation.lifetimeGift && "؛ بعد از دورهٔ آزمایشی شروع می‌شه."}
                 </p>
                 {invitation.remaining === 0 && !me.registered ? (
                   <p className="form-error">
@@ -1470,7 +1482,7 @@ export default function App() {
           <section className="guest-welcome welcome-v4">
             <Brand small />
             <Mascot size={280} animate />
-            <h1>جیش کردی، خبر بده.</h1>
+            <h1>یه لحظه از روزت، برای دوستات.</h1>
             <p>
               یه خبر کوچولو برای دوستات،
               <br />
@@ -2159,14 +2171,14 @@ export default function App() {
         {dialog && !["story", "momentStory"].includes(dialog) && (
           <Modal
             hideClose={["success", "need"].includes(dialog)}
-            fullscreen={["success", "need"].includes(dialog)}
+            fullscreen={["success", "need", "auth", "friend", "settings", "profileShare", "groupInvite", "moment"].includes(dialog)}
             onClose={() => setDialog(null)}
             className={
               ["success", "need"].includes(dialog)
                 ? "success-dialog checkin-dialog full"
                 : dialog === "moment"
-                  ? "success-dialog full"
-                  : ""
+                  ? "success-dialog page-dialog full"
+                  : ["auth", "friend", "settings", "profileShare", "groupInvite"].includes(dialog) ? "page-dialog" : ""
             }
           >
             {dialog === "auth" && (
@@ -2322,7 +2334,7 @@ export default function App() {
                 </p>
                 <div className="moment-quiet-actions">
                   <Button lilac onClick={() => setDialog(null)}>
-                    چه اتفاق بامزه‌ای!
+                    چه خوب که با هم بودیم!
                   </Button>
                   <IconButton
                     icon={ShareNetwork}
@@ -2337,86 +2349,14 @@ export default function App() {
                 <div className="friend-dialog-head">
                   <Avatar person={selectedFriend} size={105} mood="happy" />
                   <h2>{selectedFriend.name}</h2>
-                  <span>به هم وصلید</span>
+                  <span>دوستین</span>
                 </div>
-                <div className="friend-socials">
-                  <h3>لینک‌های {selectedFriend.name}</h3>
-                  {Object.keys(selectedFriend.socialLinks).length ? (
-                    Object.entries(selectedFriend.socialLinks).map(
-                      ([type, url]) => (
-                        <a
-                          key={type}
-                          href={url}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                        >
-                          {
-                            {
-                              instagram: <InstagramLogo size={23} />,
-                              telegram: <TelegramLogo size={23} />,
-                              x: <XLogo size={23} />,
-                              website: <LinkSimple size={23} />,
-                            }[type]
-                          }
-                          <span>
-                            {
-                              {
-                                instagram: "اینستاگرام",
-                                telegram: "تلگرام",
-                                x: "ایکس",
-                                website: "سایت",
-                              }[type]
-                            }
-                          </span>
-                          <ArrowSquareOut size={18} />
-                        </a>
-                      ),
-                    )
-                  ) : (
-                    <p>
-                      این دوست هنوز اجازهٔ دیدن لینک‌های خودش رو نداده. با
-                      بازکردن لینک‌های تو، لینک‌های اون خودکار باز نمی‌شن.
-                    </p>
-                  )}
-                </div>
-                <div className="friend-permission-explainer">
-                  <LockKey size={23} />
-                  <div>
-                    <h3>لینک‌های اجتماعی، با انتخاب تو</h3>
-                    <p>
-                      با اجازهٔ پایین، لینک‌هایی که در پروفایلت اضافه کردی فقط
-                      برای {selectedFriend.name} باز می‌شه؛ برای بقیه خصوصی
-                      می‌مونه. دیدن لینک‌های اون هم به اجازهٔ جداگانهٔ خودش
-                      بستگی داره.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  className={`preference-action ${selectedFriend.sharing ? "sharing-active" : ""}`}
-                  disabled={busy || !me.premium}
-                  onClick={() =>
-                    changeSocialSharing(selectedFriend, !selectedFriend.sharing)
-                  }
-                >
-                  <LinkSimple size={24} />
-                  <span>
-                    <strong>
-                      {selectedFriend.sharing
-                        ? `لینک‌های من برای ${selectedFriend.name} بازه`
-                        : "لینک‌های من برای این دوست بسته‌ست"}
-                    </strong>
-                    <small>
-                      {selectedFriend.sharing
-                        ? "برای بستن دسترسی بزن"
-                        : "برای اجازه‌دادن بزن"}
-                    </small>
-                  </span>
-                  <span className="preference-status">
-                    {selectedFriend.sharing
-                      ? "بستن دسترسی"
-                      : "باز کردن لینک‌ها"}
-                  </span>
-                </button>
+                <SocialConnection
+                  friend={selectedFriend}
+                  premium={me.premium}
+                  busy={busy}
+                  onChange={changeSocialSharing}
+                />
                 <button
                   className="preference-action"
                   disabled={busy}
@@ -2719,8 +2659,8 @@ export default function App() {
                   />
                 </Suspense>
                 <p className="dialog-description">
-                  اسم و لینک‌ها مال خودتن. هیچ لینکی بدون اجازه‌ی تو نمایش داده
-                  نمی‌شه.
+                  حساب‌های اجتماعی‌ت با درخواست یکی از شما و قبول نفر دیگه
+                  برای هر دوتون قابل دیدن می‌شه؛ دوستی به این انتخاب وابسته نیست.
                 </p>
                 <form onSubmit={saveProfile}>
                   {photoFile && (

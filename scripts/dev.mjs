@@ -46,6 +46,11 @@ if (!remote && !process.env.DATABASE_URL && process.env.VERCEL_TOKEN) {
       "VAPID_PUBLIC_KEY",
       "VAPID_PRIVATE_KEY",
       "ADMIN_PASSWORD_HASH",
+      "GOOGLE_CLIENT_ID",
+      "GOOGLE_CLIENT_SECRET",
+      "CARTO_KEY",
+      "ANDROID_PACKAGE_ID",
+      "ANDROID_SHA256_CERTIFICATES",
     ])
       if (result.env[key]) process.env[key] = result.env[key];
     console.log(

@@ -31,6 +31,9 @@ export async function getInvite(code) {
   return data;
 }
 export const fa = (number) => Number(number || 0).toLocaleString("fa-IR");
+export const inviteGiftLabel = (invite) => invite?.lifetimeGift
+  ? "پرمیوم همیشگی هدیه"
+  : `${fa(invite?.bonusDays || 7)} روز پرمیوم هدیه`;
 export function relativeTime(value) {
   if (!value) return "هنوز خبری نداده";
   const minutes = Math.max(
