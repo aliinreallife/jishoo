@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { invitationForest, invitationPath } from "../src/invitation-tree.js";
+import { observabilityPage, redactMetricEvent } from "../src/observability.js";
 import { blobatar } from "blobatar/blob";
 import {
   normalizePhone,
@@ -17,6 +19,53 @@ import {
 
 process.env.APP_SECRET =
   "unit-tests-only-a-fixed-secret-of-at-least-32-characters";
+test("observability categorizes hash routes without private identifiers or query strings", () => {
+  assert.equal(observabilityPage("https://jishoo.vercel.app/?invite=PRIVATE#/home"), "/invite");
+  assert.equal(observabilityPage("https://jishoo.vercel.app/#/circle/private-group-id"), "/app/circle");
+  assert.equal(observabilityPage("https://jishoo.vercel.app/u/private-handle"), "/u/profile");
+  assert.equal(observabilityPage("https://jishoo.vercel.app/#/stories/need"), "/app/stories/need");
+  assert.equal(observabilityPage("https://jishoo.vercel.app/?adminAccess=PRIVATE#/profile"), null);
+  assert.equal(observabilityPage("https://jishoo.vercel.app/#/admin"), null);
+  assert.equal(observabilityPage("https://jishoo.vercel.app/api/auth/google?code=PRIVATE"), null);
+  const event = redactMetricEvent({type:"vital",url:"https://jishoo.vercel.app/?invite=PRIVATE",route:"sensitive"}, "https://jishoo.vercel.app/#/home");
+  assert.equal(event.url, "https://jishoo.vercel.app/invite");
+  assert.equal(event.route, "/invite");
+  assert.equal(redactMetricEvent({type:"pageview",url:"https://jishoo.vercel.app/app/home"},"https://jishoo.vercel.app/#/admin"),null);
+});
+test("invitation tree preserves direct and later generations, independent of list order", () => {
+  const tree = invitationForest([
+    { id: "third", invitedBy: "second" }, { id: "ali", invitedBy: null },
+    { id: "second", invitedBy: "first" }, { id: "first", invitedBy: "ali" },
+    { id: "sibling", invitedBy: "ali" }, { id: "orphan", invitedBy: "deleted" },
+  ]);
+  assert.equal(tree.nodes.get("ali").children.length, 2);
+  assert.equal(tree.nodes.get("ali").descendants, 4);
+  assert.equal(tree.nodes.get("second").level, 2);
+  assert.equal(tree.nodes.get("third").level, 3);
+  assert.deepEqual(invitationPath(tree.nodes, "third").map(node => node.id), ["ali", "first", "second", "third"]);
+  assert.equal(tree.nodes.get("orphan").parentId, null);
+  assert.equal(tree.roots.length, 2);
+});
+test("invitation tree handles inconsistent cycles and deep chains without recursive traversal", () => {
+  const cyclic = invitationForest([{id:"a",invitedBy:"b"},{id:"b",invitedBy:"a"},{id:"self",invitedBy:"self"}]);
+  assert.equal(cyclic.roots.length, 2);
+  assert.equal([...cyclic.nodes.values()].filter(node => node.inconsistent).length, 2);
+  const members = Array.from({length:10000},(_,i)=>({id:String(i),invitedBy:i ? String(i-1) : null}));
+  const deep = invitationForest(members);
+  assert.equal(deep.nodes.get("0").descendants, 9999);
+  assert.equal(deep.nodes.get("9999").level, 9999);
+});
+test("invitation ancestry requires an elevated admin session", async () => {
+  const { communityAction } = await import("../lib/community.js");
+  const fail = (status, message, code) => { throw Object.assign(new Error(message), {status,code}); };
+  for (const [user, expected] of [
+    [{registered:false},401],
+    [{registered:true,role:"member",session_admin_access:true},403],
+    [{registered:true,role:"admin",session_admin_access:false},403],
+  ]) {
+    await assert.rejects(communityAction({action:"admin-invitation-tree",body:{},user,req:{method:"GET"},url:new URL("https://jishoo.vercel.app/api/app?action=admin-invitation-tree"),fail}), error => error.status === expected);
+  }
+});
 test("Iranian, Persian-digit and international phone representations normalize consistently", () => {
   assert.equal(normalizePhone("۰۹۱۲ ۱۲۳ ۴۵۶۷"), "+989121234567");
   assert.equal(normalizePhone("+98 912 123 4567"), "+989121234567");

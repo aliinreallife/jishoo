@@ -33,6 +33,7 @@ import {
 } from "../push";
 
 const AdminSupport = lazy(() => import("./AdminSupport"));
+const AdminInvitationTree = lazy(() => import("./AdminInvitationTree"));
 
 const Button = ({ children, ...props }) => (
   <button className="button button-lilac" {...props}>
@@ -310,8 +311,7 @@ export function Admin({ data, notify, refresh }) {
           <ShieldCheck size={48} />
           <h1>ورود خصوصی مدیر</h1>
           <p>
-            با حساب مدیرت وارد شو و رمز خصوصی رو بنویس. برای اولین بار، دعوت
-            خصوصی مدیر رو باز کن و با شماره‌ت عضو شو.
+            با حساب گوگل مدیرت وارد شو، بعد رمز خصوصی مدیریت رو بنویس.
           </p>
           <form
             className="admin-password-form"
@@ -344,7 +344,7 @@ export function Admin({ data, notify, refresh }) {
           </form>
           {!data.me.registered && (
             <small>
-              اول با دعوت خصوصی مدیر، حساب بساز یا با شمارهٔ مدیر وارد شو.
+              اول وارد حساب گوگل مدیر شو. این رمز فقط برای همون حساب کار می‌کنه.
             </small>
           )}
         </div>
@@ -376,6 +376,9 @@ export function Admin({ data, notify, refresh }) {
               </div>
             ))}
           </div>
+          <Suspense fallback={<p>داریم درخت دعوت‌ها رو آماده می‌کنیم…</p>}>
+            <AdminInvitationTree />
+          </Suspense>
           <div className="admin-invite-box">
             <h2>دعوت خصوصی، فقط برای یک نفر</h2>
             <p>

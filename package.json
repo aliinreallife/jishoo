@@ -1,6 +1,6 @@
 {
   "name": "jishoo",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "private": true,
   "type": "module",
   "scripts": {
@@ -16,7 +16,9 @@
     "@fontsource/vazirmatn": "^5.2.6",
     "@neondatabase/serverless": "^1.2.0",
     "@phosphor-icons/react": "^2.1.10",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/functions": "^3.10.1",
+    "@vercel/speed-insights": "^2.0.0",
     "blobatar": "^2.7.0",
     "html-to-image": "^1.11.13",
     "jose": "^6.2.12",

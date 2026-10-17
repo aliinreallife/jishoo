@@ -12,6 +12,7 @@ import "./v2.css";
 import "./community.css";
 import "./v3.css";
 import "./readability.css";
+import "./desktop-frame.css";
 import { currentRelease, releaseStorageKey } from "./releases";
 import { ReleaseNotes } from "./components/ReleaseNotes";
 import {
@@ -187,6 +188,13 @@ function Modal({
   fullscreen = false,
 }) {
   const dialog = useRef();
+  const [framed, setFramed] = useState(() => window.matchMedia("(min-width: 501px) and (min-height: 600px)").matches);
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 501px) and (min-height: 600px)");
+    const update = () => setFramed(media.matches);
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
   useEffect(() => {
     if (!fullscreen) return;
     const previous = document.body.style.overflow;
@@ -253,7 +261,7 @@ function Modal({
       </section>
     </div>
   );
-  return fullscreen ? createPortal(content, document.body) : content;
+  return fullscreen ? createPortal(content, framed ? document.querySelector(".app-shell:not(.invite-fullscreen-shell)") || document.body : document.body) : content;
 }
 function CheckinUndo({ pending, onUndo, inline = false }) {
   return (
@@ -1051,6 +1059,7 @@ export default function App() {
       );
     if (id) setSelectedCircle(id);
     location.hash = "/" + next + (id ? "/" + id : "");
+    window.dispatchEvent(new Event("jishoo:navigation"));
   }
   function finishInviteLanding() {
     setInviteLanding(false); setEntered(true); setInvitation(null);
@@ -1696,15 +1705,6 @@ export default function App() {
                         </button>
                       </div>
                     )}
-                  {data.testing && (
-                    <button
-                      className="testing-banner"
-                      onClick={() => setDialog("premium")}
-                    >
-                      <CrownSimple size={14} weight="fill" /> توی آزمایش، همه
-                      پرمیومن <CaretLeft size={13} />
-                    </button>
-                  )}
                   <div className="action-grid">
                     <button
                       className="action-card need-card"
@@ -2257,7 +2257,7 @@ export default function App() {
             {screen !== "invite" && <nav
               className="bottom-nav v2-nav"
               aria-label="ناوبری اصلی"
-              dir="ltr"
+              dir="rtl"
             >
               {tabs.map(([key, Icon, label]) => (
                 <button

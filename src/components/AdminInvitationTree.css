@@ -1,0 +1,30 @@
+.admin-invitation-tree { margin:24px 0; padding:18px 14px; border:1px solid #e3d8ee; border-radius:23px; background:linear-gradient(150deg,#f6f0ff,#fffaf0); color:#55465f; }
+.admin-invitation-tree > header { display:flex; align-items:flex-start; gap:10px; }
+.admin-invitation-tree > header > div { flex:1; min-width:0; }
+.admin-invitation-tree h2 { display:flex; gap:7px; align-items:center; font-size:18px; line-height:1.8; }
+.admin-invitation-tree p { font-size:12px; line-height:1.85; margin-top:8px; color:#74677c; }
+.admin-invitation-tree .tree-refresh { display:grid; place-items:center; min-width:44px; min-height:44px; background:#eee4f8; border:1px solid #d6c4e5; border-radius:13px; }
+.invitation-tree-totals { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0; }
+.invitation-tree-totals span { padding:6px 11px; font-size:12px; background:#fffdf7; border:1px solid #e8dfcd; border-radius:20px; }
+.tree-search-label { display:grid; gap:7px; font-size:12px; line-height:1.8; }
+.admin-invitation-tree input { width:100%; min-height:44px; border:1px solid #ddd0e6; border-radius:13px; background:#fffdf8; padding:8px 10px; }
+.invitation-tree-results { padding:8px 0; }
+.invitation-tree-results button { width:100%; min-height:44px; display:flex; gap:8px; align-items:center; padding:9px; border-bottom:1px solid #e6dcec; font-size:12px; text-align:right; }
+.invitation-tree-results button strong { flex:1; }
+.invitation-focus { margin:14px 0; }
+.invitation-focus button { min-height:36px; color:#76528f; text-decoration:underline; text-underline-offset:4px; font-size:12px; }
+.invitation-forest,.invitation-forest ol { list-style:none; padding:0; margin:14px 0 0; }
+.invitation-forest > li + li { margin-top:18px; }
+.invitation-forest ol { margin:0 8px 0 0; padding:10px 10px 0 0; border-right:2px solid #d3bee4; }
+.invitation-forest ol > li { position:relative; margin-bottom:10px; }
+.invitation-forest ol > li::before { content:""; position:absolute; top:28px; right:-11px; width:10px; border-top:2px solid #d3bee4; }
+.invitation-node { display:flex; align-items:center; gap:7px; padding:10px 7px; border:1px solid #e5dbee; border-radius:15px; background:#fffdf8; }
+.invitation-node.suspended { border-style:dashed; }
+.branch-toggle { width:30px; min-height:44px; display:grid; place-items:center; flex-shrink:0; border-radius:10px; color:#71518d; background:#f1e9f9; }
+.branch-leaf { width:30px; text-align:center; flex-shrink:0; color:#ba9dd0; }
+.invitation-node-copy { display:grid; min-width:0; gap:3px; }
+.invitation-node-copy strong { font-size:13px; overflow-wrap:anywhere; line-height:1.7; }
+.invitation-node-copy > span { font-size:11px; color:#807188; overflow-wrap:anywhere; text-align:right; }
+.invitation-node-copy small { font-size:11px; line-height:1.8; color:#75657e; }
+.invitation-deeper,.tree-more { display:flex; align-items:center; justify-content:center; gap:6px; min-height:44px; font-size:12px; color:#6e4c88; background:#eee4f7; border:1px solid #d8c6e6; border-radius:12px; padding:8px; margin-top:10px; width:100%; }
+.admin-invitation-tree .form-error button { display:block; min-height:44px; text-decoration:underline; }

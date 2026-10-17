@@ -331,7 +331,7 @@ export default function Stories({
             : exportError
               ? exportError
               : image
-                ? format === "story" ? "بالا و پایین برای دکمه‌های استوری جا گذاشتیم." : "کارت آماده‌ست؛ ذخیره کن یا بفرست."
+                ? "کارت آماده‌ست؛ ذخیره کن یا بفرست."
                 : "در حال آماده‌سازی…"}
         </span>
         <div className="story-export-actions">
