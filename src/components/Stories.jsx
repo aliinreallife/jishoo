@@ -311,7 +311,7 @@ export default function Stories({
         </div>
       </div>
       <label className="story-caption-field">
-        حرف خودتو روش بنویس
+        متن روی کارت (اختیاری)
         <input
           aria-label="متن کارت اشتراک"
           value={caption}
@@ -331,7 +331,7 @@ export default function Stories({
             : exportError
               ? exportError
               : image
-                ? "تصویر باکیفیت آماده‌ست."
+                ? "کارت آماده‌ست؛ ذخیره کن یا بفرست."
                 : "در حال آماده‌سازی…"}
         </span>
         <div className="story-export-actions">

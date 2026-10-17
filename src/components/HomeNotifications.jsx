@@ -23,10 +23,10 @@ export function PushPermission({ data, notify, onClose, onEnabled }) {
           onCancel={onClose}
         >
           <Mascot size={126} />
-          <h2 id="push-permission-title">حالِ دوستات، حتی وقتی اینجا نیستی 💧</h2>
+          <h2 id="push-permission-title">اعلان دوستات، روی گوشیت 💧</h2>
           <p>
-            وقتی دوستت می‌گه «جیش کردم» یا می‌گه «جیش دارم»، یه اعلان روی گوشی
-            می‌گیری؛ لازم نیست جیشو باز باشه.
+            وقتی دوستت جیشش رو ثبت کنه، اعلانش روی گوشی میاد؛ حتی اگه جیشو
+            بسته باشه.
           </p>
           <ul>
             <li>فقط اعلان آدمایی که بهشون وصلی</li>
@@ -92,7 +92,7 @@ export default function HomeNotifications({ data, notify, onSettings, refresh })
   return <>
     <button className={`home-notification-card ${enabled ? "enabled" : ""}`} onClick={() => enabled ? onSettings() : setOpen(true)}>
       <span className="home-notification-icon">{enabled ? <Check size={22} /> : <Bell size={24} weight="duotone" />}</span>
-      <span><strong>{enabled ? "اعلان دوستات روشنه" : "دوستت سبک شد؟ تو هم لبخند بزن!"}</strong><small>{enabled ? "تنظیم و بی‌صداکردن اعلان‌ها" : "حتی وقتی جیشو بسته‌ست؛ با اجازهٔ خودت."}</small></span>
+      <span><strong>{enabled ? "اعلان دوستات روشنه" : "جیشو بسته‌ست؟ اعلان دوستات می‌رسه"}</strong><small>{enabled ? "تنظیم و بی‌صداکردن اعلان‌ها" : "با اجازهٔ تو، روی همین گوشی؛ هر وقت خواستی خاموشش کن."}</small></span>
       <span className="home-notification-cta">{enabled ? "تنظیم" : "روشن کن"}<CaretLeft size={16} /></span>
     </button>
     {open && <PushPermission data={data} notify={notify} onClose={() => setOpen(false)} onEnabled={() => { setActive(true); refresh(); }} />}

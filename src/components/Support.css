@@ -10,7 +10,7 @@
   align-items: center;
   gap: 8px;
   color: #756c87;
-  font-size: 13px;
+  font-size: 14px;
 }
 .support-page > .mascot-character {
   display: block;
@@ -34,7 +34,7 @@
 .support-page label {
   display: grid;
   gap: 10px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
 }
 .support-page textarea,
@@ -49,15 +49,15 @@
   resize: vertical;
 }
 .support-page small {
-  font-size: 11px;
-  color: #938582;
+  font-size: 14px;
+  color: #706675;
   line-height: 2;
 }
 .support-page footer {
   display: flex;
   gap: 20px;
   margin-top: 35px;
-  font-size: 12px;
+  font-size: 14px;
   color: #85739b;
 }
 .support-sent {
@@ -68,3 +68,5 @@
   color: #677f6a;
   line-height: 2.5;
 }
+
+.support-page :is(textarea, input) { font-size: 16px; }

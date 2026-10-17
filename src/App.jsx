@@ -11,6 +11,7 @@ import "./styles.css";
 import "./v2.css";
 import "./community.css";
 import "./v3.css";
+import "./readability.css";
 import { currentRelease, releaseStorageKey } from "./releases";
 import { ReleaseNotes } from "./components/ReleaseNotes";
 import {
@@ -261,12 +262,12 @@ function CheckinUndo({ pending, onUndo, inline = false }) {
       role="status"
       aria-live="polite"
     >
-      <span className="undo-countdown" aria-hidden="true">
+      <span className="undo-countdown" aria-label={`${fa(pending.seconds)} ثانیه فرصت لغو`}>
         {fa(pending.seconds)}
       </span>
       <div>
         <strong>{pending.status === "done" ? "جیش کردم" : "جیش دارم"}</strong>
-        <span>ثبت تا {fa(pending.seconds)} ثانیهٔ دیگه</span>
+        <span>هنوز ثبت نشده</span>
       </div>
       <button onClick={onUndo}>
         <ArrowCounterClockwise size={18} />
@@ -484,15 +485,15 @@ function AuthWizard({ invitation, onComplete, notify, authInfo, inviteOnly = tru
         <div className="invite-first-step">
           <PairArt size={190} />
           <span className="little-pill">قدم اول · دعوت به جمعمون</span>
-          <h2>دعوتت رو آوردی؟</h2>
-          <p className="dialog-description">جیشو فعلاً با دعوته. اول کد دوستت رو وارد کن، بعد با گوگل حسابت رو بساز.</p>
+          <h2>دعوتت رو وارد کن</h2>
+          <p className="dialog-description">برای عضویت، کد یکی از دوستات رو وارد کن. بعد با گوگل ادامه می‌دی.</p>
           <form onSubmit={continueInvite}>
             <label className="field-label">کد دعوت<input aria-label="کد دعوت عضویت" autoCapitalize="characters" autoComplete="off" dir="ltr" maxLength={80} value={code} onChange={(e) => { setCode(e.target.value.toUpperCase()); setInvite(null); setError(""); }} placeholder="کد دوستت" required /></label>
             {error && <p className="form-error" role="alert">{error}</p>}
             <Button lilac type="submit" disabled={busy || !code.trim()}>{busy ? "داریم دعوتت رو بررسی می‌کنیم…" : "تایید دعوت و ادامه"}<Heart size={18} /></Button>
           </form>
           <button className="text-link auth-back" onClick={() => { setStage("login"); setBusy(false); setError(""); }}>قبلاً عضو شدم؛ ورود به حسابم</button>
-          <p className="auth-demo-note">کد نداری؟ فعلاً مهمان ما باش؛ ثبت جیش و استوری بدون حساب هم کار می‌کنه.</p>
+          <p className="auth-demo-note">بدون دعوت هم مهمان مایی؛ ثبت جیش، آمار و استوری رایگانه.</p>
         </div>
       ) : stage === "phone" || stage === "login" ? (
         <>
@@ -501,8 +502,7 @@ function AuthWizard({ invitation, onComplete, notify, authInfo, inviteOnly = tru
           </div>
           <h2>{authInfo?.phoneLoginEnabled ? "با شماره‌ت بیا تو جمع" : "خوش اومدی به جیشو"}</h2>
           <p className="dialog-description">
-            با گوگل وارد شو. اگه عضو جدیدی، دعوت دوستت رو لازم داری.
-            مهمان هم همیشه می‌تونه از جیشو استفاده کنه.
+            {stage === "login" ? "رفاقت‌ها و آمارت منتظرته." : "دعوتت تایید شد؛ حالا حسابت رو بساز."}
           </p>
           {stage !== "login" && !invite && (
             <div className="invitation-required">
@@ -560,7 +560,7 @@ function AuthWizard({ invitation, onComplete, notify, authInfo, inviteOnly = tru
           <p className="auth-demo-note">
             نسخه‌ی آزمایشی: پیامکی ارسال نمی‌شه و کد خودکار تایید می‌شه.
           </p>
-          </> : <p className="auth-demo-note">ورود با شماره موقتاً غیرفعاله. اگه با شماره عضو شدی و هنوز وارد حسابتی، از تنظیمات همون حساب گوگلت رو وصل کن.</p>}
+          </> : <p className="auth-demo-note">ورود با شماره فعلاً غیرفعاله. اگر از قبل وارد حسابتی، گوگلت رو از تنظیمات همون حساب وصل کن.</p>}
         </>
       ) : stage === "otp" ? (
         <>
@@ -1512,7 +1512,7 @@ export default function App() {
                 <div className="invite-landing-features">
                   <p>
                     <Drop size={21} />
-                    لحظه‌های روزت رو با دوستات شریک شو.
+                    «جیش دارم» یا «جیش کردم» رو ثبت کن.
                   </p>
                   <p>
                     <UsersThree size={21} />
@@ -1520,7 +1520,7 @@ export default function App() {
                   </p>
                   <p>
                     <ShareNetwork size={21} />
-                    لحظه‌های کوچیکت رو استوری کن.
+                    با شخصیت‌های جیشو استوری آماده بساز.
                   </p>
                 </div>
                 <p className="invite-landing-gift">
@@ -1713,7 +1713,7 @@ export default function App() {
                     >
                       <Mascot size={132} mood="shy" animate />
                       <strong>جیش دارم</strong>
-                      <span>یه لحظه از روزم</span>
+                      <span>الان برمی‌گردم!</span>
                       <Drop
                         size={18}
                         weight="duotone"
@@ -1727,7 +1727,7 @@ export default function App() {
                     >
                       <Mascot size={132} mood="happy" animate />
                       <strong>جیش کردم</strong>
-                      <span>انجام شد! ثبتش کن</span>
+                      <span>سبک شدم!</span>
                       <Drop
                         size={19}
                         weight="duotone"
@@ -1744,7 +1744,7 @@ export default function App() {
                           setAudience(e.target.checked ? "friends" : "private")
                         }
                       />
-                      <span>این لحظه رو دوست‌هام هم ببینن</span>
+                      <span>دوست‌هام این جیش رو هم ببینن</span>
                     </label>
                   )}
                   <Suspense fallback={null}><HomeNotifications data={data} notify={notify} refresh={refresh} onSettings={() => navigate("notifications")} /></Suspense>
@@ -1807,7 +1807,7 @@ export default function App() {
                         <p>
                           {me.registered
                             ? "با لینک دعوتت، آدمای خودت رو بیار تو جمع."
-                            : "مهمان هم می‌تونه جیشش رو ثبت کنه؛ برای وصل‌شدن به دوستات، با دعوت عضو شو."}
+                            : "با دعوت عضو شو تا به دوستات وصل بشی."}
                         </p>
                         <button
                           onClick={() =>
@@ -1840,8 +1840,8 @@ export default function App() {
                     </div>
                     <div>
                       <h2>این نزدیکا</h2>
-                      <strong>جیش‌های این نزدیکا</strong>
-                      <p>با اجازه‌ی مکان، نقشه رو ببین</p>
+                      <strong>آدم‌های همین دور و بر</strong>
+                      <p>دیدن نقشه، مکانت رو با کسی به اشتراک نمی‌ذاره.</p>
                     </div>
                     <CaretLeft className="muted-icon" size={19} />
                   </button>
@@ -2054,7 +2054,7 @@ export default function App() {
                               ? `هدیه‌ی تو تا ${new Date(me.trialUntil).toLocaleDateString("fa-IR")}`
                               : "ثبت جیش، نقشه و استوری همیشه رایگانه."}
                       </p>
-                      <small className="premium-free-hint">ثبت جیش، دوست‌ها، آمار، نقشه و استوری شخصی همیشه رایگانه.</small>
+                      <small className="premium-free-hint">ثبت جیش، دوست‌ها، گروه‌ها، آمار، نقشه و استوری شخصی همیشه رایگانن.</small>
                     </div>
                     <CaretLeft size={17} />
                   </button>
@@ -2065,11 +2065,10 @@ export default function App() {
                         <small>روز هدیه</small>
                       </span>
                       <div>
-                        <strong>هدیه‌ات امن و آماده‌ست 💛</strong>
+                        <strong>هدیه‌ات برای بعد می‌مونه 💛</strong>
                         <p>
-                          الان از پرمیوم رایگان لذت ببر. این{" "}
-                          {fa(me.trialDaysSaved)} روز بعد از پایان دورهٔ آزمایشی
-                          شروع می‌شه؛ امروز ازش کم نمی‌شه.
+                          تا پایان دورهٔ آزمایشی، پرمیوم رایگانه. روزهای هدیه‌ات
+                          بعدش شروع می‌شن؛ هنوز ازشون کم نمی‌شه.
                         </p>
                       </div>
                     </div>
@@ -2345,7 +2344,7 @@ export default function App() {
                   <span>
                     <Drop size={17} weight="duotone" />
                     {pendingCheckin && !pendingCheckin.saving
-                      ? "تا چند لحظه دیگه ثبت می‌شه"
+                      ? "فرصت لغو داری"
                       : busy
                         ? "در حال ثبت…"
                         : "ثبت شد"}
@@ -2383,10 +2382,10 @@ export default function App() {
                   </h1>
                   <p className="success-subtitle">
                     {audience === "private" || !me.registered
-                      ? "این لحظه فقط برای خودته."
+                      ? "فقط خودت این جیش رو می‌بینی."
                       : pendingCheckin
-                        ? "بعد از ثبت، دوستات می‌بیننش."
-                        : "دوستات این لحظه رو می‌بینن."}
+                        ? "بعد از ثبت، دوست‌های متصلت هم می‌بیننش."
+                        : "دوست‌های متصلت می‌تونن این جیش رو ببینن."}
                   </p>
                   {dialog === "success" && (
                     <div className="today-card">
@@ -2512,7 +2511,7 @@ export default function App() {
                         : `اعلان‌های ${selectedFriend.name} روشنه`}
                     </strong>
                     <small>
-                      فقط اعلان همین دوست؛ دوستی و لینک‌ها تغییر نمی‌کنه
+                      با زدن این دکمه، اعلان‌هاش رو روشن یا بی‌صدا کن. دوستی و دسترسی به حساب‌های اجتماعی تغییر نمی‌کنه.
                     </small>
                   </span>
                 </button>
@@ -2677,8 +2676,8 @@ export default function App() {
                 </div>
                 <h2>به یه دوست وصل شو</h2>
                 <p className="dialog-description">
-                  شناسهٔ دوستت رو بنویس؛ مثل @sara. با قبول درخواست، به هم وصل
-                  می‌شین. کد دعوت برای عضویت حسابه، نه دوست‌شدن.
+                  شناسهٔ دوستت رو وارد کن؛ مثلاً @sara. وقتی درخواستت رو قبول کنه،
+                  به هم وصل می‌شین. برای دوست‌شدن کد دعوت لازم نیست.
                 </p>
                 <form onSubmit={requestFriend}>
                   <label className="field-label">
@@ -2774,8 +2773,8 @@ export default function App() {
                   />
                 </Suspense>
                 <p className="dialog-description">
-                  حساب‌های اجتماعی‌ت با درخواست یکی از شما و قبول نفر دیگه
-                  برای هر دوتون قابل دیدن می‌شه؛ دوستی به این انتخاب وابسته نیست.
+                  لینک‌های اجتماعی فقط با درخواست و قبول هر دو نفر دیده می‌شن.
+                  می‌تونی اشتراک لینک‌ها رو قطع کنی و همچنان دوست بمونی.
                 </p>
                 <form onSubmit={saveProfile}>
                   {photoFile && (

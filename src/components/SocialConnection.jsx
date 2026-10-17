@@ -16,7 +16,7 @@ export default function SocialConnection({ friend, premium, busy, onChange }) {
     <section className={`social-connection social-${state}`} aria-label="اشتراک حساب‌های اجتماعی">
       <header><LinkSimple size={23} /><h3>حساب‌های اجتماعی، با اجازهٔ هر دوتون</h3></header>
       {state === "none" && <>
-        <p>برای {friend.name} درخواست بفرست. اگر قبول کنه، هر دوتون می‌تونین حساب‌های اجتماعی هم رو ببینین.</p>
+        <p>برای {friend.name} درخواست بفرست. با قبول‌کردن، لینک‌های اجتماعی‌تون برای هم باز می‌شه. تا اون موقع چیزی به اشتراک گذاشته نمی‌شه.</p>
         <button className="button button-lilac" disabled={busy || !premium} onClick={() => action("request")}>درخواست دیدن حساب‌ها</button>
       </>}
       {state === "outgoing" && <>
@@ -26,7 +26,7 @@ export default function SocialConnection({ friend, premium, busy, onChange }) {
       </>}
       {state === "incoming" && <>
         <strong>{friend.name} درخواست دیدن حساب‌ها رو فرستاده</strong>
-        <p>اگر قبول کنی، اون حساب‌های اجتماعی تو رو می‌بینه و تو هم حساب‌های اون رو می‌بینی. دوستی‌تون به این انتخاب وابسته نیست.</p>
+        <p>با قبول‌کردن، لینک‌های اجتماعی‌تون برای هم باز می‌شه. می‌تونی بعداً اشتراک رو قطع کنی و همچنان دوست بمونی.</p>
         <div className="social-consent-actions">
           <button className="button button-lilac" disabled={busy || !premium} onClick={() => action("accept")}><Check size={18} />قبول درخواست</button>
           <button className="button button-secondary" disabled={busy} onClick={() => action("decline")}><X size={18} />فعلاً نه</button>

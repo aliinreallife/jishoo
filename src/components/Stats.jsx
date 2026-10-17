@@ -11,6 +11,7 @@ import { Mascot } from "./Mascot";
 import { fa } from "../api";
 import { dayKey, weekDays, persianMonth, persianParts } from "../../lib/calendar.js";
 const key = dayKey;
+const weekLabels = ["شنبه", "۱ش", "۲ش", "۳ش", "۴ش", "۵ش", "جمعه"];
 function TrendChart({ values, period }) {
   const latest = Math.max(0, values.findLastIndex((row) => row.count > 0));
   const [selected, setSelected] = useState(latest);
@@ -27,7 +28,7 @@ function TrendChart({ values, period }) {
   };
   return <div className="stats-trend">
     <div className="trend-readout" aria-live="polite"><span>{current.detail || current.label}</span><strong>{current.future ? <small>این روز هنوز نرسیده</small> : <>{fa(current.count)} <small>بار سبک شدی</small></>}</strong></div>
-    <svg viewBox="0 0 640 205" role="img" aria-label={`روند جیش کردم؛ ${current.detail || current.label}: ${current.future ? "هنوز نرسیده" : fa(current.count) + " بار"}`} onPointerMove={choose} onClick={choose}>
+    <svg viewBox="0 0 640 180" role="img" aria-label={`روند جیش کردم؛ ${current.detail || current.label}: ${current.future ? "هنوز نرسیده" : fa(current.count) + " بار"}`} onPointerMove={choose} onClick={choose}>
       <defs><linearGradient id="stats-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8cc5f9" stopOpacity=".48"/><stop offset="100%" stopColor="#cbe7ff" stopOpacity=".04"/></linearGradient></defs>
       {[42,105,168].map((y) => <line key={y} x1="34" x2="606" y1={y} y2={y} stroke="#eadfcd" strokeDasharray="5 8" />)}
       <path d={`${path} L${last.x},168 L34,168 Z`} fill="url(#stats-area)" />
@@ -36,9 +37,10 @@ function TrendChart({ values, period }) {
       <path d={path} fill="none" stroke="#80b7ef" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
       {points.map((point,i) => (period === "week" || i === index) && <circle key={values[i].key} cx={point.x} cy={values[i].future ? 168 : point.y} opacity={values[i].future ? .4 : 1} r={i===index ? 8 : 5} fill={i===index ? "#ffe16d" : "#fffdf6"} stroke={i===index ? "#d7b747" : "#80b7ef"} strokeWidth="3" />)}
       <line x1={points[index].x} x2={points[index].x} y1="30" y2="172" stroke="#c0b0cf" strokeDasharray="4 7" />
-      {values.map((row,i) => (period === "week" || i===0 || i===values.length-1 || i % (period === "month" ? 5 : 2)===0) && <text key={row.key} x={points[i].x} y="199" textAnchor="middle" fill="#a08f8a" fontSize={period==="week" ? 20 : 18} fontFamily="Vazirmatn">{row.label}</text>)}
+
     </svg>
-    <div className="trend-navigation"><button aria-label="نقطهٔ قبلی نمودار" disabled={index===0} onClick={() => setSelected(index-1)}>→</button><span>روی نمودار بزن یا نقطه‌ها رو ورق بزن</span><button aria-label="نقطهٔ بعدی نمودار" disabled={index===values.length-1} onClick={() => setSelected(index+1)}>←</button></div>
+    <div className={`trend-axis-labels ${period}`} aria-hidden="true">{values.map((row,i) => (period === "week" || i===0 || i===values.length-1 || i % (period === "month" ? 5 : 2)===0) && <span key={row.key} title={row.detail || row.label} style={{ left: `${points[i].x / 640 * 100}%` }}>{period === "week" ? weekLabels[i] : period === "all" ? row.label.slice(0,3) : row.label}</span>)}</div>
+    <div className="trend-navigation"><button aria-label="نقطهٔ قبلی نمودار" disabled={index===0} onClick={() => setSelected(index-1)}>→</button><span>{period === "all" ? "برای دیدن هر ماه، روی نمودار بزن." : "برای دیدن هر روز، روی نمودار بزن."}</span><button aria-label="نقطهٔ بعدی نمودار" disabled={index===values.length-1} onClick={() => setSelected(index+1)}>←</button></div>
     <ol className="sr-only">{values.map((row) => <li key={row.key}>{row.detail || row.label}: {row.future ? "هنوز نرسیده" : fa(row.count) + " بار"}</li>)}</ol>
   </div>;
 }
@@ -64,8 +66,8 @@ export default function Stats({ data, onBack, onShare }) {
           <ArrowRight size={23} />
         </button>
         <div>
-          <h1>قصهٔ قطره‌هات</h1>
-          <p>لحظه‌های کوچیک، حالِ خوبِ خودت.</p>
+          <h1>آمار جیشام</h1>
+          <p>فقط «جیش کردم» توی این آمار شمرده می‌شه.</p>
         </div>
         <button onClick={onShare} aria-label="اشتراک آمار هفته">
           <ShareNetwork size={23} />
@@ -96,11 +98,11 @@ export default function Stats({ data, onBack, onShare }) {
                 : "از اولین قطره"}
           </span>
           <strong>{fa(total)}</strong>
-          <h2>{total ? "لحظهٔ سبک‌تر" : "قصه تازه شروع می‌شه"}</h2>
+          <h2>{total ? "بار سبک شدی" : "اولین ثبتت در راهه"}</h2>
           <p>
             {total
-              ? "لحظه‌هایی که برای خودت نگه داشتی."
-              : "هر وقت خواستی، اولین جیشت رو ثبت کن."}
+              ? (period === "week" ? "از شروع این هفته تا الان." : period === "month" ? "از شروع این ماه شمسی تا الان." : "از اولین ثبتت تا امروز.")
+              : "وقتی «جیش کردم» رو بزنی، آمار اینجا شروع می‌شه."}
           </p>
         </div>
         <Mascot mood={total ? "happy" : "shy"} size={150} />
@@ -108,7 +110,7 @@ export default function Stats({ data, onBack, onShare }) {
       </div>
       <div className="lovely-chart-card">
         <div className="section-heading">
-          <h2>ردپای قطره‌ها</h2>
+          <h2>نمودار جیش‌کردن‌ها</h2>
           <span>
             {period === "week"
               ? "شنبه تا جمعه"
@@ -120,7 +122,7 @@ export default function Stats({ data, onBack, onShare }) {
         <TrendChart values={values} period={period} />
         {!total && (
           <p className="stats-zero-note">
-            اینجا با ثبت‌های واقعی تو رنگ می‌گیره 💧
+            اولین ثبت که برسه، نمودارت هم رنگ می‌گیره 💧
           </p>
         )}
       </div>
@@ -140,10 +142,10 @@ export default function Stats({ data, onBack, onShare }) {
       </div>
       <div className="drop-calendar">
         <div className="section-heading">
-          <h2>یه تکه از روزهات</h2>
+          <h2>تقویم جیشام</h2>
           <span>{currentMonth.label}</span>
         </div>
-        <div className="calendar-weekdays" aria-label="روزهای هفته از شنبه تا جمعه">{["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"].map((day) => <span key={day}>{day}</span>)}</div>
+        <div className="calendar-weekdays" aria-label="روزهای هفته از شنبه تا جمعه">{["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"].map((day, i) => <span key={day} aria-label={day} title={day}>{weekLabels[i]}</span>)}</div>
         <div className="drop-calendar-grid">
           {Array.from({ length: currentMonth.offset }, (_, i) => <span key={`before-${i}`} aria-hidden="true" />)}
           {calendar.map((d) => (
@@ -160,10 +162,10 @@ export default function Stats({ data, onBack, onShare }) {
           ))}
           {Array.from({ length: padding }, (_, i) => <span key={`after-${i}`} aria-hidden="true" />)}
         </div>
-        <p>هر قطره، یه سر زدن به حالِ خودت.</p>
+        <p>عدد هر روز، تعداد جیش‌کردن‌های همون روزه.</p>
       </div>
       <p className="stats-privacy-note">
-        این آمار برای خودته؛ فقط با انتخاب تو به تصویر اشتراک تبدیل می‌شه.
+        آمارت خصوصیه؛ آیکن بالا کارتِ آمار این هفته رو برای اشتراک آماده می‌کنه.
       </p>
     </section>
   );

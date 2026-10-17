@@ -72,7 +72,11 @@ export default function Nearby({
     resize.observe(container.current);
     return () => {
       resize.disconnect();
-      map.current?.remove();
+      // Leaflet 1.9 leaves a zoom fallback timer running after remove().
+      // Finish its transition while the map pane still exists.
+      const instance = map.current;
+      if (instance?._animatingZoom) instance._onZoomTransitionEnd();
+      instance?.remove();
       map.current = null;
     };
   }, []);
@@ -264,7 +268,7 @@ export default function Nearby({
       <header className="nearby-heading">
         <div>
           <h1>این نزدیکا</h1>
-          <p>آدم‌های نزدیکت، روی یه نقشه</p>
+          <p>جیش‌های اطراف، با مکان تقریبی</p>
         </div>
         <span className="tiny-badge">
           <ShieldCheck size={13} /> موقعیت تقریبی
@@ -312,8 +316,8 @@ export default function Nearby({
           </span>
           <h2>کی دور و برته؟</h2>
           <p>
-            اجازه‌ی مکان بده تا جیش‌های این نزدیکا رو ببینی. با این کار، مکانت برای
-            بقیه نمایش داده نمی‌شه.
+            اجازهٔ مکان بده تا اطرافت رو ببینی. دیدن نقشه مکانت رو با کسی به
+            اشتراک نمی‌ذاره.
           </p>
           {geoError && <p className="form-error">{geoError}</p>}
           <button
@@ -324,7 +328,7 @@ export default function Nearby({
             {locating ? "داریم مکانت رو پیدا می‌کنیم…" : "نمایش اطراف من"}
             <NavigationArrow size={18} />
           </button>
-          <small>فعلاً نقشه‌ی تهران نمایش داده شده؛ این مکان شما نیست.</small>
+          <small>تا وقتی اجازه ندی، فقط نقشهٔ پیش‌فرض تهران نمایش داده می‌شه.</small>
         </div>
       ) : (
         <div ref={optionsPanel} className={`around-panel ${peopleOpen || selected || cluster ? "is-browsing" : ""}`} id="nearby-map-options" hidden={!panelOpen}>
@@ -335,7 +339,7 @@ export default function Nearby({
                 : `${fa(activity.length)} نفر این نزدیکی`}
             </strong>
             <div className="map-panel-actions">
-              <span className="map-live-state"><i aria-hidden="true" />خودکار تازه می‌شه</span>
+              <span className="map-live-state" aria-label="نقشه خودکار به‌روز می‌شه" title="نقشه هر چند ثانیه خودکار تازه می‌شه"><i aria-hidden="true" />خودکار</span>
               <button aria-label="جمع‌کردن گزینه‌های نقشه" aria-controls="nearby-map-options" aria-expanded={panelOpen} onClick={() => setPanelOpen(false)}>
                 فقط نقشه <CaretDown size={17} />
               </button>
@@ -406,10 +410,10 @@ export default function Nearby({
             </div>
             <p id="map-visibility-description" aria-live="polite">
               {sharingBusy ? "داریم انتخابت رو ذخیره می‌کنیم…" : visibilityMode === "hidden"
-                ? "ثبت‌ها و پروفایلت پنهانه؛ خودت هنوز نقشه رو می‌بینی."
+                ? "کسی موقعیت یا جیشت رو روی نقشه نمی‌بینه."
                 : visibilityMode === "news"
-                  ? "ثبتت با مکان تقریبی میاد؛ برای بقیه بی‌نام، برای دوست‌هات با اسم."
-                  : "آدم‌های نزدیک اسم و پروفایلت رو می‌بینن و می‌تونن درخواست دوستی بفرستن."}
+                  ? "جیشت با مکان تقریبی دیده می‌شه؛ فقط دوستات اسمت رو می‌بینن."
+                  : "آدم‌های اطراف اسم و پروفایلت رو هم می‌بینن."}
             </p>
           </fieldset>
           <button
