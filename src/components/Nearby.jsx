@@ -37,6 +37,7 @@ export default function Nearby({
     radius = useRef(),
     selfMarker = useRef();
   const optionsPanel = useRef();
+  const refreshing = useRef(false), latestRefresh = useRef();
   const [position, setPosition] = useState(null),
     [geoError, setGeoError] = useState(""),
     [locating, setLocating] = useState(false),
@@ -75,25 +76,29 @@ export default function Nearby({
       map.current = null;
     };
   }, []);
-  async function refresh(p) {
-    if (!p) return;
-    setLoading(true);
+  async function refresh(p, quiet = false) {
+    if (!p || refreshing.current) return;
+    refreshing.current = true;
+    if (!quiet) setLoading(true);
     try {
-      const result = await api("nearby", p);
+      const [activityResult, peopleResult] = await Promise.allSettled([
+        api("nearby", p), me.registered ? api("discover", p) : Promise.resolve({ people: [] }),
+      ]);
+      if (peopleResult.status === "fulfilled") setPeople(peopleResult.value.people);
+      if (activityResult.status === "rejected") throw activityResult.reason;
+      const result = activityResult.value;
       setActivity(result.activity);
-      if (me.registered) {
-        const nearbyPeople = await api("discover", p);
-        setPeople(nearbyPeople.people);
-      }
       setSelected(
         (current) => result.activity.find((x) => x.id === current?.id) || null,
       );
     } catch (error) {
-      notify(error.message);
+      if (!quiet) notify(error.message);
     } finally {
+      refreshing.current = false;
       setLoading(false);
     }
   }
+  latestRefresh.current = refresh;
   function locate() {
     if (!navigator.geolocation) {
       setGeoError("این مرورگر از مکان‌یابی پشتیبانی نمی‌کنه.");
@@ -146,10 +151,19 @@ export default function Nearby({
       weight: 3,
       interactive: false,
     }).addTo(map.current);
-    const timer = setInterval(() => {
-      if (document.visibilityState === "visible") refresh(position);
-    }, 20000);
-    return () => clearInterval(timer);
+    const update = () => {
+      if (document.visibilityState === "visible" && navigator.onLine !== false) latestRefresh.current(position, true);
+    };
+    const timer = setInterval(update, 8000);
+    document.addEventListener("visibilitychange", update);
+    window.addEventListener("focus", update);
+    window.addEventListener("online", update);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", update);
+      window.removeEventListener("focus", update);
+      window.removeEventListener("online", update);
+    };
   }, [position]);
   useEffect(() => {
     if (!markers.current) return;
@@ -321,7 +335,7 @@ export default function Nearby({
                 : `${fa(activity.length)} نفر این نزدیکی`}
             </strong>
             <div className="map-panel-actions">
-              <button onClick={() => refresh(position)}>تازه‌کردن</button>
+              <span className="map-live-state"><i aria-hidden="true" />خودکار تازه می‌شه</span>
               <button aria-label="جمع‌کردن گزینه‌های نقشه" aria-controls="nearby-map-options" aria-expanded={panelOpen} onClick={() => setPanelOpen(false)}>
                 فقط نقشه <CaretDown size={17} />
               </button>

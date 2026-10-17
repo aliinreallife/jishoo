@@ -89,6 +89,7 @@ const Admin = communityView("Admin"),
   PublicProfile = communityView("PublicProfile");
 const Nearby = lazy(() => import("./components/Nearby"));
 const Stories = lazy(() => import("./components/Stories"));
+const HomeNotifications = lazy(() => import("./components/HomeNotifications"));
 import { api, getInvite, fa, relativeTime, inviteUrl, copyText, inviteGiftLabel } from "./api";
 
 const assets = `${import.meta.env.BASE_URL}assets/`;
@@ -322,23 +323,24 @@ function StoryDialog({ children, onClose, label = "کارت اشتراک جیش�
     document.body,
   );
 }
-function AuthWizard({ invitation, onComplete, notify, authInfo }) {
+function AuthWizard({ invitation, onComplete, notify, authInfo, inviteOnly = true }) {
   const [stage, setStage] = useState(
-      authInfo?.pendingGoogle ? "register" : "phone",
+      inviteOnly ? "invite" : authInfo?.pendingGoogle ? "register" : "phone",
     ),
     [phone, setPhone] = useState(""),
     [challenge, setChallenge] = useState(null),
     [otp, setOtp] = useState(""),
     [ticket, setTicket] = useState(authInfo?.pendingGoogle ? "google" : ""),
     [name, setName] = useState(""),
-    [code, setCode] = useState(invitation?.code || ""),
+    [code, setCode] = useState(invitation?.code || sessionStorage.getItem("jishoo:signup-invite") || ""),
     [invite, setInvite] = useState(invitation),
     [completed, setCompleted] = useState(null),
-    [requiresInvite, setRequiresInvite] = useState(true),
+    [requiresInvite, setRequiresInvite] = useState(inviteOnly),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const mounted = useRef(true),
-    verifying = useRef(false);
+    verifying = useRef(false),
+    inviteChecked = useRef(false);
   useEffect(
     () => () => {
       mounted.current = false;
@@ -351,6 +353,33 @@ function AuthWizard({ invitation, onComplete, notify, authInfo }) {
       setInvite(invitation);
     }
   }, [invitation?.code]);
+  useEffect(() => {
+    if (stage !== "invite" || inviteChecked.current) return;
+    const candidate = invitation?.code || (authInfo?.pendingGoogle && code);
+    if (!candidate) return;
+    let active = true;
+    setBusy(true);
+    getInvite(candidate).then((value) => {
+      if (!active) return;
+      if (value.remaining === 0) throw new Error("این دعوت استفاده شده؛ از دوستت یه دعوت تازه بگیر.");
+      inviteChecked.current = true;
+      setInvite(value); setCode(value.code); setBusy(false);
+      sessionStorage.setItem("jishoo:signup-invite", value.code);
+      setStage(authInfo?.pendingGoogle ? "register" : "phone");
+    }).catch((error) => active && setError(error.message)).finally(() => active && setBusy(false));
+    return () => { active = false; };
+  }, [invitation?.code, authInfo?.pendingGoogle, stage]);
+  async function continueInvite(event) {
+    event.preventDefault(); setBusy(true); setError("");
+    try {
+      const value = await getInvite(code.trim());
+      if (value.remaining === 0) throw new Error("این دعوت استفاده شده؛ از دوستت یه دعوت تازه بگیر.");
+      setInvite(value); setCode(value.code);
+      sessionStorage.setItem("jishoo:signup-invite", value.code);
+      setStage(authInfo?.pendingGoogle ? "register" : "phone");
+    } catch (error) { setError(error.message); }
+    finally { setBusy(false); }
+  }
   async function start(e) {
     e.preventDefault();
     setBusy(true);
@@ -451,7 +480,21 @@ function AuthWizard({ invitation, onComplete, notify, authInfo }) {
   }
   return (
     <div className="auth-wizard">
-      {stage === "phone" ? (
+      {stage === "invite" ? (
+        <div className="invite-first-step">
+          <PairArt size={190} />
+          <span className="little-pill">قدم اول · دعوت به جمعمون</span>
+          <h2>دعوتت رو آوردی؟</h2>
+          <p className="dialog-description">جیشو فعلاً با دعوته. اول کد دوستت رو وارد کن، بعد با گوگل حسابت رو بساز.</p>
+          <form onSubmit={continueInvite}>
+            <label className="field-label">کد دعوت<input aria-label="کد دعوت عضویت" autoCapitalize="characters" autoComplete="off" dir="ltr" maxLength={80} value={code} onChange={(e) => { setCode(e.target.value.toUpperCase()); setInvite(null); setError(""); }} placeholder="کد دوستت" required /></label>
+            {error && <p className="form-error" role="alert">{error}</p>}
+            <Button lilac type="submit" disabled={busy || !code.trim()}>{busy ? "داریم دعوتت رو بررسی می‌کنیم…" : "تایید دعوت و ادامه"}<Heart size={18} /></Button>
+          </form>
+          <button className="text-link auth-back" onClick={() => { setStage("login"); setBusy(false); setError(""); }}>قبلاً عضو شدم؛ ورود به حسابم</button>
+          <p className="auth-demo-note">کد نداری؟ فعلاً مهمان ما باش؛ ثبت جیش و استوری بدون حساب هم کار می‌کنه.</p>
+        </div>
+      ) : stage === "phone" || stage === "login" ? (
         <>
           <div className="dialog-icon blue">
             {authInfo?.phoneLoginEnabled ? <Phone size={30} weight="duotone" /> : <Drop size={30} weight="duotone" />}
@@ -461,7 +504,7 @@ function AuthWizard({ invitation, onComplete, notify, authInfo }) {
             با گوگل وارد شو. اگه عضو جدیدی، دعوت دوستت رو لازم داری.
             مهمان هم همیشه می‌تونه از جیشو استفاده کنه.
           </p>
-          {!invitation && (
+          {stage !== "login" && !invite && (
             <div className="invitation-required">
               <ShieldCheck size={20} />
               <div>
@@ -473,6 +516,7 @@ function AuthWizard({ invitation, onComplete, notify, authInfo }) {
               </div>
             </div>
           )}
+          {stage === "phone" && invite && <div className="invite-auth-summary"><Avatar person={invite.inviter} size={42} /><p>{invite.inviter ? `با دعوت ${invite.inviter.name}` : "دعوتت تایید شد"}<strong>{inviteGiftLabel(invite)}</strong></p><button className="text-link" onClick={() => { setStage("invite"); setInvite(null); }}>تغییر دعوت</button></div>}
           {authInfo?.pendingGoogle ? (
             <div className="pending-google-note">
               گوگلت تایید شد.<span dir="ltr">{authInfo.pendingGoogle}</span>برای
@@ -481,9 +525,10 @@ function AuthWizard({ invitation, onComplete, notify, authInfo }) {
             </div>
           ) : (
             <Suspense fallback={null}>
-              <GoogleBanner auth={authInfo} notify={notify} />
+              <GoogleBanner auth={authInfo} intent={stage === "login" ? "login" : "signup"} inviteCode={invite?.code || code} notify={notify} />
             </Suspense>
           )}
+          {stage === "login" && <button className="text-link auth-back" onClick={() => { setStage("invite"); setError(""); }}>حساب ندارم؛ عضویت با دعوت</button>}
           {authInfo?.phoneLoginEnabled ? <><form onSubmit={start}>
             <label className="field-label">
               شماره موبایل
@@ -916,7 +961,7 @@ export default function App() {
   }, [data?.friends]);
   useEffect(() => {
     if (!entered || !data?.me.registered) return;
-    if (["friends", "circle", "notifications"].includes(screen)) refresh();
+    if (["friends", "circle", "notifications", "stats"].includes(screen)) refresh();
   }, [screen, selectedCircle, entered, data?.me.registered, refresh]);
   useEffect(() => {
     const resume = () => {
@@ -978,6 +1023,9 @@ export default function App() {
     if (outcome === "continue") {
       setDialog("auth");
       notify("گوگلت تایید شد؛ با یه دعوت، حسابت رو بساز.");
+    } else if (outcome === "invite_required") {
+      setDialog("auth");
+      notify("با این گوگل هنوز عضو نشدی؛ اول دعوتت رو وارد کن.");
     } else if (outcome === "merge_required") {
       setEntered(true);
       setDialog("settings");
@@ -1020,10 +1068,6 @@ export default function App() {
     setDialog(null);
   }
   function openStory(kind) {
-    if (pendingRef.current || pendingCheckin) {
-      notify("اول ثبتت نهایی بشه؛ بعد می‌تونی استوری کنی.");
-      return;
-    }
     setStoryKind(kind);
     setDialog("story");
   }
@@ -1100,7 +1144,7 @@ export default function App() {
         setData((current) => ({ ...current, stats: result.stats }));
         if (result.matches?.length) {
           setMoment(result.matches[0]);
-          setDialog("moment");
+          setDialog((current) => current === "story" ? current : "moment");
           refresh();
         }
       } catch (error) {
@@ -1703,6 +1747,7 @@ export default function App() {
                       <span>این لحظه رو دوست‌هام هم ببینن</span>
                     </label>
                   )}
+                  <Suspense fallback={null}><HomeNotifications data={data} notify={notify} refresh={refresh} onSettings={() => navigate("notifications")} /></Suspense>
                   <section className="friends-section">
                     <div className="section-heading">
                       <h2>دوستات الان</h2>
@@ -2255,6 +2300,7 @@ export default function App() {
               <AuthWizard
                 invitation={invitation}
                 authInfo={data.auth}
+                inviteOnly={data.inviteOnly}
                 onComplete={completeAuth}
                 notify={notify}
               />
@@ -2307,11 +2353,10 @@ export default function App() {
                   <button
                     className="checkin-share"
                     aria-label="استوری این لحظه"
-                    disabled={busy || Boolean(pendingCheckin)}
                     onClick={() =>
                       openStory(dialog === "need" ? "need" : "checkin")
                     }
-                  ><ShareNetwork size={23} /><span>استوری</span></button>
+                  ><ShareNetwork size={23} /></button>
                 </div>
                 <div className="checkin-content">
                   <div className="checkin-art">
@@ -2969,7 +3014,8 @@ export default function App() {
           >
             <Suspense fallback={<LoadingSection />}>
               <Stories
-                data={data}
+                data={pendingCheckin?.status === "done" ? { ...data, stats: { ...data.stats, today: data.stats.today + 1, week: data.stats.week + 1 } } : data}
+                undo={pendingCheckin && !pendingCheckin.saving ? <CheckinUndo pending={pendingCheckin} onUndo={undoCheckin} inline /> : null}
                 pendingInvite={invitation}
                 initialMoment={dialog === "momentStory" ? moment : null}
                 initialKind={dialog === "story" ? storyKind : null}
@@ -2982,7 +3028,7 @@ export default function App() {
         )}
         {pendingCheckin &&
           !pendingCheckin.saving &&
-          !["need", "success"].includes(dialog) && (
+          !["need", "success", "story", "momentStory"].includes(dialog) && (
             <CheckinUndo pending={pendingCheckin} onUndo={undoCheckin} />
           )}
         <div

@@ -43,7 +43,7 @@ def connect(sender,recipient):
 def page_for(browser,c,**kwargs):
  ctx,page=context(browser,**kwargs);token=next(x.value for x in c.cookies if x.name=='jishoo_session')
  ctx.add_cookies([{'name':'jishoo_session','value':token,'url':BASE,'httpOnly':True,'sameSite':'Lax'}])
- ctx.add_init_script("localStorage.setItem('jishoo:last-seen-release','0.2.0');localStorage.setItem('jishoo:v2-entered','true')")
+ ctx.add_init_script("localStorage.setItem('jishoo:last-seen-release','0.2.1');localStorage.setItem('jishoo:v2-entered','true')")
  return ctx,page
 
 def verify_rate_limits():
@@ -120,7 +120,7 @@ def main():
    landing_ctx,landing=context(browser);calls=[];landing.on('request',lambda r:calls.append(r.url) if '/api/' in r.url else None);landing.goto(BASE+'/');expect(landing.get_by_role('heading',level=1)).to_contain_text('رفاقت‌های قشنگ',timeout=20000);assert not calls
    for width,height in [(393,852),(320,568),(1440,900)]:
     landing.set_viewport_size({'width':width,'height':height});assert landing.evaluate('document.documentElement.scrollWidth<=innerWidth+1');capture(landing,f'landing-{width}.png')
-   landing.set_viewport_size({'width':393,'height':852});landing.get_by_role('link',name='ورود با گوگل',exact=True).click();expect(landing.get_by_role('button',name='ادامه با Google',exact=False)).to_be_visible(timeout=20000);assert landing.locator('input[type=tel]').count()==0
+   landing.set_viewport_size({'width':393,'height':852});landing.get_by_role('link',name='ورود با گوگل',exact=True).click();expect(landing.get_by_label('کد دعوت عضویت',exact=True)).to_be_visible(timeout=20000);landing.get_by_role('button',name='قبلاً عضو شدم؛ ورود به حسابم',exact=True).click();expect(landing.get_by_role('button',name='ادامه با Google',exact=False)).to_be_visible(timeout=20000);assert landing.locator('input[type=tel]').count()==0
    api(landing,'delete-account',{});landing_ctx.close()
    release_ctx,release=context(browser);release_token=next(x.value for x in a.cookies if x.name=='jishoo_session');release_ctx.add_cookies([{'name':'jishoo_session','value':release_token,'url':BASE,'httpOnly':True,'sameSite':'Lax'}]);release_ctx.add_init_script("if(!localStorage.getItem('qa-release-seeded')){localStorage.setItem('jishoo:v2-entered','true');localStorage.setItem('jishoo:last-seen-release','0.1.0');localStorage.setItem('qa-release-seeded','true')}");release.goto(BASE+'/#/profile');expect(release.locator('.release-notes')).to_be_visible(timeout=20000);capture(release,'release-popup.png');release.get_by_role('button',name='چه خوب! بریم تو جیشو',exact=True).click();release.reload();expect(release.locator('.release-notes')).to_have_count(0,timeout=15000);release.goto(BASE+'/changelog');expect(release.get_by_role('heading',name='تازه‌های جیشو',exact=True)).to_be_visible(timeout=15000)
    print('PASS: Landing is responsive and makes no private API requests; Google CTA opens the paused-phone login flow; Persian release notes appear once per version and remain available publicly.',flush=True)

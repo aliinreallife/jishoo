@@ -1,14 +1,21 @@
 import React from "react";
 import { Blobatar } from "@blobatar/react";
+import { useGaze } from "@blobatar/react/gaze";
 import { shy, happy, love, idle } from "blobatar/expression";
 import "blobatar/motion.css";
+import "blobatar/gaze.css";
+
+function MovingAvatar({ animate, ...props }) {
+  const { ref } = useGaze({ travel: 2.2, lookAt: animate ? "pointer" : null });
+  return <Blobatar {...props} ref={ref} animate={animate ? "always" : undefined} />;
+}
 
 export function Avatar({
   person,
   name,
   size = 80,
   mood = "idle",
-  animate = false,
+  animate = true,
   className = "",
 }) {
   const seed = person?.avatarSeed || person?.name || name || "jishoo:guest";
@@ -22,12 +29,12 @@ export function Avatar({
       {person?.avatarImage ? (
         <img src={person.avatarImage} className="uploaded-avatar" alt="" />
       ) : (
-        <Blobatar
+        <MovingAvatar
           name={seed}
           size={size}
           tone={0.23}
           expression={{ shy, happy, love, idle }[mood] || idle}
-          animate={animate ? "hover" : undefined}
+          animate={animate}
           title="شخصیت جیشو"
           aria-hidden="true"
         />

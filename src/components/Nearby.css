@@ -238,3 +238,5 @@
   outline: 3px solid #a99bce;
   outline-offset: 3px;
 }
+.map-live-state { display: inline-flex; align-items: center; gap: 5px; font-size: 9px; color: #68765c; white-space: nowrap; }
+.map-live-state i { width: 6px; height: 6px; background: #90ad7c; border-radius: 50%; }

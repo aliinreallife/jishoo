@@ -1,4 +1,10 @@
 /* A fitted preview leaves the export actions visible, including on short phones. */
+.story-undo-slot { grid-area: undo; width: 100%; max-width: 420px; }
+.story-undo-slot .undo-inline { position: static; margin: 0; transform: none; width: 100%; padding: 7px 10px; min-height: 48px; }
+.full-story-overlay .story-editor.with-undo {
+  grid-template-areas: "header" "undo" "format" "theme" "preview" "caption" "export";
+  grid-template-rows: 44px 50px 34px 30px minmax(0, 1fr) auto auto;
+}
 .story-editor img.story-raster-preview {
   display: block;
   padding: 0;
@@ -180,6 +186,11 @@
   font-size: 42px;
 }
 @media (min-width: 900px), (min-width: 650px) and (max-height: 500px) {
+  .full-story-overlay .story-editor.with-undo {
+    grid-template-areas: "header header" "preview undo" "preview format" "preview theme" "preview caption" "preview export";
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    grid-template-rows: 44px 50px 34px 30px minmax(0, 1fr) auto;
+  }
   .full-story-overlay .story-editor,
   .app-scroll .story-editor {
     grid-template-areas: "header header" "preview format" "preview theme" "preview caption" "preview export";

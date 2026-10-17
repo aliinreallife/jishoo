@@ -8,7 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import { api, fa } from "../api";
 import "./GoogleAccount.css";
-export function GoogleBanner({ auth, intent = "login", notify }) {
+export function GoogleBanner({ auth, intent = "login", inviteCode, notify }) {
   const [busy, setBusy] = useState(false);
   if (!auth?.googleEnabled) return null;
   return (
@@ -39,6 +39,7 @@ export function GoogleBanner({ auth, intent = "login", notify }) {
           try {
             const r = await api("google-start", {
               intent,
+              inviteCode,
               returnTo: location.pathname + location.search + location.hash,
             });
             location.assign(r.url);

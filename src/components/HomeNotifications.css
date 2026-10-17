@@ -1,0 +1,9 @@
+.home-notification-card { display:flex; align-items:center; gap:11px; width:100%; text-align:right; border:1px solid #dfd1ef; border-radius:22px; padding:16px 14px; margin:18px 0 24px; background:linear-gradient(125deg,#f7f0ff,#fffbef); color:#66537e; }
+.home-notification-card:hover { border-color:#ac91c9; }
+.home-notification-icon { display:grid; place-items:center; width:43px; height:43px; border-radius:15px; background:#ece0fa; flex-shrink:0; }
+.home-notification-card > span:nth-child(2) { flex:1; min-width:0; }
+.home-notification-card strong { display:block; font-size:13px; line-height:1.9; }
+.home-notification-card small { display:block; font-size:10px; color:#8c7e92; line-height:1.9; margin-top:3px; }
+.home-notification-cta { display:flex; align-items:center; gap:2px; font-size:11px; white-space:nowrap; }
+.home-notification-card.enabled { border-color:#dce4ce; background:#f6f8ef; color:#60734a; }
+.home-notification-card.enabled .home-notification-icon { background:#e7eedb; }

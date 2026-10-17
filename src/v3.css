@@ -837,3 +837,8 @@ button.preference-action:focus-visible,
 .page.invite-page {
   padding-bottom: max(30px, env(safe-area-inset-bottom));
 }
+
+.invite-first-step { text-align:center; }
+.invite-first-step > .pair-art { margin:0 auto 12px; }
+.invite-first-step .little-pill { display:inline-flex; margin-bottom:12px; }
+.invite-first-step form { text-align:right; }

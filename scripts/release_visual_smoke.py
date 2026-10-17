@@ -67,12 +67,12 @@ def verify_release_extras(browser, owner, friend, page_for, new_client):
     page.set_viewport_size({'width':393,'height':852});page.goto(BASE+'/#/stats')
     expect(page.locator('.calendar-weekdays span').first).to_have_text('شنبه')
     expect(page.locator('.calendar-weekdays span').last).to_have_text('جمعه')
-    assert page.locator('.lovely-column').count()==7
+    assert page.locator('.stats-trend .sr-only li').count()==7
     page.get_by_role('button',name='ماه',exact=True).click()
-    assert page.locator('.lovely-column').count() in [29,30,31]
-    assert page.locator('.drop-calendar-grid > div').count()==page.locator('.lovely-column').count()
+    assert page.locator('.stats-trend .sr-only li').count() in [29,30,31]
+    assert page.locator('.drop-calendar-grid > div').count()==page.locator('.stats-trend .sr-only li').count()
     capture(page,'release-shamsi-calendar.png')
-    page.get_by_role('button',name='همه‌وقت',exact=True).click();assert page.locator('.lovely-column').count()==12
+    page.get_by_role('button',name='همه‌وقت',exact=True).click();assert page.locator('.stats-trend .sr-only li').count()==12
 
     state=owner.bootstrap();code=state['me']['inviteCode']
     # Member invitation page fills the viewport and has no bottom navigation.
@@ -107,29 +107,20 @@ def verify_release_extras(browser, owner, friend, page_for, new_client):
     group_ctx.close()
     print('PASS: Shamsi calendar and chart ranges agree; invitation pages fill phone/desktop viewports with reachable CTAs; accepted links show confirmation and redirect without consuming slots.',flush=True)
 
-    # Real writes stay paused during undo, and sharing also waits for a slow save.
+    # Early story sharing leaves undo available inside the editor.
     page.set_viewport_size({'width':393,'height':852});page.goto(BASE+'/#/home')
-    calls=[]
-    def delay_checkin(route):
-        calls.append(time.monotonic());time.sleep(1.2);route.continue_()
-    page.route('**/api/app?action=checkin',delay_checkin)
-    for kind, selector in [('need','.need-card'),('done','.done-card')]:
-        baseline=owner.bootstrap()['stats']['total'];start=time.monotonic()
+    calls=[];page.on('request',lambda request:calls.append(request.url) if 'action=checkin' in request.url else None)
+    for selector in ['.need-card','.done-card']:
         page.locator(selector).click()
         share=page.get_by_role('button',name='استوری این لحظه',exact=True)
-        expect(share).to_be_disabled();page.wait_for_timeout(800);assert not calls
-        # Cancelled attempts cause no API write.
+        expect(share).to_be_enabled();assert share.inner_text()==''
+        share.click();expect(page.locator('.story-undo-slot')).to_be_visible(timeout=2000)
         page.get_by_role('button',name='لغو ثبت',exact=True).click()
-        page.wait_for_timeout(2400);assert not calls and owner.bootstrap()['stats']['total']==baseline
-        start=time.monotonic();page.locator(selector).click();expect(share).to_be_disabled()
-        page.wait_for_timeout(3200);expect(share).to_be_disabled()
-        expect(share).to_be_enabled(timeout=15000);assert len(calls)==1 and calls[0]-start>=3
-        share.click();expect(page.locator('img.story-raster-preview')).to_be_visible(timeout=30000)
-        page.get_by_role('button',name='بستن کارت اشتراک',exact=True).click()
-        page.keyboard.press('Escape');calls.clear()
+        page.wait_for_timeout(3300);assert not calls
     assert not errors,errors
     ctx.close()
-    print('PASS: Undo prevents writes for both actions; the visible story pill remains disabled during grace and delayed server save, then opens the committed result.',flush=True)
+    print('PASS: Both actions allow icon-only story sharing immediately; undo remains available in the editor and cancelling prevents the write.',flush=True)
+
 
 
 if __name__=='__main__':

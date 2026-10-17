@@ -69,6 +69,11 @@ function heart(ctx, x, y, size, color) {
 function star(ctx, x, y, size, color) {
   ctx.beginPath(); for (let n = 0; n < 8; n++) { const r = n % 2 ? size * 0.23 : size; const a = n * Math.PI / 4; const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r; if (!n) ctx.moveTo(px, py); else ctx.lineTo(px, py); } ctx.closePath(); ctx.fillStyle = color; ctx.fill();
 }
+function drop(ctx, x, y, size) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(size / 50, size / 50);
+  ctx.beginPath(); ctx.moveTo(0, -25); ctx.bezierCurveTo(-7,-11,-20,3,-20,13); ctx.bezierCurveTo(-20,39,20,39,20,13); ctx.bezierCurveTo(20,3,7,-11,0,-25);
+  ctx.fillStyle="#b8dbfa"; ctx.fill(); ctx.strokeStyle="#7caade"; ctx.lineWidth=2.5; ctx.stroke(); ctx.restore();
+}
 
 // Render once into a plain canvas. The preview, download and native share use
 // this SAME PNG, avoiding Safari's inconsistent SVG foreignObject/DOM snapshots.
@@ -85,7 +90,8 @@ export async function renderStoryImage({ kind, format, theme, caption, data, mom
   const colors = theme === "lavender" ? ["#d9cef5", "#f0eaff"] : theme === "sky" ? ["#d4e9fb", "#eff8ff"] : ["#fff2c8", "#fffae8"];
   const gradient = ctx.createLinearGradient(0, 0, 1080, height); gradient.addColorStop(0, colors[0]); gradient.addColorStop(1, colors[1]); ctx.fillStyle = gradient; ctx.fillRect(0, 0, 1080, height);
   heart(ctx, 950, height * .24, 82, "#ffffff55"); heart(ctx, 115, height * .71, 74, "#ffffff66"); star(ctx, 950, height * .67, 38, "#f1d27d77");
-  text(ctx, "jishoo", 78, square ? 83 : 125, square ? 44 : 56, "#8c79a4", 700, "left");
+  drop(ctx, 95, square ? 61 : 99, square ? 30 : 42);
+  text(ctx, "jishoo", square ? 131 : 145, square ? 83 : 125, square ? 44 : 56, "#8c79a4", 700, "left");
   text(ctx, "جیشو", 990, square ? 83 : 125, square ? 50 : 65, "#8c79a4", 400, "right", "JishooStoryWordmark");
   const me = data.me, count = kind === "weekly" ? data.stats.week : data.stats.today;
   if (kind === "weekly") {
@@ -102,34 +108,34 @@ export async function renderStoryImage({ kind, format, theme, caption, data, mom
       const y = top + Math.floor(i / 5) * (square ? 92 : 155);
       fitImage(ctx, count && i % 3 !== 1 ? happy : shy, x - size / 2, y, size, size);
     }
-    const numberY = square ? 200 : 280;
+    const numberY = square ? 175 : 280;
     text(ctx, `${count.toLocaleString("fa-IR")} بار`, 0, numberY, square ? 146 : 230, "#292b37", 900);
     text(ctx, count ? "سبک شدم!" : "هنوز شروع نکردم.", 0, numberY + (square ? 65 : 100), square ? 44 : 65);
     const punch = caption || "لحظه‌های کوچیک، حس‌های بزرگ.";
     let punchSize = square ? 23 : 30;
-    let punchY = numberY + (square ? 112 : 180);
-    const punchBottom = h / 2 - (square ? 22 : 180);
+    let punchY = numberY + (square ? 114 : 180);
+    const punchBottom = h / 2 - (square ? 50 : 180);
     let punchRows = lines(ctx, punch, punchSize, 760);
     while (punchSize > 18 && punchY + (punchRows.length - 1) * punchSize * 1.7 > punchBottom) {
       punchSize--; punchRows = lines(ctx, punch, punchSize, 760);
     }
     for (const row of punchRows) { text(ctx, row, 0, punchY, punchSize, "#a18c68", 400); punchY += punchSize * 1.7; }
-    if (!square) text(ctx, "جیشو", 0, h / 2 - 65, 85, "#595164", 400, "center", "JishooStoryWordmark");
+    text(ctx, "جیشو", 0, h / 2 - (square ? 12 : 65), square ? 34 : 85, "#595164", 400, "center", "JishooStoryWordmark");
     star(ctx, -355, square ? 200 : 350, square ? 25 : 40, "#f4d56a"); ctx.restore();
   } else {
     const pairKind = ["together", "back-to-back"].includes(kind);
-    const stamps = { checkin: "ماموریت با موفقیت انجام شد", invite: "این دعوت مال توئه", together: "رفاقت در یک سطح تازه", "back-to-back": "تایمینگمون حرف نداره" };
+    const stamps = { need: "یه مکث بین کارهام", checkin: "ماموریت با موفقیت انجام شد", invite: "این دعوت مال توئه", together: "رفاقت در یک سطح تازه", "back-to-back": "تایمینگمون حرف نداره" };
     if (stamps[kind]) { rounded(ctx, 240, square ? 112 : 190, 600, square ? 52 : 70, 30, "#fffaf0aa"); text(ctx, stamps[kind], 540, square ? 147 : 238, square ? 24 : 30, "#9e7d61"); }
     if (pair) fitImage(ctx, pair, square ? 180 : 80, square ? 175 : 350, square ? 720 : 920, square ? 465 : 760);
     else fitImage(ctx, kind === "need" ? shy : happy, square ? 285 : 120, square ? 170 : 295, square ? 510 : 840, square ? 510 : 900);
-    if (pairKind || kind === "invite") heart(ctx, 530, square ? 235 : 420, square ? 48 : 78, "#ee9aa9");
+    heart(ctx, pairKind || kind === "invite" ? 530 : 860, square ? 235 : 420, square ? 48 : 78, "#ee9aa9");
     star(ctx, square ? 890 : 950, square ? 480 : 900, square ? 27 : 42, "#f4cf62");
     const titleY = square ? (kind === "invite" ? 680 : 750) : (kind === "invite" ? 1220 : 1320);
     const end = paragraph(ctx, caption || headlines[kind] || headlines.checkin, titleY, square ? 60 : 88, kind === "invite" ? (square ? 125 : 260) : (square ? 170 : 340));
-    if (kind !== "need") {
-      const sub = pairKind ? `${me.name} و ${moment?.friend?.name || "دوستم"}` : kind === "invite" ? "یه بهونه برای با هم بودن، هر روز." : `جیش‌های امروز من: ${count.toLocaleString("fa-IR")}`;
-      text(ctx, sub, 540, Math.min(end + (square ? 5 : 10), square ? 920 : 1635), square ? 27 : 38, "#8e7d89", 400);
-    }
+    const sub = pairKind ? `${me.name} و ${moment?.friend?.name || "دوستم"}` : kind === "need" ? "یه توقف کوتاه، بعد دوباره پیشتونم." : kind === "invite" ? "یه بهونه برای با هم بودن، هر روز." : `جیش‌های امروز من: ${count.toLocaleString("fa-IR")}`;
+    const subY = Math.min(end + (square ? 5 : 10), square ? 920 : 1635);
+    text(ctx, sub, 540, subY, square ? 27 : 38, "#8e7d89", 400);
+    if (pairKind) text(ctx, kind === "together" ? "یه دقیقه فاصله، یه خاطرهٔ مشترک." : "یکی بعد از اون یکی؛ همین‌قدر بامزه.", 540, subY + (square ? 37 : 60), square ? 23 : 32, "#9f8b9b", 400);
     if (kind === "invite") {
       const y = square ? 835 : 1540;
       ctx.beginPath(); ctx.moveTo(90, y); ctx.lineTo(990, y); ctx.strokeStyle = "#ad9bb555"; ctx.lineWidth = 2; ctx.stroke();
@@ -141,7 +147,8 @@ export async function renderStoryImage({ kind, format, theme, caption, data, mom
   }
   text(ctx, me.handle ? `@${me.handle}` : "jishoo", 80, height - (square ? 39 : 105), square ? 20 : 27, "#8a7995", 400, "left");
   text(ctx, "jishoo.vercel.app", 1000, height - (square ? 39 : 105), square ? 20 : 27, "#8a7995", 400, "right");
-  if (!square) text(ctx, "یه لحظه از روزت، برای دوستات.", 540, height - 38, 28, "#9f8b9b", 400);
+  heart(ctx, square ? 325 : 250, height - (square ? 17 : 47), square ? 14 : 25, "#d9a8b7");
+  text(ctx, "یه لحظه از روزت، برای دوستات.", 540, height - (square ? 12 : 38), square ? 17 : 28, "#9f8b9b", 400);
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
   canvas.width = canvas.height = 0;
   if (!blob) throw new Error("تصویر کارت آماده نشد؛ دوباره امتحان کن.");

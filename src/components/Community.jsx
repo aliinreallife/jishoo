@@ -19,6 +19,7 @@ import {
   Check,
 } from "@phosphor-icons/react";
 import { Avatar } from "./Character";
+import { PushPermission } from "./HomeNotifications";
 import { Mascot, PairArt } from "./Mascot";
 import { api, copyText, fa, relativeTime } from "../api";
 import {
@@ -123,7 +124,6 @@ export function Notifications({ data, refresh, notify, onBack, onNavigate }) {
   const [push, setPush] = useState(false),
     [explain, setExplain] = useState(false),
     [delivery, setDelivery] = useState("");
-  const permissionDialog = useRef();
   const [busy, run] = useWork(notify);
   const environment = pushEnvironment();
   useEffect(() => {
@@ -137,9 +137,6 @@ export function Notifications({ data, refresh, notify, onBack, onNavigate }) {
       active = false;
     };
   }, []);
-  useEffect(() => {
-    if (explain) permissionDialog.current?.showModal();
-  }, [explain]);
   async function sendTest() {
     setDelivery("");
     await syncPush();
@@ -244,68 +241,7 @@ export function Notifications({ data, refresh, notify, onBack, onNavigate }) {
         بی‌صدا کنی. برای نمایش روی صفحهٔ قفل، اعلان‌های جیشو رو در تنظیمات گوشی
         مجاز کن.
       </p>
-      {explain && (
-        <dialog
-          ref={permissionDialog}
-          className="push-permission-dialog"
-          aria-labelledby="push-permission-title"
-          onCancel={() => setExplain(false)}
-        >
-          <Mascot size={126} />
-          <h2 id="push-permission-title">حالِ دوستات، حتی وقتی اینجا نیستی 💧</h2>
-          <p>
-            وقتی دوستت می‌گه «جیش کردم» یا می‌گه «جیش دارم»، یه اعلان روی گوشی
-            می‌گیری؛ لازم نیست جیشو باز باشه.
-          </p>
-          <ul>
-            <li>فقط اعلان آدمایی که بهشون وصلی</li>
-            <li>بدون دسترسی به پیام‌ها یا برنامه‌های دیگه</li>
-            <li>هر وقت بخوای، خاموش یا بی‌صداش کن</li>
-          </ul>
-          {environment === "install" ? (
-            <div className="push-install-guide">
-              <strong>روی آیفون این دو قدم لازمه</strong>
-              <ol>
-                <li>در Safari، دکمهٔ Share و بعد Add to Home Screen رو بزن.</li>
-                <li>از آیکن جیشو روی صفحهٔ اصلی بیا و اعلان رو روشن کن.</li>
-              </ol>
-              <small>نیاز به iOS 16.4 یا جدیدتر داره.</small>
-            </div>
-          ) : environment === "blocked" ? (
-            <p className="push-install-guide">
-              اجازهٔ اعلان قبلاً بسته شده. در تنظیمات سایت مرورگر، Notifications
-              رو روی Allow بذار، بعد برگرد.
-            </p>
-          ) : environment === "unsupported" ? (
-            <p className="push-install-guide">
-              این مرورگر اعلان پس‌زمینه رو پشتیبانی نمی‌کنه؛ روی اندروید از
-              Chrome یا روی آیفون از نسخهٔ صفحهٔ اصلی استفاده کن.
-            </p>
-          ) : (
-            <Button
-              disabled={busy}
-              onClick={() =>
-                run(async () => {
-                  await enablePush(data.vapidPublicKey);
-                  setPush(true);
-                  setExplain(false);
-                  notify("اعلان این دستگاه روشن شد. حالا یه اعلان تستی بفرست.");
-                })
-              }
-            >
-              باشه، اعلان دوستام رو روشن کن
-              <Bell size={19} />
-            </Button>
-          )}
-          <button
-            className="text-link"
-            disabled={busy}
-            onClick={() => setExplain(false)}
-          >
-            {environment === "ready" ? "فعلاً نه" : "فهمیدم"}
-          </button>
-        </dialog>
-      )}
+      {explain && <PushPermission data={data} notify={notify} onClose={() => setExplain(false)} onEnabled={() => setPush(true)} />}
       {!!data.notifications?.length && (
         <button
           className="text-link"

@@ -1,5 +1,5 @@
 import "./Stats.css";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ArrowRight,
   ShareNetwork,
@@ -11,6 +11,37 @@ import { Mascot } from "./Mascot";
 import { fa } from "../api";
 import { dayKey, weekDays, persianMonth, persianParts } from "../../lib/calendar.js";
 const key = dayKey;
+function TrendChart({ values, period }) {
+  const latest = Math.max(0, values.findLastIndex((row) => row.count > 0));
+  const [selected, setSelected] = useState(latest);
+  useEffect(() => setSelected(latest), [period, latest]);
+  const index = Math.min(selected, values.length - 1), current = values[index];
+  const max = Math.max(1, ...values.map((row) => row.count));
+  const points = values.map((row, i) => ({ x: 34 + i * 572 / Math.max(1, values.length - 1), y: 168 - row.count / max * 126 }));
+  const recordedPoints = points.filter((_, i) => !values[i].future);
+  const last = recordedPoints.at(-1);
+  const path = recordedPoints.reduce((value, point, i) => i ? `${value} C${points[i-1].x + (point.x-points[i-1].x)/2},${points[i-1].y} ${points[i-1].x + (point.x-points[i-1].x)/2},${point.y} ${point.x},${point.y}` : `M${point.x},${point.y}`, "");
+  const choose = (event) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    setSelected(Math.max(0, Math.min(values.length - 1, Math.round(((event.clientX-box.left)/box.width*640 - 34)/572 * (values.length-1)))));
+  };
+  return <div className="stats-trend">
+    <div className="trend-readout" aria-live="polite"><span>{current.detail || current.label}</span><strong>{current.future ? <small>این روز هنوز نرسیده</small> : <>{fa(current.count)} <small>بار سبک شدی</small></>}</strong></div>
+    <svg viewBox="0 0 640 205" role="img" aria-label={`روند جیش کردم؛ ${current.detail || current.label}: ${current.future ? "هنوز نرسیده" : fa(current.count) + " بار"}`} onPointerMove={choose} onClick={choose}>
+      <defs><linearGradient id="stats-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8cc5f9" stopOpacity=".48"/><stop offset="100%" stopColor="#cbe7ff" stopOpacity=".04"/></linearGradient></defs>
+      {[42,105,168].map((y) => <line key={y} x1="34" x2="606" y1={y} y2={y} stroke="#eadfcd" strokeDasharray="5 8" />)}
+      <path d={`${path} L${last.x},168 L34,168 Z`} fill="url(#stats-area)" />
+      {recordedPoints.length === 1 && <rect x={last.x-12} y={last.y} width="24" height={Math.max(1,168-last.y)} rx="12" fill="url(#stats-area)" />}
+      <line x1={last.x} x2="606" y1="168" y2="168" stroke="#dfd9e5" strokeDasharray="4 7" />
+      <path d={path} fill="none" stroke="#80b7ef" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+      {points.map((point,i) => (period === "week" || i === index) && <circle key={values[i].key} cx={point.x} cy={values[i].future ? 168 : point.y} opacity={values[i].future ? .4 : 1} r={i===index ? 8 : 5} fill={i===index ? "#ffe16d" : "#fffdf6"} stroke={i===index ? "#d7b747" : "#80b7ef"} strokeWidth="3" />)}
+      <line x1={points[index].x} x2={points[index].x} y1="30" y2="172" stroke="#c0b0cf" strokeDasharray="4 7" />
+      {values.map((row,i) => (period === "week" || i===0 || i===values.length-1 || i % (period === "month" ? 5 : 2)===0) && <text key={row.key} x={points[i].x} y="199" textAnchor="middle" fill="#a08f8a" fontSize={period==="week" ? 20 : 18} fontFamily="Vazirmatn">{row.label}</text>)}
+    </svg>
+    <div className="trend-navigation"><button aria-label="نقطهٔ قبلی نمودار" disabled={index===0} onClick={() => setSelected(index-1)}>→</button><span>روی نمودار بزن یا نقطه‌ها رو ورق بزن</span><button aria-label="نقطهٔ بعدی نمودار" disabled={index===values.length-1} onClick={() => setSelected(index+1)}>←</button></div>
+    <ol className="sr-only">{values.map((row) => <li key={row.key}>{row.detail || row.label}: {row.future ? "هنوز نرسیده" : fa(row.count) + " بار"}</li>)}</ol>
+  </div>;
+}
 export default function Stats({ data, onBack, onShare }) {
   const [period, setPeriod] = useState("week");
   const s = data.stats, now = new Date(), currentMonth = persianMonth(now);
@@ -21,7 +52,7 @@ export default function Stats({ data, onBack, onShare }) {
       return { key: `${month.year}-${month.month}`, label: month.start.toLocaleDateString("fa-IR-u-ca-persian", { month: "short", timeZone: "Asia/Tehran" }), count: month.days.reduce((sum, d) => sum + (counts.get(key(d)) || 0), 0) };
     })
     : (period === "week" ? weekDays(now) : currentMonth.days).map((d) => ({
-      key: key(d), label: d.toLocaleDateString("fa-IR-u-ca-persian", period === "week" ? { weekday: "short", timeZone: "Asia/Tehran" } : { day: "numeric", timeZone: "Asia/Tehran" }), count: counts.get(key(d)) || 0,
+      key: key(d), future: key(d) > key(now), detail: d.toLocaleDateString("fa-IR-u-ca-persian", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Tehran" }), label: d.toLocaleDateString("fa-IR-u-ca-persian", period === "week" ? { weekday: "short", timeZone: "Asia/Tehran" } : { day: "numeric", timeZone: "Asia/Tehran" }), count: counts.get(key(d)) || 0,
     }));
   const total = period === "all" ? s.total : values.reduce((sum, row) => sum + row.count, 0), max = Math.max(1, ...values.map((row) => row.count));
   const calendar = currentMonth.days.map((d) => ({ key: key(d), count: counts.get(key(d)) || 0, day: persianParts(d).day, label: d.toLocaleDateString("fa-IR-u-ca-persian", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Tehran" }) }));
@@ -86,47 +117,7 @@ export default function Stats({ data, onBack, onShare }) {
                 : "۱۲ ماه شمسی اخیر"}
           </span>
         </div>
-        <div
-          className={`lovely-chart ${period}`}
-          style={{ gridTemplateColumns: `repeat(${values.length}, minmax(0, 1fr))` }}
-          aria-label="نمودار جیش کردم"
-          role="img"
-        >
-          {values.map((v, i) => (
-            <div
-              className="lovely-column"
-              key={v.key}
-              title={`${v.label}: ${fa(v.count)} بار`}
-            >
-              <span className="lovely-chart-track">
-                <i
-                  style={{
-                    height: v.count
-                      ? `${Math.max(7, (v.count / max) * 100)}%`
-                      : "3%",
-                  }}
-                  data-empty={!v.count}
-                >
-                  {v.count > 0 && period !== "month" && (
-                    <Drop size={15} weight="fill" />
-                  )}
-                </i>
-              </span>
-              <small>
-                {(
-                  period === "all"
-                    ? i % 2 === 0
-                    : period !== "month" || i % 5 === 0 || i === values.length - 1
-                )
-                  ? v.label
-                  : "\u00a0"}
-              </small>
-              <span className="sr-only">
-                {v.label}: {fa(v.count)} بار
-              </span>
-            </div>
-          ))}
-        </div>
+        <TrendChart values={values} period={period} />
         {!total && (
           <p className="stats-zero-note">
             اینجا با ثبت‌های واقعی تو رنگ می‌گیره 💧

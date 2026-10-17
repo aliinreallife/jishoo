@@ -14,6 +14,7 @@ export default function Stories({
   initialMoment = null,
   initialKind = null,
   onClose,
+  undo = null,
 }) {
   const [kind, setKind] = useState(
       initialMoment?.kind || initialKind || "weekly",
@@ -251,7 +252,8 @@ export default function Stories({
       </section>
     );
   return (
-    <section className="story-editor" ref={editor}>
+    <section className={`story-editor ${undo ? "with-undo" : ""}`} ref={editor}>
+      {undo && <div className="story-undo-slot">{undo}</div>}
       <header>
         <button
           aria-label="بستن کارت اشتراک"
