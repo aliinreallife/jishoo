@@ -1,3 +1,4 @@
+import { listGroups, groupAction, groupInfo } from "../lib/groups.js";
 import { randomUUID } from "node:crypto";
 import { waitUntil } from "@vercel/functions";
 import { sanitizeAvatar } from "../lib/avatar.js";
@@ -147,19 +148,26 @@ function profile(user, own = false) {
   return p;
 }
 async function stats(userId) {
-  const rows = await query(
-    `SELECT COUNT(*) FILTER(WHERE status='done')::int AS total, COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date=(NOW() AT TIME ZONE 'Asia/Tehran')::date)::int AS today, COUNT(*) FILTER(WHERE status='done' AND created_at>=NOW()-INTERVAL '7 days')::int AS week, COUNT(*) FILTER(WHERE status='done' AND created_at>=NOW()-INTERVAL '30 days')::int AS month, COUNT(*) FILTER(WHERE status='need')::int AS need FROM checkins WHERE user_id=$1`,
-    [userId],
-  );
-  const daily = await query(
-    `SELECT (created_at AT TIME ZONE 'Asia/Tehran')::date::text AS day, COUNT(*)::int AS count FROM checkins WHERE user_id=$1 AND status='done' AND created_at>=NOW()-INTERVAL '7 days' GROUP BY 1 ORDER BY 1`,
-    [userId],
-  );
-  const latest = await query(
-    "SELECT id,status,visibility,created_at FROM checkins WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1",
-    [userId],
-  );
-  return { ...rows[0], daily, latest: latest[0] || null };
+  const [rows, history, latest] = await Promise.all([
+    query(
+      `SELECT COUNT(*) FILTER(WHERE status='done')::int AS total,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date=(NOW() AT TIME ZONE 'Asia/Tehran')::date)::int AS today,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date>=(NOW() AT TIME ZONE 'Asia/Tehran')::date-6)::int AS week,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date>=(NOW() AT TIME ZONE 'Asia/Tehran')::date-29)::int AS month,COUNT(*) FILTER(WHERE status='need')::int AS need FROM checkins WHERE user_id=$1`,
+      [userId],
+    ),
+    query(
+      `SELECT 'day' AS kind,(created_at AT TIME ZONE 'Asia/Tehran')::date::text AS day,COUNT(*)::int AS count FROM checkins WHERE user_id=$1 AND status='done' AND created_at>NOW()-INTERVAL '31 days' GROUP BY 2 UNION ALL SELECT 'month' AS kind,TO_CHAR(created_at AT TIME ZONE 'Asia/Tehran','YYYY-MM') AS day,COUNT(*)::int AS count FROM checkins WHERE user_id=$1 AND status='done' AND created_at>NOW()-INTERVAL '1 year' GROUP BY 2 ORDER BY day`,
+      [userId],
+    ),
+    query(
+      "SELECT id,status,visibility,created_at FROM checkins WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1",
+      [userId],
+    ),
+  ]);
+  return {
+    ...rows[0],
+    daily: history.filter((d) => d.kind === "day"),
+    monthly: history.filter((d) => d.kind === "month"),
+    latest: latest[0] || null,
+  };
 }
 async function friends(user) {
   if (!user.registered) return [];
@@ -206,14 +214,7 @@ async function moments(user) {
     },
   }));
 }
-async function circles(user) {
-  if (!user.registered) return [];
-  const rows = await query(
-    `SELECT c.*,COALESCE(json_agg(m.user_id) FILTER(WHERE m.user_id IS NOT NULL),'[]') AS members FROM circles c LEFT JOIN circle_members m ON m.circle_id=c.id WHERE c.owner_id=$1 GROUP BY c.id ORDER BY c.created_at`,
-    [user.id],
-  );
-  return rows.map((r) => ({ id: r.id, name: r.name, members: r.members }));
-}
+const circles = listGroups;
 async function bootstrap(user) {
   const [s, f, m, c, community] = await Promise.all([
     stats(user.id),
@@ -362,9 +363,17 @@ export default async function handler(req, res) {
         200,
         await publicProfile(url.searchParams.get("handle"), fail),
       );
+    if (action === "circle-info" && req.method === "GET")
+      return json(
+        res,
+        200,
+        await groupInfo(url.searchParams.get("code"), fail),
+      );
     const auth = await session(req, res);
     const user = auth.user;
     if (action === "bootstrap") return json(res, 200, await bootstrap(user));
+    const groupResult = await groupAction({ action, body, user, req, fail });
+    if (groupResult !== undefined) return json(res, 200, groupResult);
     const extra = await communityAction({
       action,
       body,
@@ -470,7 +479,7 @@ export default async function handler(req, res) {
           );
       }
       const registered = await query(
-        `WITH candidate AS MATERIALIZED (SELECT id FROM users WHERE id=$3 AND NOT registered FOR UPDATE), ticket AS MATERIALIZED (SELECT * FROM auth_challenges WHERE id=$2 AND user_id=$3 AND verified_at IS NOT NULL AND consumed_at IS NULL AND expires_at>NOW() AND EXISTS(SELECT 1 FROM candidate)), valid_invite AS (UPDATE invites SET uses=uses+1 WHERE code=$1 AND active AND (max_uses IS NULL OR uses<max_uses) AND EXISTS(SELECT 1 FROM ticket) RETURNING *), joined AS (UPDATE users SET registered=TRUE,name=$4,avatar_seed=$4,handle=CASE WHEN COALESCE((SELECT grant_admin FROM valid_invite),FALSE) AND (SELECT reserved_handle FROM valid_invite)='ali' THEN 'ali' ELSE 'u'||SUBSTRING(REPLACE(users.id,'-',''),1,10) END,role=CASE WHEN COALESCE((SELECT grant_admin FROM valid_invite),FALSE) THEN 'admin' ELSE 'member' END,phone_hash=ticket.phone_hash,phone_cipher=ticket.phone_cipher,invite_code=$5,invited_by=(SELECT inviter_id FROM valid_invite),trial_days_bank=CASE WHEN $7::boolean THEN CASE WHEN EXISTS(SELECT 1 FROM valid_invite) THEN 7 ELSE 3 END ELSE 0 END,trial_until=CASE WHEN $7::boolean THEN NULL ELSE NOW()+CASE WHEN EXISTS(SELECT 1 FROM valid_invite) THEN INTERVAL '7 days' ELSE INTERVAL '3 days' END END FROM ticket WHERE users.id=$3 AND NOT users.registered AND (NOT $6::boolean OR EXISTS(SELECT 1 FROM valid_invite)) RETURNING users.*), reward AS (UPDATE users SET trial_days_bank=CASE WHEN $7::boolean THEN trial_days_bank+7 ELSE trial_days_bank END,trial_until=CASE WHEN $7::boolean THEN trial_until ELSE GREATEST(COALESCE(trial_until,NOW()),COALESCE(paid_until,NOW()),NOW())+INTERVAL '7 days' END WHERE id=(SELECT invited_by FROM joined) RETURNING id), consume AS (UPDATE auth_challenges SET consumed_at=NOW() WHERE id=$2 AND EXISTS(SELECT 1 FROM joined) RETURNING id), personal_invite AS (INSERT INTO invites(code,inviter_id,max_uses) SELECT $5,id,CASE WHEN role='admin' THEN 1 WHEN $7::boolean THEN 3 ELSE NULL END FROM joined ON CONFLICT DO NOTHING RETURNING code), auto_connect AS (INSERT INTO connections(id,user_a,user_b,requested_by,status) SELECT $9,LEAST(id,invited_by),GREATEST(id,invited_by),invited_by,CASE WHEN $8::boolean THEN 'accepted' ELSE 'pending' END FROM joined WHERE invited_by IS NOT NULL ON CONFLICT(user_a,user_b) DO NOTHING RETURNING id), admin_session AS(UPDATE sessions SET admin_access=TRUE WHERE token_hash=$10 AND EXISTS(SELECT 1 FROM joined WHERE role='admin') RETURNING token_hash) SELECT * FROM joined`,
+        `WITH candidate AS MATERIALIZED (SELECT id FROM users WHERE id=$3 AND NOT registered FOR UPDATE), ticket AS MATERIALIZED (SELECT * FROM auth_challenges WHERE id=$2 AND user_id=$3 AND verified_at IS NOT NULL AND consumed_at IS NULL AND expires_at>NOW() AND EXISTS(SELECT 1 FROM candidate)), valid_invite AS (UPDATE invites SET uses=uses+1 WHERE code=$1 AND active AND (max_uses IS NULL OR uses<max_uses) AND EXISTS(SELECT 1 FROM ticket) RETURNING *), joined AS (UPDATE users SET registered=TRUE,terms_version='2026-10-17',terms_accepted_at=NOW(),name=$4,avatar_seed=$4,handle=CASE WHEN COALESCE((SELECT grant_admin FROM valid_invite),FALSE) AND (SELECT reserved_handle FROM valid_invite)='ali' THEN 'ali' ELSE 'u'||SUBSTRING(REPLACE(users.id,'-',''),1,10) END,role=CASE WHEN COALESCE((SELECT grant_admin FROM valid_invite),FALSE) THEN 'admin' ELSE 'member' END,phone_hash=ticket.phone_hash,phone_cipher=ticket.phone_cipher,invite_code=$5,invited_by=(SELECT inviter_id FROM valid_invite),trial_days_bank=CASE WHEN $7::boolean THEN CASE WHEN EXISTS(SELECT 1 FROM valid_invite) THEN 7 ELSE 3 END ELSE 0 END,trial_until=CASE WHEN $7::boolean THEN NULL ELSE NOW()+CASE WHEN EXISTS(SELECT 1 FROM valid_invite) THEN INTERVAL '7 days' ELSE INTERVAL '3 days' END END FROM ticket WHERE users.id=$3 AND NOT users.registered AND (NOT $6::boolean OR EXISTS(SELECT 1 FROM valid_invite)) RETURNING users.*), reward AS (UPDATE users SET trial_days_bank=CASE WHEN $7::boolean THEN trial_days_bank+7 ELSE trial_days_bank END,trial_until=CASE WHEN $7::boolean THEN trial_until ELSE GREATEST(COALESCE(trial_until,NOW()),COALESCE(paid_until,NOW()),NOW())+INTERVAL '7 days' END WHERE id=(SELECT invited_by FROM joined) RETURNING id), consume AS (UPDATE auth_challenges SET consumed_at=NOW() WHERE id=$2 AND EXISTS(SELECT 1 FROM joined) RETURNING id), personal_invite AS (INSERT INTO invites(code,inviter_id,max_uses) SELECT $5,id,CASE WHEN role='admin' THEN 1 WHEN $7::boolean THEN 3 ELSE NULL END FROM joined ON CONFLICT DO NOTHING RETURNING code), auto_connect AS (INSERT INTO connections(id,user_a,user_b,requested_by,status) SELECT $9,LEAST(id,invited_by),GREATEST(id,invited_by),invited_by,CASE WHEN $8::boolean THEN 'accepted' ELSE 'pending' END FROM joined WHERE invited_by IS NOT NULL ON CONFLICT(user_a,user_b) DO NOTHING RETURNING id), admin_session AS(UPDATE sessions SET admin_access=TRUE WHERE token_hash=$10 AND EXISTS(SELECT 1 FROM joined WHERE role='admin') RETURNING token_hash) SELECT * FROM joined`,
         [
           code,
           body.ticket,
@@ -493,7 +502,7 @@ export default async function handler(req, res) {
             actorId: fresh.id,
             kind: "invite",
             title: `${fresh.name} با دعوتت اومد!`,
-            body: "جمعمون یه نفر قشنگ‌تر شد.",
+            body: "با دعوت تو اومد؛ یه رفاقت تازه در راهه.",
             route: "/#/invite",
             dedupe: `joined:${fresh.id}`,
           }),
@@ -614,6 +623,13 @@ export default async function handler(req, res) {
     }
     if (action === "connection-request") {
       requireAccount(user);
+      if (body.handle) {
+        try {
+          body.handle = normalizeHandle(body.handle);
+        } catch (error) {
+          fail(400, error.message);
+        }
+      }
       const info = body.handle
         ? {
             inviter: (
@@ -643,17 +659,43 @@ export default async function handler(req, res) {
     }
     if (action === "connection-respond") {
       requireAccount(user);
-      if (body.accept)
-        await query(
-          `UPDATE connections SET status='accepted' WHERE id=$1 AND status='pending' AND requested_by<>$2 AND (user_a=$2 OR user_b=$2)`,
+      if (typeof body.accept !== "boolean") fail(400, "انتخاب معتبر نیست.");
+      if (body.accept) {
+        const accepted = await query(
+          `UPDATE connections SET status='accepted' WHERE id=$1 AND status='pending' AND requested_by<>$2 AND (user_a=$2 OR user_b=$2) RETURNING id`,
           [body.id, user.id],
         );
-      else
-        await query(
-          "DELETE FROM connections WHERE id=$1 AND (user_a=$2 OR user_b=$2)",
-          [body.id, user.id],
-        );
-      return json(res, 200, { friends: await friends(user) });
+        if (!accepted[0])
+          fail(404, "این درخواست پیدا نشد یا قبلاً پاسخ داده شده.");
+      } else {
+        const relation = (
+          await query(
+            "SELECT * FROM connections WHERE id=$1 AND (user_a=$2 OR user_b=$2)",
+            [body.id, user.id],
+          )
+        )[0];
+        if (!relation) fail(404, "این اتصال پیدا نشد.");
+        const peer =
+          relation.user_a === user.id ? relation.user_b : relation.user_a;
+        await transaction([
+          [
+            "DELETE FROM connections WHERE id=$1 AND (user_a=$2 OR user_b=$2)",
+            [body.id, user.id],
+          ],
+          [
+            `DELETE FROM circle_members m USING circles c WHERE m.circle_id=c.id AND NOT c.shared AND ((c.owner_id=$1 AND m.user_id=$2) OR (c.owner_id=$2 AND m.user_id=$1))`,
+            [user.id, peer],
+          ],
+          [
+            `DELETE FROM notification_preferences WHERE scope='friend' AND ((user_id=$1 AND scope_id=$2) OR (user_id=$2 AND scope_id=$1))`,
+            [user.id, peer],
+          ],
+        ]);
+      }
+      return json(res, 200, {
+        friends: await friends(user),
+        circles: await circles(user),
+      });
     }
     if (action === "connection-share") {
       requireAccount(user);
@@ -717,6 +759,9 @@ export default async function handler(req, res) {
         })
         .map((r) => ({
           id: r.id,
+          markerKey: hashToken(
+            "map:" + user.id + ":" + r.user_id + ":" + process.env.APP_SECRET,
+          ).slice(0, 16),
           status: r.status,
           createdAt: r.created_at,
           lat: r.location_lat,
@@ -739,31 +784,6 @@ export default async function handler(req, res) {
               : null,
         }));
       return json(res, 200, { activity, approximate: true });
-    }
-    if (action === "circle-create") {
-      requireAccount(user);
-      const name = normalizeName(body.name);
-      if (!name || name.length > 40) fail(400, "اسم جمع معتبر نیست.");
-      const allowed = (await friends(user))
-        .filter((f) => f.status === "accepted")
-        .map((f) => f.id);
-      const members = [
-        ...new Set(Array.isArray(body.members) ? body.members : []),
-      ];
-      if (members.some((id) => !allowed.includes(id)))
-        fail(403, "فقط دوست‌های وصل‌شده رو می‌تونی اضافه کنی.");
-      const id = randomUUID();
-      await transaction([
-        [
-          "INSERT INTO circles(id,owner_id,name) VALUES($1,$2,$3)",
-          [id, user.id, name],
-        ],
-        ...members.map((m) => [
-          "INSERT INTO circle_members(circle_id,user_id) VALUES($1,$2)",
-          [id, m],
-        ]),
-      ]);
-      return json(res, 200, { circles: await circles(user) });
     }
     if (action === "delete-account") {
       if (user.role === "admin" && user.handle === "ali")

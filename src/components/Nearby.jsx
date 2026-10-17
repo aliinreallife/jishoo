@@ -1,3 +1,4 @@
+import "./Nearby.css";
 import React, { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -11,12 +12,20 @@ import {
   Plus,
   Minus,
   Drop,
-  Sparkle,
 } from "@phosphor-icons/react";
+import { markerOffsets } from "../map-markers";
 import { api, relativeTime, fa } from "../api";
 import { Avatar } from "./Character";
 
-export default function Nearby({ me, onSharingChanged, notify }) {
+export default function Nearby({
+  me,
+  data,
+  refreshAccount,
+  onAuth,
+  onConnect,
+  onSharingChanged,
+  notify,
+}) {
   const container = useRef(),
     map = useRef(),
     markers = useRef(),
@@ -27,6 +36,10 @@ export default function Nearby({ me, onSharingChanged, notify }) {
     [locating, setLocating] = useState(false),
     [activity, setActivity] = useState([]),
     [selected, setSelected] = useState(null),
+    [cluster, setCluster] = useState(null),
+    [people, setPeople] = useState([]),
+    [peopleOpen, setPeopleOpen] = useState(false),
+    [peopleBusy, setPeopleBusy] = useState(false),
     [loading, setLoading] = useState(false),
     [sharing, setSharing] = useState(me.shareLocation);
   useEffect(() => {
@@ -57,6 +70,10 @@ export default function Nearby({ me, onSharingChanged, notify }) {
     try {
       const result = await api("nearby", p);
       setActivity(result.activity);
+      if (me.registered) {
+        const nearbyPeople = await api("discover", p);
+        setPeople(nearbyPeople.people);
+      }
       setSelected(
         (current) => result.activity.find((x) => x.id === current?.id) || null,
       );
@@ -126,7 +143,36 @@ export default function Nearby({ me, onSharingChanged, notify }) {
   useEffect(() => {
     if (!markers.current) return;
     markers.current.clearLayers();
+    const offsets = markerOffsets(activity),
+      clustered = new Set();
     activity.forEach((item) => {
+      const offset = offsets.get(item.id);
+      if (offset.cluster) {
+        const key = `${item.lat}:${item.lng}`;
+        if (clustered.has(key)) return;
+        clustered.add(key);
+        const badge = document.createElement("button");
+        badge.className = "map-cluster-count";
+        badge.textContent = fa(offset.cluster.length);
+        badge.setAttribute(
+          "aria-label",
+          `${fa(offset.cluster.length)} نفر در این محدوده`,
+        );
+        L.marker([item.lat, item.lng], {
+          icon: L.divIcon({
+            html: badge,
+            className: "map-cluster-icon",
+            iconSize: [50, 50],
+            iconAnchor: [25, 25],
+          }),
+        })
+          .addTo(markers.current)
+          .on("click", () => {
+            setCluster(offset.cluster);
+            setSelected(null);
+          });
+        return;
+      }
       const element = document.createElement("div");
       element.className = `live-map-marker ${item.status} ${item.isFriend ? "friend-marker" : ""}`;
       const figure = document.createElement("span");
@@ -158,11 +204,14 @@ export default function Nearby({ me, onSharingChanged, notify }) {
         html: element,
         className: "map-avatar-icon",
         iconSize: [48, 57],
-        iconAnchor: [24, 50],
+        iconAnchor: [24 - offset.x, 50 - offset.y],
       });
       L.marker([item.lat, item.lng], { icon, title: item.name })
         .addTo(markers.current)
-        .on("click", () => setSelected(item));
+        .on("click", () => {
+          setCluster(null);
+          setSelected(item);
+        });
     });
   }, [activity]);
   async function changeSharing(enabled) {
@@ -185,12 +234,44 @@ export default function Nearby({ me, onSharingChanged, notify }) {
       notify(error.message);
     }
   }
+  async function changeDiscovery() {
+    if (!me.registered) {
+      onAuth();
+      return;
+    }
+    if (!position) {
+      locate();
+      notify("اول اطرافت رو پیدا کن، بعد نمایش پروفایلت رو انتخاب کن.");
+      return;
+    }
+    setPeopleBusy(true);
+    try {
+      const enabled = !me.discoverable;
+      if (enabled && !sharing) {
+        await api("location", { ...position, enabled: true });
+        setSharing(true);
+        onSharingChanged(true);
+      }
+      await api("discoverable", { enabled });
+      await refreshAccount();
+      await refresh(position);
+      notify(
+        enabled
+          ? "پروفایلت با موقعیت تقریبی در این نزدیکا دیده می‌شه."
+          : "پروفایلت از فهرست این نزدیکا پنهان شد.",
+      );
+    } catch (e) {
+      notify(e.message);
+    } finally {
+      setPeopleBusy(false);
+    }
+  }
   return (
     <section className="real-nearby-page">
       <header className="nearby-heading">
         <div>
-          <h1>دور و بر من</h1>
-          <p>خبرهای ۳۰ دقیقه‌ی اخیر، همین نزدیکی</p>
+          <h1>این نزدیکا</h1>
+          <p>خبرهای تازه و آدم‌های نزدیکت</p>
         </div>
         <span className="tiny-badge">
           <ShieldCheck size={13} /> موقعیت تقریبی
@@ -268,6 +349,121 @@ export default function Nearby({ me, onSharingChanged, notify }) {
               onChange={(e) => changeSharing(e.target.checked)}
             />
           </label>
+          <button
+            className="nearby-people-trigger"
+            aria-expanded={peopleOpen}
+            onClick={() => setPeopleOpen(!peopleOpen)}
+          >
+            <span>آدم‌های این نزدیکا</span>
+            <strong>
+              {me.registered ? fa(people.length) : "با ورود به حساب"}
+            </strong>
+            <Plus size={17} />
+          </button>
+          {peopleOpen && (
+            <div className="nearby-people-panel">
+              {me.registered ? (
+                <>
+                  <button
+                    className="discovery-visibility"
+                    aria-pressed={Boolean(me.discoverable)}
+                    disabled={peopleBusy}
+                    onClick={changeDiscovery}
+                  >
+                    <ShieldCheck size={19} />
+                    <span>
+                      <strong>
+                        {me.discoverable
+                          ? "پروفایلم اینجا دیده می‌شه"
+                          : "پروفایلم در فهرست پنهانه"}
+                      </strong>
+                      <small>
+                        {me.discoverable
+                          ? "برای پنهان‌کردن بزن"
+                          : "برای نمایش نام و پروفایل به آدم‌های نزدیک بزن"}
+                      </small>
+                    </span>
+                  </button>
+                  <div className="nearby-people-list">
+                    {people.map((person) => (
+                      <div className="nearby-person" key={person.id}>
+                        <Avatar person={person} size={42} />
+                        <div>
+                          <strong>{person.name}</strong>
+                          <span dir="ltr">@{person.handle}</span>
+                          <small>{person.distance}</small>
+                        </div>
+                        <button
+                          disabled={peopleBusy || person.connection !== null}
+                          onClick={async () => {
+                            setPeopleBusy(true);
+                            try {
+                              await onConnect(person.handle);
+                              await refresh(position);
+                            } finally {
+                              setPeopleBusy(false);
+                            }
+                          }}
+                        >
+                          {person.connection === "accepted"
+                            ? "دوستید"
+                            : person.connection === "pending"
+                              ? "درخواست ثبت شده"
+                              : "درخواست دوستی"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  {!people.length && (
+                    <p className="map-empty-note">
+                      هنوز کسی نمایش پروفایلش رو در این محدوده روشن نکرده.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p>
+                    روی نقشه خبرهای بی‌نام رو می‌بینی؛ برای دوستی با آدم‌های
+                    نزدیک وارد شو.
+                  </p>
+                  <button className="button button-lilac" onClick={onAuth}>
+                    ورود یا عضویت
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+          <p className="map-grid-explanation">
+            نقطه‌ها محل دقیق افراد نیستن. نشانگرهای یک محدوده برای خوانایی از هم
+            باز می‌شن.
+          </p>
+          {cluster && (
+            <div className="map-cluster-list">
+              <div>
+                <strong>{fa(cluster.length)} نفر در این محدوده</strong>
+                <button
+                  aria-label="بستن فهرست محدوده"
+                  onClick={() => setCluster(null)}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              {cluster.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setSelected(item);
+                    setCluster(null);
+                  }}
+                >
+                  <span>{item.name}</span>
+                  <small>
+                    {item.status === "need" ? "جیش داره" : "جیش کرده"}
+                  </small>
+                </button>
+              ))}
+            </div>
+          )}
           {selected ? (
             <div className="selected-neighbor">
               <Avatar

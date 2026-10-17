@@ -262,3 +262,58 @@ test("an admin password elevates only the registered, active owner account", asy
     else process.env.ADMIN_PASSWORD_HASH = original;
   }
 });
+
+test("nearby icons separate stable overlapping markers without changing approximate coordinates", async () => {
+  const { markerOffsets } = await import("../src/map-markers.js");
+  const people = [
+    { id: "a", markerKey: "2", lat: 35.7, lng: 51.4 },
+    { id: "b", markerKey: "1", lat: 35.7, lng: 51.4 },
+    { id: "c", markerKey: "3", lat: 35.72, lng: 51.4 },
+  ];
+  const before = JSON.stringify(people),
+    a = markerOffsets(people),
+    b = markerOffsets([...people].reverse());
+  assert.notDeepEqual(a.get("a"), a.get("b"));
+  assert.deepEqual(a.get("a"), b.get("a"));
+  assert.equal(a.get("c").x, 0);
+  assert.equal(a.get("c").y, 0);
+  assert.equal(JSON.stringify(people), before);
+  assert.ok(
+    markerOffsets(
+      Array.from({ length: 9 }, (_, i) => ({ ...people[0], id: String(i) })),
+    ).get("0").cluster,
+  );
+});
+test("test push fans out to every account device and reports partial failures without skipping other devices", async () => {
+  const { deliverToDevices } = await import("../lib/notifications.js");
+  const rows = [
+      { endpoint_hash: "phone" },
+      { endpoint_hash: "laptop" },
+      { endpoint_hash: "tablet" },
+    ],
+    seen = [];
+  const result = await deliverToDevices(
+    "member",
+    rows,
+    { title: "Test" },
+    async (user, row) => {
+      assert.equal(user, "member");
+      seen.push(row.endpoint_hash);
+      if (row.endpoint_hash === "laptop") throw new Error("provider failure");
+      return { accepted: true };
+    },
+  );
+  assert.deepEqual(seen, ["phone", "laptop", "tablet"]);
+  assert.deepEqual(result, { devices: 3, accepted: 2, failed: 1 });
+});
+test("favicon has a transparent outer canvas and keeps visible mascot pixels", async () => {
+  const { default: sharp } = await import("sharp");
+  const { data, info } = await sharp("public/assets/favicon-transparent.png")
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  assert.equal(info.width, 64);
+  assert.equal(info.height, 64);
+  assert.equal(data[3], 0);
+  assert.ok(data.some((value, i) => i % 4 === 3 && value > 0));
+});

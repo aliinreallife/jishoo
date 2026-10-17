@@ -6,5 +6,6 @@ import App from "./App";
 import "./styles.css";
 import "./v2.css";
 import "./community.css";
+import "./v3.css";
 
 createRoot(document.getElementById("root")).render(<App />);

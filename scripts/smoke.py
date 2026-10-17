@@ -78,5 +78,5 @@ def capture(page, name):
     page.screenshot(path=str(ARTIFACTS / name))
 
 if __name__ == "__main__":
-    from browser_smoke import main
+    from v4_smoke import main
     main()

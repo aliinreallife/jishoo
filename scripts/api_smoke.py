@@ -119,7 +119,7 @@ def main():
         pending = next(f for f in a.bootstrap()["friends"] if f["id"] == rc["me"]["id"])
         assert pending["status"] == "pending" and pending["incoming"]
         # An outsider cannot accept a connection between other users.
-        b.call("connection-respond", {"id": pending["connectionId"], "accept": True})
+        b.call("connection-respond", {"id": pending["connectionId"], "accept": True}, expected=404)
         assert next(f for f in a.bootstrap()["friends"] if f["id"] == rc["me"]["id"])["status"] == "pending"
         a.call("connection-respond", {"id": pending["connectionId"], "accept": True})
         assert next(f for f in c.bootstrap()["friends"] if f["id"] == ra["me"]["id"])["status"] == "accepted"

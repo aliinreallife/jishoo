@@ -13,7 +13,6 @@ import {
   MapPin,
   ShareNetwork,
   Drop,
-  Sparkle,
   Heart,
   Plus,
   X,
@@ -33,15 +32,21 @@ import {
   XLogo,
   SignOut,
   Trash,
-  Confetti,
   Smiley,
   Bell,
+  BellSlash,
+  LockKey,
+  ArrowCounterClockwise,
   Medal,
   NavigationArrow,
 } from "@phosphor-icons/react";
 import { Avatar } from "./components/Character";
 import { Mascot, PairArt } from "./components/Mascot";
 import { syncPush, disablePush } from "./push";
+const Friends = lazy(() => import("./components/Friends"));
+const Stats = lazy(() => import("./components/Stats"));
+const Legal = lazy(() => import("./components/Legal"));
+const GroupJoin = lazy(() => import("./components/GroupJoin"));
 const PhotoEditor = lazy(() => import("./components/PhotoEditor"));
 import InvitationQuota from "./components/InvitationQuota";
 const communityView = (name) => {
@@ -59,7 +64,6 @@ const communityView = (name) => {
   };
 };
 const Admin = communityView("Admin"),
-  Discover = communityView("Discover"),
   Achievements = communityView("Achievements"),
   Notifications = communityView("Notifications"),
   PublicProfile = communityView("PublicProfile");
@@ -85,16 +89,23 @@ const routes = [
   "stats",
   "invite",
   "circle",
-  "discover",
   "achievements",
   "notifications",
   "admin",
   "publicProfile",
+  "groupJoin",
+  "privacy",
+  "terms",
 ];
 const readRoute = () => {
+  if (location.pathname === "/privacy" || location.pathname === "/terms")
+    return location.pathname.slice(1);
+  if (new URLSearchParams(location.search).get("group") && !location.hash)
+    return "groupJoin";
   const value = location.hash.replace(/^#\/?/, "").split("/")[0];
   if (!value && /^\/u\/[a-z0-9_]+\/?$/i.test(location.pathname))
     return "publicProfile";
+  if (value === "discover") return "nearby";
   return routes.includes(value) ? value : "home";
 };
 const readStoryKind = () => {
@@ -240,38 +251,6 @@ function StoryDialog({ children, onClose, label = "کارت اشتراک جیش�
       }}
     >
       {children}
-    </div>
-  );
-}
-function Chart({ stats }) {
-  const days = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(Date.now() - (6 - index) * 86400000);
-    const key = date.toLocaleDateString("en-CA", { timeZone: "Asia/Tehran" });
-    return {
-      label: date.toLocaleDateString("fa-IR", {
-        weekday: "short",
-        timeZone: "Asia/Tehran",
-      }),
-      count: stats.daily.find((d) => d.day === key)?.count || 0,
-    };
-  });
-  const max = Math.max(...days.map((d) => d.count), 1);
-  return (
-    <div
-      className="chart actual-chart"
-      role="img"
-      aria-label={`تعداد جیش هفت روز اخیر: ${days.map((d) => fa(d.count)).join("، ")}`}
-    >
-      {days.map((day, i) => (
-        <div className="chart-column" key={i}>
-          <div
-            className="chart-bar"
-            style={{ height: day.count ? `${(day.count / max) * 100}%` : "0%" }}
-          />
-          <span>{day.label}</span>
-          {day.count > 0 && <small>{fa(day.count)}</small>}
-        </div>
-      ))}
     </div>
   );
 }
@@ -531,7 +510,7 @@ function AuthWizard({ invitation, onComplete, notify }) {
                     (f) =>
                       f.id === invite.inviter.id && f.status === "accepted",
                   )
-                    ? "حالا به هم وصلید!"
+                    ? "رفاقتتون شروع شد 💛"
                     : "درخواست دوستیت فرستاده شد.",
                 );
               } catch (e) {
@@ -635,6 +614,17 @@ function AuthWizard({ invitation, onComplete, notify }) {
               <Heart size={19} weight="duotone" />
             </Button>
           </form>
+          <p className="signup-legal">
+            با ساخت حساب،{" "}
+            <a href="/terms" target="_blank" rel="noreferrer">
+              شرایط استفاده
+            </a>{" "}
+            و{" "}
+            <a href="/privacy" target="_blank" rel="noreferrer">
+              حریم خصوصی
+            </a>{" "}
+            رو می‌پذیری.
+          </p>
           <p className="auth-demo-note">
             این روزها پرمیوم مهمون مایی. روزهای هدیه‌ات محفوظه و بعد از آزمایش
             شروع می‌شه.
@@ -666,7 +656,6 @@ export default function App() {
     [selectedCircle, setSelectedCircle] = useState(
       () => location.hash.split("/")[2] || "",
     ),
-    [period, setPeriod] = useState("هفته"),
     [friendCode, setFriendCode] = useState(""),
     [circleName, setCircleName] = useState(""),
     [circleMembers, setCircleMembers] = useState([]),
@@ -676,14 +665,22 @@ export default function App() {
     [socials, setSocials] = useState({}),
     [audience, setAudience] = useState("friends"),
     [photoFile, setPhotoFile] = useState(null),
+    [pendingCheckin, setPendingCheckin] = useState(null),
+    [groupHandle, setGroupHandle] = useState(""),
+    [groupActionType, setGroupActionType] = useState("leave"),
     [inviteLanding, setInviteLanding] = useState(() =>
       Boolean(new URLSearchParams(location.search).get("invite")),
     );
-  const timer = useRef(),
+  const pendingTimer = useRef(),
+    pendingRef = useRef(null),
+    countdownTimer = useRef(),
+    groupCode = useRef(new URLSearchParams(location.search).get("group") || ""),
+    timer = useRef(),
     adminAccess = useRef(
       new URLSearchParams(location.search).get("adminAccess"),
     ),
     scroll = useRef(),
+    lastRefresh = useRef(0),
     inviteFromUrl = useRef(
       new URLSearchParams(location.search).get("invite") ||
         sessionStorage.getItem("jishoo:invite") ||
@@ -698,6 +695,7 @@ export default function App() {
     try {
       const value = await api("bootstrap");
       setData(value);
+      lastRefresh.current = Date.now();
       setLoadError("");
       if (value.me.registered) setEntered(true);
       return value;
@@ -706,8 +704,12 @@ export default function App() {
     }
   }, []);
   useEffect(() => {
-    refresh();
-    return () => clearTimeout(timer.current);
+    if (!["terms", "privacy"].includes(readRoute())) refresh();
+    return () => {
+      clearTimeout(timer.current);
+      clearTimeout(pendingTimer.current);
+      clearInterval(countdownTimer.current);
+    };
   }, []);
   useEffect(() => {
     const handle = location.pathname.match(/^\/u\/([a-z0-9_]+)\/?$/i)?.[1];
@@ -790,6 +792,27 @@ export default function App() {
     return () => clearInterval(interval);
   }, [entered, dialog, refresh]);
   useEffect(() => {
+    if (!entered || !data?.me.registered) return;
+    if (["friends", "circle", "notifications"].includes(screen)) refresh();
+  }, [screen, selectedCircle, entered, data?.me.registered, refresh]);
+  useEffect(() => {
+    const resume = () => {
+      if (
+        entered &&
+        !dialog &&
+        document.visibilityState === "visible" &&
+        Date.now() - lastRefresh.current > 15000
+      )
+        refresh();
+    };
+    window.addEventListener("focus", resume);
+    document.addEventListener("visibilitychange", resume);
+    return () => {
+      window.removeEventListener("focus", resume);
+      document.removeEventListener("visibilitychange", resume);
+    };
+  }, [entered, dialog, refresh]);
+  useEffect(() => {
     const code = inviteFromUrl.current;
     if (!code) return;
     sessionStorage.setItem("jishoo:invite", code);
@@ -801,6 +824,7 @@ export default function App() {
     if (data?.me.registered) syncPush().catch(() => {});
   }, [data?.me.id, data?.me.registered]);
   function navigate(next, id) {
+    if (next === "discover") next = "nearby";
     setScreen(next);
     if (next === "stories")
       setStoryKind(
@@ -821,7 +845,13 @@ export default function App() {
     setEntered(true);
     setDialog(null);
     setInviteLanding(false);
-    navigate(result.me.isAdmin ? "admin" : "home");
+    navigate(
+      result.me.isAdmin
+        ? "admin"
+        : screen === "groupJoin" && groupCode.current
+          ? "groupJoin"
+          : "home",
+    );
   }
   async function perform(action, body) {
     setBusy(true);
@@ -834,21 +864,109 @@ export default function App() {
       setBusy(false);
     }
   }
-  async function checkin(status) {
-    if (busy) return;
-    setEntered(true);
-    const result = await perform("checkin", {
+  function undoCheckin() {
+    if (!pendingRef.current) return;
+    clearTimeout(pendingTimer.current);
+    clearInterval(countdownTimer.current);
+    pendingRef.current = null;
+    setPendingCheckin(null);
+    setBusy(false);
+    setDialog(null);
+    notify("ثبت لغو شد؛ خبری فرستاده نشد.");
+  }
+  function checkin(status) {
+    if (busy || pendingRef.current) return;
+    clearTimeout(timer.current);
+    setNotice("");
+    const queued = {
       status,
       visibility: audience,
       nonce: crypto.randomUUID(),
+      deadline: Date.now() + 3000,
+    };
+    pendingRef.current = queued;
+    setPendingCheckin({ ...queued, seconds: 3 });
+    setBusy(true);
+    setEntered(true);
+    setDialog(status === "done" ? "success" : "need");
+    countdownTimer.current = setInterval(
+      () =>
+        setPendingCheckin((current) =>
+          current
+            ? {
+                ...current,
+                seconds: Math.max(
+                  1,
+                  Math.ceil((queued.deadline - Date.now()) / 1000),
+                ),
+              }
+            : null,
+        ),
+      100,
+    );
+    pendingTimer.current = setTimeout(async () => {
+      pendingRef.current = null;
+      clearInterval(countdownTimer.current);
+      setPendingCheckin({ ...queued, seconds: 0, saving: true });
+      try {
+        const result = await api("checkin", queued);
+        setData((current) => ({ ...current, stats: result.stats }));
+        if (result.matches?.length) {
+          setMoment(result.matches[0]);
+          setDialog("moment");
+          refresh();
+        }
+      } catch (error) {
+        setDialog(null);
+        notify(error.message);
+      } finally {
+        setPendingCheckin(null);
+        setBusy(false);
+      }
+    }, 3000);
+  }
+  async function connectHandle(handle) {
+    const result = await perform("connection-request", {
+      handle: handle.trim(),
     });
-    if (!result) return;
-    setData((current) => ({ ...current, stats: result.stats }));
-    if (result.matches?.length) {
-      setMoment(result.matches[0]);
-      setDialog("moment");
-      refresh();
-    } else setDialog(status === "done" ? "success" : "need");
+    if (result) {
+      setData((current) => ({ ...current, friends: result.friends }));
+      notify("درخواست دوستیت فرستاده شد.");
+    }
+    return result;
+  }
+  async function groupMutation(action, body) {
+    const result = await perform(action, body);
+    if (result) {
+      setData((current) => ({ ...current, circles: result.circles }));
+      return result;
+    }
+  }
+  function showGroupInvite(group) {
+    setSelectedCircle(group.id);
+    setGroupHandle("");
+    setDialog("groupInvite");
+  }
+  async function shareGroupLink() {
+    if (!circle?.inviteCode) return;
+    const url = new URL(data.publicUrl);
+    url.searchParams.set("group", circle.inviteCode);
+    if (data.invitationQuota?.remaining !== 0 && me.inviteCode)
+      url.searchParams.set("invite", me.inviteCode);
+    try {
+      if (navigator.share)
+        await navigator.share({
+          title: circle.name,
+          text: `به گروه «${circle.name}» بیا.`,
+          url: url.href,
+        });
+      else {
+        await copyText(url.href);
+        notify("لینک گروه کپی شد.");
+      }
+    } catch (e) {
+      if (e.name !== "AbortError") notify(e.message);
+    }
   }
   async function shareInvite() {
     if (data.invitationQuota?.remaining === 0) {
@@ -947,7 +1065,7 @@ export default function App() {
   }
   async function requestFriend(e) {
     e.preventDefault();
-    const result = await perform("connection-request", { code: friendCode });
+    const result = await connectHandle(friendCode);
     if (result) {
       setData((current) => ({ ...current, friends: result.friends }));
       setFriendCode("");
@@ -961,8 +1079,12 @@ export default function App() {
       accept,
     });
     if (result) {
-      setData((current) => ({ ...current, friends: result.friends }));
-      notify(accept ? "حالا به هم وصلید!" : "اتصال حذف شد.");
+      setData((current) => ({
+        ...current,
+        friends: result.friends,
+        circles: result.circles || current.circles,
+      }));
+      notify(accept ? "رفاقتتون شروع شد 💛" : "اتصال حذف شد.");
       if (!accept) setDialog(null);
     }
   }
@@ -986,12 +1108,14 @@ export default function App() {
     const result = await perform("circle-create", {
       name: circleName,
       members: circleMembers,
+      shared: true,
     });
     if (result) {
       setData((current) => ({ ...current, circles: result.circles }));
       setDialog(null);
       setCircleName("");
       setCircleMembers([]);
+      navigate("circle", result.id);
       notify("جمع خودت ساخته شد.");
     }
   }
@@ -1017,8 +1141,7 @@ export default function App() {
       data?.friends.filter((f) => f.status === "pending" && f.incoming) || [];
   const tabs = [
     ["home", House, "خانه"],
-    ["nearby", MapPin, "اطراف"],
-    ["discover", UsersThree, "هم‌جیش"],
+    ["nearby", MapPin, "این نزدیکا"],
     ["friends", UsersThree, "دوست‌ها"],
     ["profile", User, "من"],
   ];
@@ -1029,16 +1152,21 @@ export default function App() {
     "notifications",
     "admin",
     "publicProfile",
+    "groupJoin",
+    "privacy",
+    "terms",
   ].includes(screen)
     ? "profile"
     : screen === "circle"
       ? "friends"
       : screen;
   const circle = data?.circles.find((x) => x.id === selectedCircle);
-  const displayFriends =
-    screen === "circle"
-      ? accepted.filter((f) => circle?.members.includes(f.id))
-      : accepted;
+  if (screen === "privacy" || screen === "terms")
+    return (
+      <Suspense fallback={<LoadingSection />}>
+        <Legal kind={screen} />
+      </Suspense>
+    );
   return (
     <div className="desktop-stage">
       <aside className="desktop-brand" aria-hidden="true">
@@ -1084,6 +1212,27 @@ export default function App() {
             <p>{loadError || "داریم جمعمون رو آماده می‌کنیم…"}</p>
             {loadError && <Button onClick={refresh}>دوباره امتحان کن</Button>}
           </section>
+        ) : screen === "groupJoin" ? (
+          <Suspense fallback={<LoadingSection />}>
+            <GroupJoin
+              code={groupCode.current}
+              data={data}
+              onAuth={openAuth}
+              notify={notify}
+              onBack={() => {
+                setInviteLanding(false);
+                setEntered(true);
+                navigate("friends");
+              }}
+              onJoined={(r) => {
+                setData((current) => ({ ...current, circles: r.circles }));
+                setEntered(true);
+                setInviteLanding(false);
+                navigate("circle", r.id);
+                notify("به گروه خوش اومدی.");
+              }}
+            />
+          </Suspense>
         ) : inviteLanding ? (
           <section className="invite-landing">
             <Brand small />
@@ -1115,7 +1264,7 @@ export default function App() {
                   </p>
                   <p>
                     <UsersThree size={21} />
-                    هم‌جیش پیدا کن و خاطرهٔ مشترک بساز.
+                    دوستات رو پیدا کن و خبرها رو با هم شریک شو.
                   </p>
                   <p>
                     <ShareNetwork size={21} />
@@ -1184,52 +1333,27 @@ export default function App() {
             <small>عضویت و وصل‌شدن دو قدم جداست؛ انتخاب با توئه.</small>
           </section>
         ) : !entered ? (
-          <section className="guest-welcome">
+          <section className="guest-welcome welcome-v4">
             <Brand small />
-            {invitation && (
-              <div className="welcome-invite-banner">
-                {invitation.inviter ? (
-                  <Avatar person={invitation.inviter} size={32} />
-                ) : (
-                  <Mascot size={39} />
-                )}
-                <span>
-                  {invitation.inviter
-                    ? `${invitation.inviter.name} دعوتت کرده!`
-                    : "یه دعوت خصوصی از جیشو"}{" "}
-                  <small>
-                    {invitation.remaining === 0
-                      ? "این دعوت پر شده؛ یه لینک تازه لازم داری."
-                      : "دعوتت کرده به جمع دوستاش بپیوندی"}
-                  </small>
-                </span>
-              </div>
-            )}
-            <img
-              className="guest-door"
-              src={assets + "guest-door.webp"}
-              alt="قطره‌ی خجالتی زرد کنار درِ دستشویی"
-            />
-            <h1>بدون اکانت هم می‌شه جیش کرد.</h1>
-            <p>جیش کن، به دوستات خبر بده، بعداً تصمیم بگیر.</p>
-            <Button onClick={() => checkin("done")} disabled={busy}>
-              جیش کردم <Sparkle size={21} weight="duotone" />
+            <Mascot size={280} animate />
+            <h1>جیش کردی، خبر بده.</h1>
+            <p>
+              یه خبر کوچولو برای دوستات،
+              <br />
+              یه حال خوب برای خودت.
+            </p>
+            <Button onClick={() => setEntered(true)}>
+              شروع کنیم <ArrowRight size={20} />
             </Button>
-            <button
-              className="guest-enter-link"
-              onClick={() => setEntered(true)}
-            >
-              یه سر به جیشو بزن <CaretLeft size={15} />
-            </button>
-            <div className="guest-today">
-              جیش‌های امروز: <strong>{fa(data.stats.today)}</strong>
-            </div>
             <button className="guest-signup-link" onClick={openAuth}>
-              ورود یا ساخت حساب <Phone size={17} />
+              ورود یا عضویت <Phone size={17} />
             </button>
-            <small>
-              مهمان بودن همیشه رایگانه. فقط برای عضویت اسم می‌پرسیم.
-            </small>
+            <small>مهمان هم می‌تونی شروع کنی؛ عضویت برای بعد.</small>
+            <div className="legal-links">
+              <a href="/terms">شرایط استفاده</a>
+              <span>·</span>
+              <a href="/privacy">حریم خصوصی</a>
+            </div>
             {inviteError && <p className="form-error">{inviteError}</p>}
           </section>
         ) : (
@@ -1351,7 +1475,7 @@ export default function App() {
                       <Mascot size={132} mood="happy" animate />
                       <strong>جیش کردم</strong>
                       <span>انجام شد! ثبتش کن</span>
-                      <Sparkle
+                      <Drop
                         size={19}
                         weight="duotone"
                         className="action-corner"
@@ -1414,7 +1538,7 @@ export default function App() {
                                 </>
                               ) : (
                                 <>
-                                  <Sparkle weight="duotone" /> جیش کرد
+                                  <Drop weight="duotone" /> جیش کرد
                                 </>
                               )}
                             </span>
@@ -1461,7 +1585,7 @@ export default function App() {
                       <Mascot size={38} />
                     </div>
                     <div>
-                      <h2>نزدیک من</h2>
+                      <h2>این نزدیکا</h2>
                       <strong>خبرهای دور و برت</strong>
                       <p>با اجازه‌ی مکان، نقشه رو ببین</p>
                     </div>
@@ -1483,6 +1607,10 @@ export default function App() {
                 <Suspense fallback={<LoadingSection />}>
                   <Nearby
                     me={me}
+                    data={data}
+                    refreshAccount={refresh}
+                    onAuth={openAuth}
+                    onConnect={connectHandle}
                     onSharingChanged={(value) =>
                       setData((current) => ({
                         ...current,
@@ -1496,15 +1624,6 @@ export default function App() {
                     notify={notify}
                   />
                 </Suspense>
-              )}
-              {screen === "discover" && (
-                <Discover
-                  data={data}
-                  refresh={refresh}
-                  notify={notify}
-                  onMap={() => navigate("nearby")}
-                  onAuth={openAuth}
-                />
               )}
               {screen === "achievements" && (
                 <Achievements
@@ -1555,214 +1674,49 @@ export default function App() {
                 />
               )}
               {(screen === "friends" || screen === "circle") && (
-                <section className="page friends-page">
-                  <Header
-                    title={
-                      screen === "circle"
-                        ? circle?.name || "جمع من"
-                        : "آدمای من"
-                    }
-                    subtitle={
-                      screen === "circle"
-                        ? "یه جمع از دوست‌های وصل‌شده"
-                        : "هر اتصال، یه اجازه‌ی دوطرفه"
-                    }
-                    back={
-                      screen === "circle"
-                        ? () => navigate("friends")
-                        : undefined
-                    }
-                    action={
-                      screen === "friends" && me.registered ? (
-                        <IconButton
-                          icon={Plus}
-                          label="وصل شدن به دوست"
-                          onClick={() => setDialog("addFriend")}
-                        />
-                      ) : undefined
-                    }
+                <Suspense fallback={<LoadingSection />}>
+                  <Friends
+                    data={data}
+                    group={screen === "circle" ? circle : null}
+                    missingGroup={screen === "circle" && !circle}
+                    busy={busy}
+                    onBack={() => navigate("friends")}
+                    onAdd={() => setDialog("addFriend")}
+                    onCreate={() => setDialog("circle")}
+                    onFriend={(friend) => {
+                      setSelectedFriend(friend);
+                      setDialog("friend");
+                    }}
+                    onRespond={respondFriend}
+                    onGroup={(id) => navigate("circle", id)}
+                    onInvite={showGroupInvite}
+                    onGroupRespond={async (group, accept) => {
+                      const r = await groupMutation("circle-respond", {
+                        id: group.id,
+                        accept,
+                      });
+                      if (r) {
+                        notify(
+                          accept ? "به گروه خوش اومدی." : "دعوت گروه رد شد.",
+                        );
+                        if (!accept) navigate("friends");
+                      }
+                    }}
+                    onGroupLeave={(group) => {
+                      setSelectedCircle(group.id);
+                      setGroupActionType("leave");
+                      setDialog("groupConfirm");
+                    }}
+                    onGroupDelete={(group) => {
+                      setSelectedCircle(group.id);
+                      setGroupActionType("delete");
+                      setDialog("groupConfirm");
+                    }}
+                    onMute={notificationPreference}
+                    onAuth={openAuth}
+                    onConnect={connectHandle}
                   />
-                  {screen === "circle" && circle && (
-                    <label className="circle-notification-choice">
-                      <Bell size={19} />
-                      <span>خبرهای این جمع</span>
-                      <input
-                        type="checkbox"
-                        checked={
-                          !data.notificationPreferences?.some(
-                            (p) =>
-                              p.scope === "circle" &&
-                              p.id === circle.id &&
-                              !p.enabled,
-                          )
-                        }
-                        disabled={busy}
-                        onChange={(e) =>
-                          notificationPreference(
-                            "circle",
-                            circle.id,
-                            e.target.checked,
-                          )
-                        }
-                      />
-                    </label>
-                  )}
-                  {!me.registered ? (
-                    <div className="account-empty">
-                      <div className="pair-preview">
-                        <PairArt size={245} />
-                      </div>
-                      <h2>آدمای خودت رو پیدا کن</h2>
-                      <p>
-                        با دعوت عضو شو تا به دوستات وصل بشی. جیش و آمار و استوری
-                        مهمان همچنان رایگانه.
-                      </p>
-                      <Button lilac onClick={openAuth}>
-                        عضویت با دعوت
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      {pending.length > 0 && screen === "friends" && (
-                        <div className="connection-requests">
-                          <h2>می‌خوان بهت وصل بشن</h2>
-                          {pending.map((friend) => (
-                            <div className="request-card" key={friend.id}>
-                              <Avatar person={friend} size={45} />
-                              <strong>{friend.name}</strong>
-                              <button
-                                className="accept-request"
-                                onClick={() => respondFriend(friend, true)}
-                                disabled={busy}
-                              >
-                                <Check size={17} /> وصل شیم
-                              </button>
-                              <button
-                                aria-label={`رد درخواست ${friend.name}`}
-                                onClick={() => respondFriend(friend, false)}
-                                disabled={busy}
-                              >
-                                <X size={19} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {displayFriends.length ? (
-                        <div className="connected-list">
-                          {displayFriends.map((friend) => (
-                            <button
-                              className="connected-card"
-                              key={friend.id}
-                              onClick={() => {
-                                setSelectedFriend(friend);
-                                setDialog("friend");
-                              }}
-                            >
-                              <Avatar person={friend} size={59} mood="happy" />
-                              <div>
-                                <h2>{friend.name}</h2>
-                                <p>
-                                  {friend.latestStatus
-                                    ? `${friend.latestStatus === "need" ? "جیش داره" : "جیش کرد"} · ${relativeTime(friend.latestAt)}`
-                                    : "به هم وصلید؛ هنوز خبر تازه‌ای نیست."}
-                                </p>
-                                <span>
-                                  {Object.keys(friend.socialLinks).length
-                                    ? "لینک‌ها با اجازه‌ی دوستت در دسترسه"
-                                    : "لینک‌ها خصوصی‌ان، مگر خودش بخواد."}
-                                </span>
-                              </div>
-                              <CaretLeft size={18} />
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="empty-state compact-empty">
-                          <UsersThree size={46} weight="duotone" />
-                          <h2>
-                            {screen === "circle"
-                              ? "این جمع هنوز دوستی نداره"
-                              : "هنوز به کسی وصل نیستی"}
-                          </h2>
-                          <p>لینک دعوتت رو بفرست، یا کد دوستت رو وارد کن.</p>
-                          {screen === "friends" && (
-                            <Button lilac onClick={() => navigate("invite")}>
-                              دعوت از دوستام
-                              <ShareNetwork size={18} />
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                      {data.friends.some(
-                        (f) => f.status === "pending" && !f.incoming,
-                      ) &&
-                        screen === "friends" && (
-                          <p className="soft-note">
-                            درخواستت فرستاده شده؛ منتظر جواب دوستتی.
-                          </p>
-                        )}
-                      {screen === "friends" && (
-                        <>
-                          <div className="section-heading circles-heading">
-                            <h2>جمع‌های من</h2>
-                            <button
-                              className="text-link"
-                              onClick={() => setDialog("circle")}
-                            >
-                              <Plus size={15} /> جمع تازه
-                            </button>
-                          </div>
-                          <div className="groups-list">
-                            {data.circles.map((group) => (
-                              <button
-                                className="group-card"
-                                key={group.id}
-                                onClick={() => navigate("circle", group.id)}
-                              >
-                                <span className="group-symbol purple">
-                                  <UsersThree weight="duotone" />
-                                </span>
-                                <div>
-                                  <h2>{group.name}</h2>
-                                  <p>{fa(group.members.length)} دوست</p>
-                                  <div className="circle-avatars">
-                                    {accepted
-                                      .filter((f) =>
-                                        group.members.includes(f.id),
-                                      )
-                                      .slice(0, 4)
-                                      .map((f) => (
-                                        <Avatar
-                                          key={f.id}
-                                          person={f}
-                                          size={27}
-                                        />
-                                      ))}
-                                  </div>
-                                </div>
-                                <CaretLeft size={20} />
-                              </button>
-                            ))}
-                          </div>
-                          {!data.circles.length && (
-                            <p className="circles-empty">
-                              دوست‌های دانشگاه، خانواده یا آدمای همیشگی رو برای
-                              خودت دسته‌بندی کن.
-                            </p>
-                          )}
-                          <Button
-                            secondary
-                            className="connect-code-button"
-                            onClick={() => setDialog("addFriend")}
-                          >
-                            <UserPlus size={20} /> کد دوستم رو دارم
-                          </Button>
-                        </>
-                      )}
-                    </>
-                  )}
-                </section>
+                </Suspense>
               )}
               {screen === "stories" && (
                 <Suspense fallback={<LoadingSection />}>
@@ -1805,33 +1759,6 @@ export default function App() {
                         : "برای خودت یه شناسه انتخاب کن"
                       : "شخصیت مهمان؛ اسم لازم نیست"}
                   </p>
-                  {me.registered && me.handle && (
-                    <div className="profile-link-card">
-                      <span>این لینک، مال توئه</span>
-                      <strong dir="ltr">jishoo.vercel.app/u/{me.handle}</strong>
-                      <div>
-                        <button onClick={shareProfile}>
-                          <ShareNetwork size={17} />
-                          اشتراک پروفایل
-                        </button>
-                        <button
-                          onClick={async () => {
-                            try {
-                              await copyText(
-                                `${data.publicUrl}/u/${me.handle}`,
-                              );
-                              notify("لینک پروفایلت کپی شد.");
-                            } catch (e) {
-                              notify(e.message);
-                            }
-                          }}
-                        >
-                          <Copy size={17} />
-                          کپی لینک
-                        </button>
-                      </div>
-                    </div>
-                  )}
                   <div className="stats-row">
                     <span>
                       <strong>{fa(data.stats.week)}</strong>
@@ -1994,66 +1921,13 @@ export default function App() {
                 </section>
               )}
               {screen === "stats" && (
-                <section className="page stats-page">
-                  <Header title="آمار جیشام" back={() => navigate("profile")} />
-                  <div className="segmented">
-                    {["هفته", "ماه", "همه‌وقت"].map((value) => (
-                      <button
-                        key={value}
-                        className={period === value ? "active" : ""}
-                        onClick={() => setPeriod(value)}
-                      >
-                        {value}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="chart-card">
-                    <strong className="total-count">
-                      {fa(
-                        period === "هفته"
-                          ? data.stats.week
-                          : period === "ماه"
-                            ? data.stats.month
-                            : data.stats.total,
-                      )}
-                    </strong>
-                    <p>بار جیش کردی</p>
-                    <Chart stats={data.stats} />
-                    <div className="chart-foot">
-                      <Drop size={20} weight="duotone" />
-                      <span>نمودار ۷ روز اخیر · خبرهای واقعی خودت</span>
-                    </div>
-                  </div>
-                  <div className="mood-card">
-                    <h2>سهم حالت</h2>
-                    <div className="mood-meter">
-                      <span
-                        style={{
-                          width: `${data.stats.total + data.stats.need ? (data.stats.total / (data.stats.total + data.stats.need)) * 100 : 0}%`,
-                        }}
-                      />
-                    </div>
-                    <div className="mood-labels">
-                      <span>
-                        <Drop weight="duotone" />
-                        <strong>{fa(data.stats.total)}</strong>
-                        <small>جیش کردم</small>
-                      </span>
-                      <span>
-                        <Drop weight="duotone" />
-                        <strong>{fa(data.stats.need)}</strong>
-                        <small>جیش دارم</small>
-                      </span>
-                    </div>
-                  </div>
-                  <Button
-                    lilac
-                    className="stats-share"
-                    onClick={() => openStory("weekly")}
-                  >
-                    <ShareNetwork size={19} /> این هفته رو استوری کن
-                  </Button>
-                </section>
+                <Suspense fallback={<LoadingSection />}>
+                  <Stats
+                    data={data}
+                    onBack={() => navigate("profile")}
+                    onShare={() => openStory("weekly")}
+                  />
+                </Suspense>
               )}
               {screen === "invite" && (
                 <section className="page invite-page">
@@ -2094,10 +1968,14 @@ export default function App() {
                       <Button lilac onClick={shareInvite}>
                         <ShareNetwork size={20} /> فرستادن لینک دعوت
                       </Button>
-                      <Button secondary onClick={() => openStory("invite")}>
-                        استوری با کد دعوت من
-                        <Sparkle size={20} weight="duotone" />
-                      </Button>
+                      <div className="invite-story-icon">
+                        <span>کارت دعوتت</span>
+                        <IconButton
+                          icon={ShareNetwork}
+                          label="اشتراک کارت دعوت"
+                          onClick={() => openStory("invite")}
+                        />
+                      </div>
                     </>
                   ) : (
                     <Button lilac onClick={openAuth}>
@@ -2210,95 +2088,77 @@ export default function App() {
                 </Button>
               </div>
             )}
-            {dialog === "need" && (
+            {(dialog === "need" || dialog === "success") && (
               <>
-                <div className="reaction-kicker">
-                  <Drop size={18} weight="duotone" /> وضعیت: فوری ولی خجالتی
+                <div className="reaction-toolbar">
+                  <span>
+                    <Drop size={17} weight="duotone" />
+                    {pendingCheckin && !pendingCheckin.saving
+                      ? "تا چند لحظه دیگه ثبت می‌شه"
+                      : busy
+                        ? "در حال ثبت خبر…"
+                        : "خبرت ثبت شد"}
+                  </span>
+                  <IconButton
+                    icon={ShareNetwork}
+                    label="اشتراک این خبر"
+                    disabled={busy}
+                    onClick={() =>
+                      openStory(dialog === "need" ? "need" : "checkin")
+                    }
+                  />
                 </div>
-                <div className="need-reaction-art">
-                  <Mascot size={255} animate />
+                <div
+                  className={
+                    dialog === "need"
+                      ? "need-reaction-art"
+                      : "success-art personal-success"
+                  }
+                >
+                  <Mascot
+                    size={250}
+                    mood={dialog === "need" ? "shy" : "happy"}
+                    animate
+                  />
                 </div>
                 <h1>
-                  جیش دارم.
-                  <br />
-                  همراه می‌خوام!
+                  {dialog === "need" ? (
+                    <>
+                      جیش دارم.
+                      <br />
+                      الان برمی‌گردم!
+                    </>
+                  ) : (
+                    <>
+                      جیش کردم.
+                      <br />
+                      سبک شدم!
+                    </>
+                  )}
                 </h1>
                 <p className="success-subtitle">
-                  یه خبر کوچولو، یه بهونه برای با هم بودن.
+                  {audience === "private" || !me.registered
+                    ? "این خبر برای خودت می‌مونه."
+                    : pendingCheckin
+                      ? "بعد از ثبت، دوستات باخبر می‌شن."
+                      : "دوستات ازت باخبر می‌شن."}
                 </p>
-                <div className="reaction-sticker">
-                  <Sparkle size={18} weight="fill" /> این یکی رو استوری کن،
-                  رفیقتو پیدا کن.
-                </div>
+                {dialog === "success" && (
+                  <div className="today-card">
+                    <p>جیش کردم‌های امروز</p>
+                    <strong>
+                      {fa(
+                        data.stats.today +
+                          (pendingCheckin?.status === "done" ? 1 : 0),
+                      )}
+                      <Drop size={27} weight="duotone" />
+                    </strong>
+                  </div>
+                )}
                 <div className="success-buttons">
-                  <Button lilac onClick={() => openStory("need")}>
-                    <ShareNetwork size={19} /> استوریِ وضعیت اضطراری
+                  <Button lilac onClick={() => setDialog(null)}>
+                    {dialog === "need" ? "باشه، الان برمی‌گردم" : "چه حس خوبی!"}
                   </Button>
-                  <Button
-                    secondary
-                    onClick={() => {
-                      setDialog(null);
-                      navigate("discover");
-                    }}
-                  >
-                    کی همراهمه؟ <UsersThree size={19} />
-                  </Button>
-                  <button
-                    className="text-link auth-back"
-                    onClick={() => setDialog(null)}
-                  >
-                    فعلاً پیش خودمون بمونه
-                  </button>
-                </div>
-              </>
-            )}
-            {dialog === "success" && (
-              <>
-                <div className="success-art personal-success">
-                  <Mascot size={250} mood="happy" animate />
-                  <Sparkle
-                    size={32}
-                    weight="duotone"
-                    className="success-sparkle s-one"
-                  />
-                  <Confetti
-                    size={33}
-                    weight="duotone"
-                    className="success-sparkle s-two"
-                  />
-                </div>
-                <h1>جیش کردم، سبک شدم!</h1>
-                <p className="success-subtitle">این حسِ سبک‌شدن باید ثبت شه.</p>
-                <p className="success-time">همین الان · توی جیشو ثبت شد</p>
-                <div className="today-card">
-                  <p>جیش‌های امروزت</p>
-                  <strong>
-                    {fa(data.stats.today)}
-                    <Drop size={27} weight="duotone" />
-                  </strong>
-                  <p className="success-small-note">
-                    هر خبر کوچولو، یه لحظه‌ی سبک‌تر.
-                  </p>
-                </div>
-                <div className="success-buttons">
-                  <Button
-                    lilac
-                    onClick={() => {
-                      setDialog(null);
-                      openStory("checkin");
-                    }}
-                  >
-                    این لحظه رو استوری کن
-                    <ShareNetwork size={19} />
-                  </Button>
-                  <Button secondary onClick={() => setDialog(null)}>
-                    عالیه!
-                  </Button>
-                  {!me.registered && (
-                    <button className="text-link auth-back" onClick={openAuth}>
-                      اگه خواستی، با دعوت عضو شو
-                    </button>
-                  )}
                 </div>
               </>
             )}
@@ -2325,37 +2185,15 @@ export default function App() {
                     ? "کمتر از یک دقیقه فاصله، یه خاطره‌ی مشترک."
                     : "تا پنج دقیقه فاصله، یه اتفاق کوچولو."}
                 </p>
-                <div className="success-buttons">
-                  <Button
-                    lilac
-                    onClick={() => {
-                      setDialog("momentStory");
-                    }}
-                  >
-                    استوری این خاطره
-                    <ShareNetwork size={20} />
+                <div className="moment-quiet-actions">
+                  <Button lilac onClick={() => setDialog(null)}>
+                    چه اتفاق بامزه‌ای!
                   </Button>
-                  <Button
-                    secondary
-                    onClick={() => {
-                      const friend = accepted.find(
-                        (f) => f.id === moment.friend.id,
-                      );
-                      if (friend) {
-                        setSelectedFriend(friend);
-                        setDialog("friend");
-                      } else setDialog(null);
-                    }}
-                  >
-                    دیدن ارتباطمون
-                    <LinkSimple size={19} />
-                  </Button>
-                  <button
-                    className="text-link auth-back"
-                    onClick={() => setDialog(null)}
-                  >
-                    این هم می‌شه یه خاطره.
-                  </button>
+                  <IconButton
+                    icon={ShareNetwork}
+                    label="اشتراک این خاطره"
+                    onClick={() => setDialog("momentStory")}
+                  />
                 </div>
               </>
             )}
@@ -2401,52 +2239,98 @@ export default function App() {
                     )
                   ) : (
                     <p>
-                      لینک‌هاش خصوصی‌ان. اگه خودش بخواد، اینجا بهت نشون داده
-                      می‌شن.
+                      این دوست هنوز اجازهٔ دیدن لینک‌های خودش رو نداده. با
+                      بازکردن لینک‌های تو، لینک‌های اون خودکار باز نمی‌شن.
                     </p>
                   )}
                 </div>
-                <label className="social-sharing-choice">
+                <div className="friend-permission-explainer">
+                  <LockKey size={23} />
+                  <div>
+                    <h3>لینک‌های اجتماعی، با انتخاب تو</h3>
+                    <p>
+                      با اجازهٔ پایین، لینک‌هایی که در پروفایلت اضافه کردی فقط
+                      برای {selectedFriend.name} باز می‌شه؛ برای بقیه خصوصی
+                      می‌مونه. دیدن لینک‌های اون هم به اجازهٔ جداگانهٔ خودش
+                      بستگی داره.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  className={`preference-action ${selectedFriend.sharing ? "sharing-active" : ""}`}
+                  disabled={busy || !me.premium}
+                  onClick={() =>
+                    changeSocialSharing(selectedFriend, !selectedFriend.sharing)
+                  }
+                >
+                  <LinkSimple size={24} />
                   <span>
-                    لینک‌های من برای {selectedFriend.name} قابل دیدن باشه
-                    <small>فقط برای همین دوست، هر وقت خواستی خاموشش کن.</small>
+                    <strong>
+                      {selectedFriend.sharing
+                        ? `لینک‌های من برای ${selectedFriend.name} بازه`
+                        : "لینک‌های من برای این دوست بسته‌ست"}
+                    </strong>
+                    <small>
+                      {selectedFriend.sharing
+                        ? "برای بستن دسترسی بزن"
+                        : "برای اجازه‌دادن بزن"}
+                    </small>
                   </span>
-                  <input
-                    type="checkbox"
-                    className="toggle"
-                    checked={selectedFriend.sharing}
-                    onChange={(e) =>
-                      changeSocialSharing(selectedFriend, e.target.checked)
-                    }
-                    disabled={busy || !me.premium}
-                  />
-                </label>
-                <label className="social-sharing-choice">
+                  <span className="preference-status">
+                    {selectedFriend.sharing ? "باز" : "خصوصی"}
+                  </span>
+                </button>
+                <button
+                  className="preference-action"
+                  disabled={busy}
+                  onClick={() =>
+                    notificationPreference(
+                      "friend",
+                      selectedFriend.id,
+                      Boolean(
+                        data.notificationPreferences?.some(
+                          (p) =>
+                            p.scope === "friend" &&
+                            p.id === selectedFriend.id &&
+                            !p.enabled,
+                        ),
+                      ),
+                    )
+                  }
+                >
+                  {data.notificationPreferences?.some(
+                    (p) =>
+                      p.scope === "friend" &&
+                      p.id === selectedFriend.id &&
+                      !p.enabled,
+                  ) ? (
+                    <BellSlash size={24} />
+                  ) : (
+                    <Bell size={24} />
+                  )}
                   <span>
-                    اعلان‌های {selectedFriend.name}
-                    <small>فقط خبرهای همین دوست</small>
-                  </span>
-                  <input
-                    type="checkbox"
-                    className="toggle"
-                    checked={
-                      !data.notificationPreferences?.some(
+                    <strong>
+                      {data.notificationPreferences?.some(
                         (p) =>
                           p.scope === "friend" &&
                           p.id === selectedFriend.id &&
                           !p.enabled,
                       )
-                    }
-                    disabled={busy}
-                    onChange={(e) =>
-                      notificationPreference(
-                        "friend",
-                        selectedFriend.id,
-                        e.target.checked,
-                      )
-                    }
-                  />
-                </label>
+                        ? `${selectedFriend.name} بی‌صداست`
+                        : `خبرهای ${selectedFriend.name} روشنه`}
+                    </strong>
+                    <small>
+                      فقط اعلان همین دوست؛ دوستی و لینک‌ها تغییر نمی‌کنه
+                    </small>
+                  </span>
+                </button>
+                <button
+                  className="danger-text"
+                  onClick={() => setDialog("disconnect")}
+                >
+                  <UserPlus size={18} />
+                  قطع دوستی با {selectedFriend.name}
+                </button>
                 {!Object.keys(me.socialLinks || {}).length && (
                   <button
                     className="text-link auth-back"
@@ -2464,6 +2348,136 @@ export default function App() {
                 </Button>
               </>
             )}
+            {dialog === "disconnect" && selectedFriend && (
+              <>
+                <Avatar person={selectedFriend} size={90} />
+                <h2>دوستی رو قطع کنیم؟</h2>
+                <p className="dialog-description">
+                  دیگه خبرهای هم رو نمی‌بینین و دسترسی به لینک‌های اجتماعی بسته
+                  می‌شه. عضویت گروه‌ها جداست؛ هر وقت خواستی می‌تونی درخواست تازه
+                  بفرستی.
+                </p>
+                <Button
+                  disabled={busy}
+                  onClick={() => respondFriend(selectedFriend, false)}
+                >
+                  قطع دوستی
+                </Button>
+                <Button
+                  secondary
+                  disabled={busy}
+                  onClick={() => setDialog("friend")}
+                >
+                  برگشت
+                </Button>
+              </>
+            )}
+            {dialog === "groupInvite" && circle && (
+              <>
+                <div className="dialog-icon purple">
+                  <UsersThree size={30} />
+                </div>
+                <h2>دعوت به {circle.name}</h2>
+                <p className="dialog-description">
+                  با شناسه دعوت بفرست، یا لینک گروه رو شریک شو. هر نفر خودش
+                  عضویت رو انتخاب می‌کنه.
+                </p>
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const r = await groupMutation("circle-invite", {
+                      id: circle.id,
+                      handle: groupHandle,
+                    });
+                    if (r) {
+                      setGroupHandle("");
+                      notify("دعوت گروه فرستاده شد.");
+                    }
+                  }}
+                >
+                  <label className="field-label">
+                    شناسهٔ دوست
+                    <input
+                      value={groupHandle}
+                      onChange={(e) =>
+                        setGroupHandle(e.target.value.toLowerCase())
+                      }
+                      placeholder="@sara"
+                      dir="ltr"
+                      required
+                    />
+                  </label>
+                  <Button
+                    lilac
+                    disabled={busy || !groupHandle.trim()}
+                    type="submit"
+                  >
+                    فرستادن دعوت
+                  </Button>
+                </form>
+                <Button secondary disabled={busy} onClick={shareGroupLink}>
+                  <ShareNetwork size={18} />
+                  اشتراک لینک گروه
+                </Button>
+                <button
+                  className="text-link"
+                  disabled={busy}
+                  onClick={async () => {
+                    const r = await groupMutation("circle-rotate", {
+                      id: circle.id,
+                    });
+                    if (r)
+                      notify("لینک تازه آماده‌ست؛ لینک قبلی دیگه کار نمی‌کنه.");
+                  }}
+                >
+                  ساخت لینک تازه و لغو لینک قبلی
+                </button>
+              </>
+            )}
+            {dialog === "groupConfirm" && circle && (
+              <>
+                <UsersThree size={48} />
+                <h2>
+                  {groupActionType === "delete"
+                    ? "این گروه حذف بشه؟"
+                    : "از گروه خارج می‌شی؟"}
+                </h2>
+                <p className="dialog-description">
+                  {groupActionType === "delete"
+                    ? "عضویت‌ها و لینک دعوت گروه حذف می‌شن؛ دوستی‌های فردی باقی می‌مونن."
+                    : "پروفایلت از فهرست اعضا برداشته می‌شه؛ دوستی‌های فردی باقی می‌مونن."}
+                </p>
+                <Button
+                  disabled={busy}
+                  onClick={async () => {
+                    const r = await groupMutation(
+                      groupActionType === "delete"
+                        ? "circle-delete"
+                        : "circle-leave",
+                      { id: circle.id },
+                    );
+                    if (r) {
+                      setDialog(null);
+                      navigate("friends");
+                      notify(
+                        groupActionType === "delete"
+                          ? "گروه حذف شد."
+                          : "از گروه خارج شدی.",
+                      );
+                    }
+                  }}
+                >
+                  {groupActionType === "delete" ? "حذف گروه" : "خروج از گروه"}
+                </Button>
+                <Button
+                  secondary
+                  disabled={busy}
+                  onClick={() => setDialog(null)}
+                >
+                  برگشت
+                </Button>
+              </>
+            )}
             {dialog === "addFriend" && (
               <>
                 <div className="dialog-icon purple">
@@ -2471,18 +2485,18 @@ export default function App() {
                 </div>
                 <h2>به یه دوست وصل شو</h2>
                 <p className="dialog-description">
-                  کد دعوت دوستت رو بنویس. وقتی درخواستت رو قبول کنه، به هم وصل
-                  می‌شین.
+                  شناسهٔ دوستت رو بنویس؛ مثل @sara. با قبول درخواست، به هم وصل
+                  می‌شین. کد دعوت برای عضویت حسابه، نه دوست‌شدن.
                 </p>
                 <form onSubmit={requestFriend}>
                   <label className="field-label">
-                    کد دوستت
+                    شناسهٔ دوستت
                     <input
                       value={friendCode}
                       onChange={(e) =>
-                        setFriendCode(e.target.value.toUpperCase())
+                        setFriendCode(e.target.value.toLowerCase())
                       }
-                      placeholder="J-..."
+                      placeholder="@sara"
                       dir="ltr"
                       required
                     />
@@ -2510,10 +2524,11 @@ export default function App() {
             )}
             {dialog === "circle" && (
               <>
-                <h2>یه جمع برای خودت</h2>
+                <h2>یه گروه خودمونی بساز</h2>
                 <p className="dialog-description">
-                  دوست‌های وصل‌شده رو راحت‌تر پیدا کن. این دسته‌بندی فقط برای
-                  خودته.
+                  یه اسم انتخاب کن و دوستات رو دعوت کن. هر نفر خودش دعوت رو قبول
+                  می‌کنه؛ عضویت گروه دوستی یا اجازهٔ لینک‌ها رو خودکار عوض
+                  نمی‌کنه.
                 </p>
                 <form onSubmit={createCircle}>
                   <label className="field-label">
@@ -2550,7 +2565,7 @@ export default function App() {
                     type="submit"
                     disabled={busy || !circleName.trim()}
                   >
-                    ساخت جمع
+                    ساخت گروه
                     <Plus size={18} />
                   </Button>
                 </form>
@@ -2660,6 +2675,11 @@ export default function App() {
                     <Check size={19} />
                   </Button>
                 </form>
+                <div className="legal-links">
+                  <a href="/terms">شرایط استفاده</a>
+                  <span>·</span>
+                  <a href="/privacy">حریم خصوصی</a>
+                </div>
                 <button className="signout" onClick={logout} disabled={busy}>
                   <SignOut size={18} />
                   خروج از حساب
@@ -2805,6 +2825,21 @@ export default function App() {
               />
             </Suspense>
           </StoryDialog>
+        )}
+        {pendingCheckin && !pendingCheckin.saving && (
+          <div className="undo-checkin" role="status" aria-live="polite">
+            <Drop size={22} />
+            <div>
+              <strong>
+                {pendingCheckin.status === "done" ? "جیش کردم" : "جیش دارم"}
+              </strong>
+              <span>ثبت تا {fa(pendingCheckin.seconds)} ثانیهٔ دیگه</span>
+            </div>
+            <button onClick={undoCheckin}>
+              <ArrowCounterClockwise size={18} />
+              لغو ثبت
+            </button>
+          </div>
         )}
         <div
           className={`toast ${notice ? "visible" : ""}`}

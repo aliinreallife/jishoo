@@ -1,0 +1,131 @@
+.map-grid-explanation {
+  font-size: 10px;
+  color: #867b84;
+  line-height: 1.9;
+  padding: 6px 0;
+}
+.map-cluster-count {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #fffcf1;
+  border-radius: 50%;
+  color: #5e6f91;
+  background: #b8d4f4;
+  box-shadow: 0 3px 12px #4e597c33;
+  font-weight: 800;
+  font-size: 18px;
+}
+.map-cluster-list {
+  max-height: 190px;
+  overflow-y: auto;
+  background: #fffaf1;
+  padding: 12px;
+  border-radius: 16px;
+}
+.map-cluster-list > div,
+.map-cluster-list > button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 9px;
+  font-size: 12px;
+}
+.map-cluster-list small {
+  color: #8a7e89;
+}
+.nearby-people-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 13px 14px;
+  background: #f0ebf9;
+  color: #6e6383;
+  border-radius: 15px;
+  font-size: 12px;
+  margin: 8px 0;
+}
+.nearby-people-trigger > span {
+  flex: 1;
+  text-align: right;
+  font-weight: 700;
+}
+.nearby-people-trigger > strong {
+  font-size: 11px;
+}
+.nearby-people-panel {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 2px 0 8px;
+}
+.nearby-people-panel > p {
+  font-size: 12px;
+  line-height: 2;
+  color: #86768c;
+}
+.discovery-visibility {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: #f9f4e9;
+  border: 1px solid #e9dfcb;
+  border-radius: 14px;
+  width: 100%;
+  text-align: right;
+  color: #a49a82;
+  margin: 8px 0 12px;
+}
+.discovery-visibility[aria-pressed="true"] {
+  background: #eaf3ef;
+  border-color: #cddfd4;
+  color: #789784;
+}
+.discovery-visibility > span {
+  display: grid;
+  gap: 5px;
+}
+.discovery-visibility strong {
+  font-size: 11px;
+  color: #756b78;
+}
+.discovery-visibility small {
+  font-size: 9px;
+  color: #998b91;
+  line-height: 1.8;
+}
+.nearby-person {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 3px;
+  border-bottom: 1px solid #ede5da;
+}
+.nearby-person > div {
+  flex: 1;
+  display: grid;
+  gap: 3px;
+  text-align: right;
+}
+.nearby-person strong {
+  font-size: 12px;
+}
+.nearby-person span,
+.nearby-person small {
+  font-size: 9px;
+  color: #9b8b98;
+  text-align: right;
+}
+.nearby-person > button {
+  font-size: 10px;
+  color: #7f77a5;
+  background: #ede9f9;
+  padding: 9px 7px;
+  border-radius: 10px;
+  max-width: 80px;
+}
+.real-nearby-page .around-panel {
+  max-height: 60%;
+  overflow: auto;
+}

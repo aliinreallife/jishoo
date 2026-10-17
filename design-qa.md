@@ -53,3 +53,10 @@ All identified P1/P2 findings were fixed and recaptured. The final focused invit
 - [x] Verify invitation limits, admin permissions, profiles, achievements and notification controls.
 - [x] Compare screenshots, fix P1/P2 findings and recapture focused evidence.
 - [x] Keep the local preview available and verify the published application.
+
+
+## October 17 follow-up
+
+This revision supersedes the earlier five-tab navigation and large result-screen sharing controls. Four tabs now use **این نزدیکا** for the combined map/discovery flow. The two reactions have a small optional share icon, one close action and a global three-second undo. Need copy reads «جیش دارم. الان برمی‌گردم!»; there is no company request. The profile link is inside the share dialog only. New friend cards, explicit social permissions/mutes, accepted shared groups, real chart ranges and a droplet calendar use the existing cream/pastel palette. Terms and privacy have public reading pages. The favicon is an isolated yellow shy droplet with a transparent canvas; the blue home mascot remains unchanged.
+
+Fresh captures are `v4-welcome.png`, `v4-undo-window.png`, `v4-need-result.png`, `v4-done-result.png`, `v4-friends.png`, `v4-friend-permissions.png`, `v4-shared-group.png`, `v4-group-link.png`, `v4-stats.png`, `v4-nearby-unified.png`, `v4-notifications.png`, `v4-terms.png` and `v4-privacy.png` under ignored `artifacts/`. Screenshot review caught visible screen-reader chart text; it is now visually hidden, and long-range labels are spaced apart. The browser checks exercise 320, 393, 768 and 1440 pixel widths. Group membership, friendship and social-link consent are separate decisions. The tests use disposable accounts and do not consume the owner's invitation.

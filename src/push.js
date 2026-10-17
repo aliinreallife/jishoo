@@ -118,8 +118,5 @@ export async function disablePush() {
   }
 }
 export async function testPush() {
-  const registration = await navigator.serviceWorker.getRegistration("/");
-  const subscription = await registration?.pushManager.getSubscription();
-  if (!subscription) throw new Error("اول اعلان روی این دستگاه رو روشن کن.");
-  return api("push-test", { endpoint: subscription.endpoint });
+  return api("push-test", {});
 }

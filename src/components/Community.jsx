@@ -62,7 +62,9 @@ export function Achievements({ data, onBack, onShare }) {
           <h1>قشنگی‌های کوچیک من</h1>
           <p>قدم‌های واقعی، لقب‌های بامزه</p>
         </div>
-        <Medal size={28} weight="duotone" />
+        <button onClick={onShare} aria-label="اشتراک آمار هفته">
+          <ShareNetwork size={23} />
+        </button>
       </header>
       <div className="achievement-intro">
         <Mascot size={125} mood="happy" />
@@ -112,165 +114,6 @@ export function Achievements({ data, onBack, onShare }) {
         تکرارِ پشت‌سرهمِ خبرها امتیاز اضافه نمی‌ده؛ «جیش دارم» هم راه میان‌بُرِ
         لقب‌ها نیست.
       </p>
-      <Button onClick={onShare}>
-        <ShareNetwork size={19} /> این هفته‌مو استوری کنم
-      </Button>
-    </section>
-  );
-}
-export function Discover({ data, refresh, notify, onMap, onAuth }) {
-  const [people, setPeople] = useState([]),
-    [point, setPoint] = useState(null),
-    [searched, setSearched] = useState(false),
-    [error, setError] = useState("");
-  const [busy, run] = useWork(notify);
-  function locate() {
-    setError("");
-    if (!navigator.geolocation) {
-      setError("مکان‌یابی روی این مرورگر در دسترس نیست.");
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        const p = { lat: coords.latitude, lng: coords.longitude };
-        setPoint(p);
-        find(p);
-      },
-      () => setError("برای پیدا کردن هم‌جیش‌های اطراف، اجازه‌ی مکان لازمه."),
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
-    );
-  }
-  const find = (p) =>
-    run(async () => {
-      const value = await api("discover", p);
-      setPeople(value.people);
-      setSearched(true);
-    });
-  return (
-    <section className="page discover-page">
-      <header className="community-heading">
-        <div>
-          <h1>کی همراهمه؟</h1>
-          <p>یه هم‌جیش از همین نزدیکی پیدا کن.</p>
-        </div>
-        <UsersThree size={30} weight="duotone" />
-      </header>
-      <div className="discover-hero">
-        <PairArt size={250} />
-        <span className="tiny-badge">
-          <MapPin size={13} /> نزدیک، با اجازه‌ی خودتون
-        </span>
-      </div>
-      {!data.me.registered ? (
-        <div className="soft-signup-card">
-          <h2>رفیقِ راه می‌خوای؟</h2>
-          <p>
-            برای وصل‌شدن، با دعوت عضو شو. مهمان هم می‌تونه جیش کنه و استوری
-            بذاره.
-          </p>
-          <Button onClick={onAuth}>عضویت با دعوت</Button>
-        </div>
-      ) : (
-        <>
-          <div className="discover-consent">
-            <label>
-              <span>
-                من هم توی لیست هم‌جیش‌ها باشم
-                <small>با اسم و موقعیت تقریبی، برای آدمای این نزدیکی</small>
-              </span>
-              <input
-                type="checkbox"
-                checked={Boolean(data.me.discoverable && data.me.shareLocation)}
-                disabled={busy}
-                onChange={(event) => {
-                  const enabled = event.target.checked;
-                  run(async () => {
-                    if (enabled) {
-                      if (!point) {
-                        notify("اول اطرافت رو پیدا کن تا مکانت مشخص بشه.");
-                        locate();
-                        return;
-                      }
-                      await api("location", { ...point, enabled: true });
-                    }
-                    await api("discoverable", { enabled });
-                    await refresh();
-                  });
-                }}
-              />
-            </label>
-          </div>
-          <Button
-            disabled={busy}
-            onClick={() => (point ? find(point) : locate())}
-          >
-            <MapPin size={19} />
-            {busy
-              ? "داریم دور و برت رو می‌بینیم…"
-              : point
-                ? "هم‌جیش‌های اطراف رو تازه کن"
-                : "پیدا کردن هم‌جیش‌های اطراف"}
-          </Button>
-          {error && <p className="form-error">{error}</p>}
-          <div className="discover-list">
-            {people.map((person) => (
-              <article className="discover-person" key={person.id}>
-                <Avatar person={person} size={59} />
-                <div>
-                  <h2>{person.name}</h2>
-                  <span dir="ltr">@{person.handle || "jishoo"}</span>
-                  <p>
-                    {person.activity === "need"
-                      ? "جیش داره؛ شاید همراهمون بشه!"
-                      : person.activity === "done"
-                        ? "تازه جیش کرده"
-                        : "یه رفیق این نزدیکی"}
-                  </p>
-                  <small>{person.distance}</small>
-                </div>
-                <button
-                  disabled={busy || person.connection !== null}
-                  onClick={() =>
-                    run(async () => {
-                      await api("connection-request", {
-                        handle: person.handle,
-                      });
-                      await refresh();
-                      await find(point);
-                      notify("درخواستت رفت پیشش!");
-                    })
-                  }
-                >
-                  {person.connection === "accepted" ? (
-                    "وصلید"
-                  ) : person.connection === "pending" ? (
-                    person.incoming ? (
-                      "منتظر جواب تو"
-                    ) : (
-                      "درخواست رفت"
-                    )
-                  ) : (
-                    <>
-                      <Plus size={17} />
-                      وصل شیم
-                    </>
-                  )}
-                </button>
-              </article>
-            ))}
-          </div>
-          {searched && !people.length && (
-            <div className="empty-state compact-empty">
-              <Mascot size={110} />
-              <h2>هنوز هم‌جیشی این نزدیکی نیست</h2>
-              <p>دعوتت کنجکاوشون می‌کنه؛ یه رفیق رو بیار تو جمع.</p>
-            </div>
-          )}
-          <button className="text-link map-link" onClick={onMap}>
-            <MapPin size={17} /> خبرها رو روی نقشه ببینم
-          </button>
-        </>
-      )}
     </section>
   );
 }
@@ -298,9 +141,9 @@ export function Notifications({ data, refresh, notify, onBack, onNavigate }) {
   async function sendTest() {
     setDelivery("");
     await syncPush();
-    await testPush();
+    const result = await testPush();
     setDelivery(
-      "سرویس اعلان، پیام تست رو قبول کرد. اعلانش رو روی گوشی ببین؛ نمایش نهایی به تنظیمات گوشی بستگی داره.",
+      `سرویس اعلان برای ${fa(result.delivered)} دستگاه از ${fa(result.devices)} دستگاه پیام رو قبول کرد.${result.failed ? ` ${fa(result.failed)} دستگاه نیاز به بررسی اجازه یا اتصال داره.` : ""} نمایش نهایی به تنظیمات هر دستگاه بستگی داره.`,
     );
   }
   return (
@@ -355,30 +198,32 @@ export function Notifications({ data, refresh, notify, onBack, onNavigate }) {
             {push ? "راهنما و تنظیم اعلان" : "خبر رفیقام رو برسون"}
             <Bell size={18} />
           </Button>
+          <button
+            className="button button-secondary"
+            disabled={busy || !data.vapidPublicKey}
+            onClick={() => run(sendTest)}
+          >
+            اعلان تستی روی همهٔ دستگاه‌ها
+          </button>
+          <small>
+            برای همهٔ دستگاه‌هایی که با این حساب اعلان رو روشن کردن؛ لازم نیست
+            جیشو باز باشه.
+          </small>
           {push && (
-            <>
-              <button
-                className="button button-secondary"
-                disabled={busy}
-                onClick={() => run(sendTest)}
-              >
-                یه اعلان تستی بفرست
-              </button>
-              <button
-                className="text-link"
-                disabled={busy}
-                onClick={() =>
-                  run(async () => {
-                    await disablePush();
-                    setPush(false);
-                    setDelivery("");
-                    notify("اعلان این دستگاه خاموش شد.");
-                  })
-                }
-              >
-                خاموش‌کردن روی این دستگاه
-              </button>
-            </>
+            <button
+              className="text-link"
+              disabled={busy}
+              onClick={() =>
+                run(async () => {
+                  await disablePush();
+                  setPush(false);
+                  setDelivery("");
+                  notify("اعلان این دستگاه خاموش شد.");
+                })
+              }
+            >
+              خاموش‌کردن روی این دستگاه
+            </button>
           )}
           {delivery && (
             <p className="push-delivery-result" role="status">
@@ -407,7 +252,7 @@ export function Notifications({ data, refresh, notify, onBack, onNavigate }) {
           <Mascot size={126} />
           <h2 id="push-permission-title">یه خبر کوچولو، حتی وقتی نیستی 💧</h2>
           <p>
-            وقتی دوستت می‌گه «جیش کردم» یا دنبال هم‌جیشه، یه اعلان روی گوشی
+            وقتی دوستت می‌گه «جیش کردم» یا می‌گه «جیش دارم»، یه اعلان روی گوشی
             می‌گیری؛ لازم نیست جیشو باز باشه.
           </p>
           <ul>
