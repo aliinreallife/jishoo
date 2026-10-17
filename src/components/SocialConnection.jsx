@@ -9,6 +9,26 @@ const platforms = {
   website: [LinkSimple, "سایت"],
 };
 
+export function SocialAccountFields({ value, onChange, autoFocus = false }) {
+  return [
+    ["instagram", "اینستاگرام", "@username"],
+    ["telegram", "تلگرام", "@username"],
+    ["x", "ایکس", "@username"],
+    ["website", "وب‌سایت", "https://..."],
+  ].map(([key, label, placeholder], index) => (
+    <label className="field-label social-field" key={key}>
+      {label}
+      <input
+        value={value[key] || ""}
+        onChange={event => onChange(current => ({ ...current, [key]: event.target.value }))}
+        placeholder={placeholder}
+        dir="ltr"
+        autoFocus={autoFocus && index === 0}
+      />
+    </label>
+  ));
+}
+
 export default function SocialConnection({ friend, premium, busy, onChange }) {
   const state = friend.linkConnection || "none";
   const action = (operation) => onChange(friend, operation);

@@ -71,3 +71,8 @@
   display: block;
   color: #87724f;
 }
+.social-setup-reminder { text-align:center; }
+.social-setup-reminder > .mascot-character { margin:0 auto 12px; }
+.social-setup-reminder .social-setup-privacy { font-size:12px; line-height:1.9; color:#786a84; background:#f4edf9; border-radius:14px; padding:12px; margin:14px 0 18px; }
+.social-setup-reminder > .button + .button { margin-top:9px; }
+.social-account-editor > .button { margin-top:10px; }

@@ -70,7 +70,7 @@ const GroupJoin = lazy(() => import("./components/GroupJoin"));
 const PhotoEditor = lazy(() => import("./components/PhotoEditor"));
 import InvitationQuota from "./components/InvitationQuota";
 import SharedMemories from "./components/SharedMemories";
-import SocialConnection from "./components/SocialConnection";
+import SocialConnection, { SocialAccountFields } from "./components/SocialConnection";
 const communityView = (name) => {
   const View = lazy(() =>
     import("./components/Community").then((module) => ({
@@ -186,6 +186,8 @@ function Modal({
   className = "",
   hideClose = false,
   fullscreen = false,
+  labelledBy,
+  focusTarget,
 }) {
   const dialog = useRef();
   const [framed, setFramed] = useState(() => window.matchMedia("(min-width: 501px) and (min-height: 600px)").matches);
@@ -205,9 +207,7 @@ function Modal({
   }, [fullscreen]);
   useEffect(() => {
     const previous = document.activeElement;
-    dialog.current
-      ?.querySelector("button:not(:disabled),input:not(:disabled)")
-      ?.focus();
+    (dialog.current?.querySelector(focusTarget || "button:not(:disabled),input:not(:disabled)"))?.focus();
     const escape = (e) => {
       if (e.key === "Escape") onClose();
     };
@@ -216,7 +216,7 @@ function Modal({
       window.removeEventListener("keydown", escape);
       previous?.focus();
     };
-  }, []);
+  }, [focusTarget]);
   const content = (
     <div
       className={`overlay-backdrop ${className.includes("full") ? "full-overlay" : ""} ${fullscreen ? "viewport-overlay" : ""}`}
@@ -229,6 +229,7 @@ function Modal({
         role="dialog"
         aria-modal="true"
         aria-label="پنجره جیشو"
+        aria-labelledby={labelledBy}
         className={`dialog ${className}`}
         onKeyDown={(e) => {
           if (e.key !== "Tab") return;
@@ -1249,6 +1250,20 @@ export default function App() {
       notify("پروفایلت ذخیره شد.");
     }
   }
+  function openSocialAccounts() {
+    setSocials(data.me.socialLinks || {});
+    setDialog("socialAccounts");
+  }
+  async function saveSocialAccounts(event) {
+    event.preventDefault();
+    const result = await perform("profile", { socialLinks: socials });
+    if (!result) return;
+    setData(result);
+    const friend = result.friends.find(friend => friend.id === selectedFriend?.id);
+    setSelectedFriend(friend || null);
+    setDialog(friend ? "friend" : null);
+    notify("حساب‌های اجتماعی‌ت ذخیره شد.");
+  }
   function shareProfile() {
     if (!me.registered) {
       openAuth();
@@ -1336,9 +1351,13 @@ export default function App() {
     if (result) {
       setData((current) => ({ ...current, friends: result.friends }));
       setSelectedFriend(result.friends.find((f) => f.id === friend.id));
+      if (operation === "accept" && !Object.values(me.socialLinks || {}).some(value => typeof value === "string" && value.trim())) {
+        setDialog("socialSetup");
+        return;
+      }
       notify({
         request: "درخواستت فرستاده شد؛ منتظر قبول‌کردن دوستت می‌مونیم.",
-        accept: "درخواست قبول شد؛ حالا حساب‌های هم رو می‌بینین.",
+        accept: "درخواست قبول شد؛ حساب‌های اضافه‌شده برای هم قابل دیدنن.",
         cancel: "درخواستت لغو شد.",
         decline: "درخواست رد شد؛ دوستی‌تون سر جاشه.",
         disconnect: "اشتراک حساب‌ها قطع شد؛ همچنان دوستین.",
@@ -2281,8 +2300,10 @@ export default function App() {
 
         {dialog && !["story", "momentStory"].includes(dialog) && (
           <Modal
-            hideClose={["success", "need"].includes(dialog)}
-            fullscreen={["success", "need", "auth", "friend", "settings", "profileShare", "groupInvite", "moment", "premium"].includes(dialog)}
+            hideClose={["success", "need", "socialSetup"].includes(dialog)}
+            fullscreen={["success", "need", "auth", "friend", "settings", "socialAccounts", "profileShare", "groupInvite", "moment", "premium"].includes(dialog)}
+            labelledBy={dialog === "socialSetup" ? "social-setup-title" : dialog === "socialAccounts" ? "social-accounts-title" : undefined}
+            focusTarget={dialog === "socialSetup" ? ".social-setup-reminder button" : dialog === "socialAccounts" ? ".social-field input" : undefined}
             onClose={() => dialog === "whatsNew" ? dismissRelease() : setDialog(null)}
             className={
               ["success", "need"].includes(dialog)
@@ -2291,7 +2312,7 @@ export default function App() {
                   ? "success-dialog page-dialog full"
                   : dialog === "whatsNew" ? "release-dialog"
                   : dialog === "friend" ? `page-dialog friend-page-dialog social-page-${selectedFriend?.linkConnection || "none"}`
-                  : ["auth", "settings", "profileShare", "groupInvite", "premium"].includes(dialog) ? "page-dialog" : ""
+                  : ["auth", "settings", "socialAccounts", "profileShare", "groupInvite", "premium"].includes(dialog) ? "page-dialog" : ""
             }
           >
             {dialog === "whatsNew" && <ReleaseNotes onClose={dismissRelease} />}
@@ -2525,7 +2546,7 @@ export default function App() {
                 {!Object.keys(me.socialLinks || {}).length && (
                   <button
                     className="text-link auth-back"
-                    onClick={openSettings}
+                    onClick={openSocialAccounts}
                   >
                     اول لینک‌های خودم رو اضافه کنم
                   </button>
@@ -2538,6 +2559,36 @@ export default function App() {
                   برگشت
                 </Button>
               </>
+            )}
+            {dialog === "socialSetup" && (
+              <div className="social-setup-reminder">
+                <Mascot size={92} />
+                <h2 id="social-setup-title">هنوز حسابی اضافه نکردی</h2>
+                <p className="dialog-description">
+                  درخواست رو قبول کردی 💛 اگه دوست داری، حساب‌های خودت رو هم اضافه کن.
+                </p>
+                <p className="social-setup-privacy">
+                  حساب‌هایی که اضافه کنی، برای دوست‌هایی که تبادل حساب‌ها رو باهاشون قبول کردی هم دیده می‌شن.
+                </p>
+                <Button lilac autoFocus onClick={openSocialAccounts}>
+                  <LinkSimple size={20} /> افزودن حساب‌های من
+                </Button>
+                <Button secondary onClick={() => setDialog("friend")}>فعلاً نه</Button>
+              </div>
+            )}
+            {dialog === "socialAccounts" && (
+              <div className="social-account-editor">
+                <div className="dialog-icon purple"><LinkSimple size={28} /></div>
+                <h2 id="social-accounts-title">حساب‌های اجتماعی من</h2>
+                <p className="dialog-description">
+                  هر کدوم رو دوست داری اضافه کن؛ پُرکردن همه لازم نیست. دوست‌هایی که تبادل حساب‌ها رو باهاشون قبول کردی، لینک‌های ذخیره‌شده رو می‌بینن.
+                </p>
+                <form onSubmit={saveSocialAccounts}>
+                  <SocialAccountFields value={socials} onChange={setSocials} autoFocus />
+                  <Button lilac type="submit" disabled={busy}>ذخیره حساب‌ها <Check size={19} /></Button>
+                </form>
+                <Button secondary disabled={busy} onClick={() => setDialog("friend")}>برگشت</Button>
+              </div>
             )}
             {dialog === "disconnect" && selectedFriend && (
               <>
@@ -2847,27 +2898,7 @@ export default function App() {
                       می‌شه.
                     </small>
                   </label>
-                  {[
-                    ["instagram", "اینستاگرام", "@username"],
-                    ["telegram", "تلگرام", "@username"],
-                    ["x", "ایکس", "@username"],
-                    ["website", "وب‌سایت", "https://..."],
-                  ].map(([key, label, placeholder]) => (
-                    <label className="field-label social-field" key={key}>
-                      {label}
-                      <input
-                        value={socials[key] || ""}
-                        onChange={(e) =>
-                          setSocials((current) => ({
-                            ...current,
-                            [key]: e.target.value,
-                          }))
-                        }
-                        placeholder={placeholder}
-                        dir="ltr"
-                      />
-                    </label>
-                  ))}
+                  <SocialAccountFields value={socials} onChange={setSocials} />
                   <Button lilac type="submit" disabled={busy}>
                     ذخیره تغییرات
                     <Check size={19} />
