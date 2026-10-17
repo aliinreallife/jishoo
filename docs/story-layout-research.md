@@ -15,3 +15,7 @@ Current-source verification was attempted against:
 The execution environment returned network-level **HTTP 403** for all these pages, including after network permission was granted. No current quotation or official numerical recommendation was verified. Advertising placements and organic Story controls must not be treated as identical guidance. The 250px allowance remains explicitly provisional until a current source or real-device measurements can be checked.
 
 The browser test measures actual canvas text and bitmap bounds against the chosen allowance, checks text collisions, and creates simulated account/reply overlays for visual comparison. The overlay images are QA simulations, not screenshots of Instagram.
+
+## Subsequent spacing correction (0.2.5)
+
+The user found the remaining composition too packed and explicitly asked to recover space from the edge padding. The selected allowance is now **160px at each end**, with the same 80px side gutters. This is a visual preference, not a newly verified Instagram recommendation. It recovers 180px between the header, artwork, headline and signature. The weekly poster returns to 1320px tall; its grid, count and caption are spaced farther apart. Existing card content, artwork sizes, fonts and square arrangements are retained. QA overlay bands represent the selected 160px design allowance only, not measured Instagram controls.
