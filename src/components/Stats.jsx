@@ -145,11 +145,15 @@ export default function Stats({ data, onBack, onShare }) {
                   )}
                 </i>
               </span>
-              {(period === "all"
-                ? i % 2 === 0
-                : period !== "month" || i % 5 === 0 || i === 29) && (
-                <small>{v.label}</small>
-              )}
+              <small>
+                {(
+                  period === "all"
+                    ? i % 2 === 0
+                    : period !== "month" || i % 5 === 0 || i === 29
+                )
+                  ? v.label
+                  : "\u00a0"}
+              </small>
               <span className="sr-only">
                 {v.label}: {fa(v.count)} بار
               </span>

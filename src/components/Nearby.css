@@ -126,6 +126,10 @@
   max-width: 80px;
 }
 .real-nearby-page .around-panel {
-  max-height: 60%;
+  position: relative;
+  inset: auto;
+  margin: 12px 14px 20px;
+  flex-shrink: 0;
+  max-height: 52%;
   overflow: auto;
 }

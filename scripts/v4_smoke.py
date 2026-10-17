@@ -122,17 +122,19 @@ def main():
    a.get_by_role('button',name='ماه',exact=True).click();expect(a.locator('.lovely-chart .lovely-column')).to_have_count(30)
    a.get_by_role('button',name='همه‌وقت',exact=True).click();expect(a.locator('.lovely-chart .lovely-column')).to_have_count(12)
    expect(a.locator('.drop-calendar-grid > div')).to_have_count(21)
+   baseline=a.locator('.lovely-chart-track').evaluate_all('(els)=>els.map(el=>el.getBoundingClientRect().bottom)');assert max(baseline)-min(baseline)<2
    expect(a.locator('.toast.visible')).to_have_count(0,timeout=6000);capture(a,'v4-stats.png')
    print('PASS: Disconnect revokes friendship/social access while group membership stays separate; real week/month/year chart ranges render',flush=True)
    point={'lat':35.70127,'lng':51.40137}
    for page in [a,c]:api(page,'location',{**point,'enabled':True});api(page,'checkin',{'status':'need','visibility':'friends','nonce':secrets.token_hex(12)})
    api(c,'discoverable',{'enabled':True})
-   a.goto(BASE+'/#/nearby');expect(a.get_by_role('heading',name='این نزدیکا')).to_be_visible(timeout=20000)
+   a.goto(BASE+'/#/nearby');a.reload();expect(a.get_by_role('heading',name='این نزدیکا')).to_be_visible(timeout=20000)
    a.get_by_role('button',name='نمایش اطراف من',exact=True).click()
    expect(a.locator('.nearby-people-trigger')).to_be_visible(timeout=20000)
    expect(a.locator('.live-map-marker')).to_have_count(2,timeout=20000)
    anchors=a.locator('.map-avatar-icon').evaluate_all('(els)=>els.map(el=>el.style.marginLeft)');assert len(set(anchors))==2
    a.locator('.nearby-people-trigger').click();expect(a.locator('.nearby-person')).to_contain_text('آزمایش نیما',timeout=15000)
+   a.wait_for_function("() => {const panel=document.querySelector('.around-panel').getBoundingClientRect();return [...document.querySelectorAll('.live-map-marker')].every(el=>el.getBoundingClientRect().bottom<panel.top)}",timeout=10000)
    capture(a,'v4-nearby-unified.png')
    assert len(api(a,'nearby',point)['activity'])==2
    print('PASS: One nearby page contains the map and opt-in people list; shared-cell markers separate visually while coordinates remain coarse',flush=True)
