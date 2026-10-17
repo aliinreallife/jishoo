@@ -43,7 +43,7 @@ def connect(sender,recipient):
 def page_for(browser,c,**kwargs):
  ctx,page=context(browser,**kwargs);token=next(x.value for x in c.cookies if x.name=='jishoo_session')
  ctx.add_cookies([{'name':'jishoo_session','value':token,'url':BASE,'httpOnly':True,'sameSite':'Lax'}])
- ctx.add_init_script("localStorage.setItem('jishoo:last-seen-release','0.2.2');localStorage.setItem('jishoo:v2-entered','true')")
+ ctx.add_init_script("localStorage.setItem('jishoo:last-seen-release',"+json.dumps(json.loads((ROOT/'package.json').read_text())['version'])+");localStorage.setItem('jishoo:v2-entered','true')")
  return ctx,page
 
 def verify_rate_limits():

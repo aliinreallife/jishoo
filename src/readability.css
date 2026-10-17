@@ -1,53 +1,53 @@
 /* Shared UI typography. Exported story artwork has its own canvas type scale. */
 :root {
-  --ui-body: 15px;
-  --ui-help: 14px;
-  --ui-meta: 13px;
-  --ui-action: 15px;
-  --ui-section: 18px;
+  --ui-body: 14px;
+  --ui-help: 12.5px;
+  --ui-meta: 11.5px;
+  --ui-action: 14px;
+  --ui-section: 16px;
   --ui-muted: #6b6370;
   --ui-soft: #756b76;
   --ui-link: #6a4f86;
 }
 .app-shell, .dialog, .push-permission-dialog { font-size: var(--ui-body); }
-.app-shell p, .dialog p { line-height: 1.9; }
+.app-shell p, .dialog p { line-height: 1.8; }
 :is(.app-shell, .dialog) :is(.dialog-description, .auth-demo-note, .signup-legal, .invite-required-help, .soft-note, .form-help, .premium-free-hint) {
-  font-size: var(--ui-help); line-height: 1.9; color: var(--ui-muted);
+  font-size: var(--ui-help); line-height: 1.8; color: var(--ui-muted);
 }
 .dialog .dialog-description { margin: 12px 0 24px; }
-.dialog h2 { font-size: 24px; line-height: 1.65; }
+.dialog h2 { font-size: 22px; line-height: 1.65; }
 :is(.app-shell, .dialog) .field-label { font-size: var(--ui-help); color: #514957; line-height: 1.8; }
 :is(.app-shell, .dialog) :is(input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select) {
   font-size: 16px; line-height: 1.8; min-width: 0;
 }
 :is(.app-shell, .dialog) input::placeholder { color: #847987; opacity: 1; }
 :is(.app-shell, .dialog) .field-label > small { font-size: var(--ui-meta); color: var(--ui-muted); }
-:is(.app-shell, .dialog, .push-permission-dialog) .button { font-size: var(--ui-action); min-height: 48px; line-height: 1.65; }
+:is(.app-shell, .dialog, .push-permission-dialog) .button { font-size: var(--ui-action); min-height: 44px; line-height: 1.65; }
 :is(.app-shell, .dialog, .push-permission-dialog) .text-link { font-size: var(--ui-help); line-height: 1.8; color: var(--ui-link); }
-:is(.app-shell, .dialog) .form-error { font-size: var(--ui-help); line-height: 1.9; color: #a13f3d; }
+:is(.app-shell, .dialog) .form-error { font-size: var(--ui-help); line-height: 1.8; color: #a13f3d; }
 :is(.app-shell, .dialog) :is(.little-pill, .eyebrow, .tiny-badge) { font-size: 12px; line-height: 1.7; color: #786441; }
 .app-shell :is(.section-heading h2, .memories-heading h2, .profile-community-link h2, .profile-stats-link h2) { font-size: var(--ui-section); line-height: 1.7; }
-.app-shell .community-heading h1 { font-size: 26px; line-height: 1.5; }
+.app-shell .community-heading h1 { font-size: 23px; line-height: 1.5; }
 .app-shell .community-heading p { font-size: var(--ui-help); color: var(--ui-muted); line-height: 1.8; }
 .app-shell :is(.friends-tabs, .stats-period) button { font-size: var(--ui-help); min-height: 44px; }
-.app-shell .bottom-nav small { font-size: 12px; line-height: 1.5; color: #6c6774; }
+.app-shell .bottom-nav small { font-size: 11px; line-height: 1.5; color: #6c6774; }
 
 /* Home: a clear action, followed by readable privacy and notification context. */
 .app-shell .home-header > div:first-child { min-width: 0; }
-.app-shell .home-header h1 { font-size: clamp(21px, 5.4vw, 26px); line-height: 1.6; flex-wrap: wrap; overflow-wrap: anywhere; }
+.app-shell .home-header h1 { font-size: clamp(20px, 5.1vw, 24px); line-height: 1.6; flex-wrap: wrap; overflow-wrap: anywhere; }
 .app-shell .home-header p { font-size: var(--ui-help); color: var(--ui-muted); }
 .app-shell .testing-banner { font-size: var(--ui-meta); min-height: 38px; color: #75602f; padding: 8px 12px; line-height: 1.7; }
-.app-shell .action-card strong { font-size: 24px; line-height: 1.5; }
+.app-shell .action-card strong { font-size: 22px; line-height: 1.5; }
 .app-shell .action-card > span:not(.character) { font-size: var(--ui-help); color: #665b4c; line-height: 1.8; }
 .app-shell .done-card > span:not(.character) { color: #465f7b; }
 .app-shell .audience-choice { font-size: var(--ui-meta); line-height: 1.8; color: var(--ui-muted); margin-block: 14px; }
 .app-shell .home-notification-card strong { font-size: var(--ui-body); line-height: 1.8; }
 .app-shell .home-notification-card small { font-size: var(--ui-meta); line-height: 1.85; color: var(--ui-muted); }
 .app-shell .home-notification-cta { font-size: var(--ui-meta); }
-.app-shell :is(.empty-friends-card p, .nearby-card p, .home-bottom, .inline-invitation-card p) { font-size: var(--ui-meta); color: var(--ui-muted); line-height: 1.9; }
+.app-shell :is(.empty-friends-card p, .nearby-card p, .home-bottom, .inline-invitation-card p) { font-size: var(--ui-meta); color: var(--ui-muted); line-height: 1.8; }
 .app-shell .nearby-card strong { font-size: var(--ui-help); }
 .app-shell .nearby-card { gap: 14px; }
-.app-shell .friend-identity strong { font-size: 16px; line-height: 1.7; }
+.app-shell .friend-identity strong { font-size: 15px; line-height: 1.7; }
 .app-shell .friend-identity small { font-size: 12px; color: var(--ui-soft); }
 .app-shell :is(.friend-status, .pending-home) { font-size: var(--ui-meta); }
 
@@ -55,49 +55,49 @@
 .dialog .auth-wizard :is(.dialog-description, .invite-first-step > p, .invite-connect-step > p) { font-size: var(--ui-help); color: var(--ui-muted); }
 .dialog .auth-wizard .auth-back { font-size: var(--ui-help); min-height: 44px; color: var(--ui-link); }
 .dialog :is(.google-banner strong, .account-method strong) { font-size: var(--ui-body); }
-.dialog :is(.google-banner small, .account-method small, .account-method span, .connected-google > .text-link) { font-size: var(--ui-meta); line-height: 1.9; color: var(--ui-muted); }
-.dialog .google-auth-button { font-size: var(--ui-action); min-height: 48px; }
-.dialog .account-connections > p { font-size: var(--ui-help); color: var(--ui-muted); line-height: 1.9; }
-.dialog .account-method .account-phone-number { font-size: 18px; }
-.dialog :is(.pending-google-note, .invite-auth-summary, .avatar-upload-row small, .phone-auth-paused) { font-size: var(--ui-meta); line-height: 1.9; color: var(--ui-muted); }
-.dialog :is(.invite-auth-summary p, .invite-auth-summary strong, .phone-paused-note, .merge-profile, .merge-profile > strong, .merge-profile > small) { font-size: var(--ui-meta); line-height: 1.9; color: var(--ui-muted); }
-.dialog .account-merge-card :is(p, ul) { font-size: var(--ui-help); line-height: 1.9; }
-.dialog .social-connection :is(p, strong) { font-size: var(--ui-help); line-height: 1.95; color: #65546f; }
-.dialog .social-connection h3 { font-size: 17px; line-height: 1.8; }
-.dialog :is(.friend-mute-card, .friend-notification-card) { line-height: 1.9; }
+.dialog :is(.google-banner small, .account-method small, .account-method span, .connected-google > .text-link) { font-size: var(--ui-meta); line-height: 1.8; color: var(--ui-muted); }
+.dialog .google-auth-button { font-size: var(--ui-action); min-height: 44px; }
+.dialog .account-connections > p { font-size: var(--ui-help); color: var(--ui-muted); line-height: 1.8; }
+.dialog .account-method .account-phone-number { font-size: 17px; }
+.dialog :is(.pending-google-note, .invite-auth-summary, .avatar-upload-row small, .phone-auth-paused) { font-size: var(--ui-meta); line-height: 1.8; color: var(--ui-muted); }
+.dialog :is(.invite-auth-summary p, .invite-auth-summary strong, .phone-paused-note, .merge-profile, .merge-profile > strong, .merge-profile > small) { font-size: var(--ui-meta); line-height: 1.8; color: var(--ui-muted); }
+.dialog .account-merge-card :is(p, ul) { font-size: var(--ui-help); line-height: 1.8; }
+.dialog .social-connection :is(p, strong) { font-size: var(--ui-help); line-height: 1.85; color: #65546f; }
+.dialog .social-connection h3 { font-size: 15.5px; line-height: 1.8; }
+.dialog :is(.friend-mute-card, .friend-notification-card) { line-height: 1.8; }
 .dialog :is(.friend-mute-card small, .friend-notification-card small, .friend-premium-note) { font-size: var(--ui-meta); color: var(--ui-muted); }
 .dialog .friend-page-dialog > p { font-size: var(--ui-meta); }
-.dialog .friend-dialog-head > span { font-size: 13px; color: var(--ui-muted); }
-.dialog .preference-action strong { font-size: 15px; line-height: 1.8; }
-.dialog .preference-action small { font-size: 13px; line-height: 1.85; color: var(--ui-muted); }
-.dialog :is(.tiny-premium-note, .disconnect-friend, .signout, .delete-account-link) { font-size: 13px; line-height: 1.85; }
-.dialog .premium-feature-note { font-size: 13px; line-height: 1.85; color: #786441; }
-.app-shell .legal-links { font-size: 13px; }
-.dialog .legal-links { font-size: 13px; }
-.app-shell :is(.hub-person h2, .group-card h2) { font-size: 17px; }
+.dialog .friend-dialog-head > span { font-size: 12px; color: var(--ui-muted); }
+.dialog .preference-action strong { font-size: 14px; line-height: 1.8; }
+.dialog .preference-action small { font-size: 12px; line-height: 1.85; color: var(--ui-muted); }
+.dialog :is(.tiny-premium-note, .disconnect-friend, .signout, .delete-account-link) { font-size: 12px; line-height: 1.85; }
+.dialog .premium-feature-note { font-size: 12px; line-height: 1.85; color: #786441; }
+.app-shell .legal-links { font-size: 12px; }
+.dialog .legal-links { font-size: 12px; }
+.app-shell :is(.hub-person h2, .group-card h2) { font-size: 15.5px; }
 .app-shell :is(.hub-person p, .hub-person > div > span, .group-summary p, .group-card p, .friends-heading p, .friend-requests-panel p) { font-size: var(--ui-meta); color: var(--ui-muted); line-height: 1.85; }
 .app-shell .hub-person .compact-connect { font-size: var(--ui-meta); max-width: 86px; }
-.app-shell :is(.group-join-card p, .group-link-landing > p) { font-size: var(--ui-help); line-height: 1.9; color: var(--ui-muted); }
+.app-shell :is(.group-join-card p, .group-link-landing > p) { font-size: var(--ui-help); line-height: 1.8; color: var(--ui-muted); }
 
 /* Profile and invitations: gift timing and visibility must be easy to read. */
 .app-shell .profile-page .handle { font-size: var(--ui-help); color: var(--ui-muted); overflow-wrap: anywhere; }
 .app-shell .stats-row small { font-size: var(--ui-meta); color: var(--ui-muted); }
-.app-shell .premium-card strong { font-size: 17px; line-height: 1.8; color: #66517c; }
-.app-shell :is(.premium-card p, .premium-free-hint, .saved-premium-card p) { font-size: var(--ui-meta); line-height: 1.9; color: #6f5e79; }
+.app-shell .premium-card strong { font-size: 15.5px; line-height: 1.8; color: #66517c; }
+.app-shell :is(.premium-card p, .premium-free-hint, .saved-premium-card p) { font-size: var(--ui-meta); line-height: 1.8; color: #6f5e79; }
 .app-shell .saved-premium-card p { color: #74613e; }
-.app-shell .saved-premium-card strong { font-size: 16px; line-height: 1.8; }
+.app-shell .saved-premium-card strong { font-size: 15px; line-height: 1.8; }
 .app-shell .saved-premium-number small { font-size: var(--ui-meta); }
 .app-shell :is(.profile-community-link p, .memories-heading p, .memory-kind, .memory-person, .install-card p) { font-size: var(--ui-meta); line-height: 1.85; color: var(--ui-muted); }
-.app-shell :is(.memories-empty p, .invite-page-description, .invite-landing-features p, .invite-landing-gift, .invitation-quota-card > p) { font-size: var(--ui-help); line-height: 1.95; color: var(--ui-muted); }
+.app-shell :is(.memories-empty p, .invite-page-description, .invite-landing-features p, .invite-landing-gift, .invitation-quota-card > p) { font-size: var(--ui-help); line-height: 1.85; color: var(--ui-muted); }
 .app-shell :is(.invite-slot-characters small, .invite-landing > small, .invited-members > p, .invited-members span, .install-card small) { font-size: var(--ui-meta); line-height: 1.85; color: var(--ui-muted); }
-.app-shell .quota-top strong { font-size: 17px; }
+.app-shell .quota-top strong { font-size: 15.5px; }
 .app-shell .invitation-quota-card > button { font-size: var(--ui-help); min-height: 44px; }
 .app-shell .invite-landing-gift { color: #745c29; padding: 14px 16px; }
 
 /* Stats: HTML axis labels retain a readable size as the SVG scales. */
 .app-shell .lovely-stats .community-heading p { font-size: var(--ui-help); color: var(--ui-muted); }
 .app-shell .stats-hero-card > div > span { font-size: var(--ui-help); color: #79623c; }
-.app-shell .stats-hero-card p { font-size: var(--ui-meta); color: #79623c; line-height: 1.9; }
+.app-shell .stats-hero-card p { font-size: var(--ui-meta); color: #79623c; line-height: 1.8; }
 .app-shell .stats-hero-card h2 { font-size: var(--ui-section); line-height: 1.7; }
 .app-shell :is(.lovely-chart-card, .drop-calendar) .section-heading { flex-wrap: wrap; gap: 8px 16px; }
 .app-shell :is(.lovely-chart-card, .drop-calendar) .section-heading > span { font-size: var(--ui-meta); color: var(--ui-muted); }
@@ -105,25 +105,25 @@
 .app-shell .trend-readout { align-items: flex-start; flex-wrap: wrap; }
 .app-shell .trend-navigation > span { font-size: var(--ui-meta); color: var(--ui-muted); line-height: 1.8; }
 .app-shell .trend-navigation button { width: 44px; height: 44px; }
-.app-shell :is(.stats-zero-note, .stats-mini-grid span, .drop-calendar p, .stats-privacy-note) { font-size: var(--ui-meta); line-height: 1.9; color: var(--ui-muted); }
+.app-shell :is(.stats-zero-note, .stats-mini-grid span, .drop-calendar p, .stats-privacy-note) { font-size: var(--ui-meta); line-height: 1.8; color: var(--ui-muted); }
 .app-shell .calendar-weekdays { font-size: 12px; line-height: 1.7; color: #6d6079; }
-.app-shell .drop-calendar-grid > div > b, .app-shell .drop-calendar-grid small { font-size: 13px; }
+.app-shell .drop-calendar-grid > div > b, .app-shell .drop-calendar-grid small { font-size: 12px; }
 .trend-axis-labels { position: relative; height: 25px; margin-top: 8px; direction: ltr; }
-.trend-axis-labels span { position: absolute; transform: translateX(-50%); white-space: nowrap; text-align: center; font-size: 13px; line-height: 1.7; color: #716575; }
+.trend-axis-labels span { position: absolute; transform: translateX(-50%); white-space: nowrap; text-align: center; font-size: 12px; line-height: 1.7; color: #716575; }
 .trend-axis-labels.week span { font-size: 12px; }
 
 /* Map controls stay legible and can still be collapsed to reveal the map. */
 .app-shell .nearby-heading p { font-size: var(--ui-meta); color: var(--ui-muted); }
-.app-shell .map-permission-card :is(p, small) { font-size: var(--ui-help); line-height: 1.9; color: var(--ui-muted); }
+.app-shell .map-permission-card :is(p, small) { font-size: var(--ui-help); line-height: 1.8; color: var(--ui-muted); }
 .app-shell .map-permission-card > small { font-size: var(--ui-meta); }
 .app-shell .real-nearby-page .around-panel { max-height: min(50%, 320px); }
 .app-shell .real-nearby-page .around-panel.is-browsing { max-height: min(62%, 480px); }
 .app-shell .real-nearby-page .around-panel-top > strong { font-size: var(--ui-help); }
-.app-shell :is(.map-panel-actions > button, .map-controls button, .map-options-restore) { font-size: 13px; min-height: 44px; }
-.app-shell .map-controls > button > span { font-size: 13px; }
+.app-shell :is(.map-panel-actions > button, .map-controls button, .map-options-restore) { font-size: 12px; min-height: 44px; }
+.app-shell .map-controls > button > span { font-size: 12px; }
 .app-shell .map-live-state { font-size: 12px; color: #53664b; }
 .app-shell .map-visibility-control legend { font-size: var(--ui-help); }
-.app-shell .map-visibility-modes > button { font-size: 13px; min-height: 64px; color: #6f614e; }
+.app-shell .map-visibility-modes > button { font-size: 12px; min-height: 60px; color: #6f614e; }
 .app-shell .map-visibility-modes > button[aria-pressed=true] { color: #3c6046; }
 .app-shell .map-visibility-control > p { font-size: var(--ui-meta); line-height: 1.85; color: var(--ui-muted); }
 .app-shell :is(.nearby-people-trigger, .nearby-person small, .selected-neighbor p, .nearby-people-panel > p) { font-size: var(--ui-meta); color: var(--ui-muted); line-height: 1.85; }
@@ -131,29 +131,29 @@
 .app-shell .nearby-person strong { font-size: var(--ui-body); }
 
 /* Reactions and story controls use UI sizes; exported PNG text is unchanged. */
-.dialog .success-subtitle { font-size: var(--ui-help); color: var(--ui-muted); line-height: 1.9; }
+.dialog .success-subtitle { font-size: var(--ui-help); color: var(--ui-muted); line-height: 1.8; }
 .dialog .reaction-toolbar > span { font-size: var(--ui-meta); color: #75644d; }
-.undo-checkin strong { font-size: 14px; line-height: 1.7; }
-.undo-checkin > div > span { font-size: 13px; line-height: 1.7; color: #766443; }
-.undo-checkin button { font-size: 13px; min-height: 44px; }
-.full-story-overlay .story-editor > header h1 { font-size: 18px; }
-.full-story-overlay .story-editor :is(.story-format button, .story-style-controls button) { font-size: 13px; line-height: 1.6; }
-.full-story-overlay .story-editor .story-caption-field { font-size: 13px; line-height: 1.7; color: var(--ui-muted); }
+.undo-checkin strong { font-size: 13px; line-height: 1.7; }
+.undo-checkin > div > span { font-size: 12px; line-height: 1.7; color: #766443; }
+.undo-checkin button { font-size: 12px; min-height: 44px; }
+.full-story-overlay .story-editor > header h1 { font-size: 17px; }
+.full-story-overlay .story-editor :is(.story-format button, .story-style-controls button) { font-size: 12px; line-height: 1.6; }
+.full-story-overlay .story-editor .story-caption-field { font-size: 12px; line-height: 1.7; color: var(--ui-muted); }
 .full-story-overlay .story-editor .story-caption-field input { font-size: 16px; min-height: 44px; }
-.full-story-overlay .story-editor .export-state { font-size: 13px; line-height: 1.7; color: var(--ui-muted); }
-.full-story-overlay .story-editor .story-export-actions .button { font-size: 14px; min-height: 48px; }
-.full-story-overlay .story-editor .story-secondary-buttons > button { font-size: 13px; min-height: 36px; }
-.full-story-overlay .story-editor { grid-template-rows: 44px 38px 36px minmax(0, 1fr) auto auto; }
-.full-story-overlay .story-editor.with-undo { grid-template-rows: 44px 62px 38px 36px minmax(0, 1fr) auto auto; }
-.full-story-overlay .story-undo-slot .undo-inline { min-height: 58px; }
-.app-shell .push-permission-dialog :is(p, li) { font-size: 14px; line-height: 1.95; }
-.app-shell .notification-settings small, .app-shell .notification-item small { font-size: 13px; line-height: 1.85; color: var(--ui-muted); }
-.app-shell .device-push-card p { font-size: 14px; color: var(--ui-muted); }
-.app-shell .push-install-guide small { font-size: 13px; }
+.full-story-overlay .story-editor .export-state { font-size: 12px; line-height: 1.7; color: var(--ui-muted); }
+.full-story-overlay .story-editor .story-export-actions .button { font-size: 13px; min-height: 44px; }
+.full-story-overlay .story-editor .story-secondary-buttons > button { font-size: 12px; min-height: 36px; }
+.full-story-overlay .story-editor { grid-template-rows: 44px 34px 30px minmax(0, 1fr) auto auto; }
+.full-story-overlay .story-editor.with-undo { grid-template-rows: 44px 58px 34px 30px minmax(0, 1fr) auto auto; }
+.full-story-overlay .story-undo-slot .undo-inline { min-height: 54px; }
+.app-shell .push-permission-dialog :is(p, li) { font-size: 13px; line-height: 1.85; }
+.app-shell .notification-settings small, .app-shell .notification-item small { font-size: 12px; line-height: 1.85; color: var(--ui-muted); }
+.app-shell .device-push-card p { font-size: 13px; color: var(--ui-muted); }
+.app-shell .push-install-guide small { font-size: 12px; }
 
 @media (min-width: 900px), (min-width: 650px) and (max-height: 500px) {
-  .full-story-overlay .story-editor { grid-template-rows: 44px 38px 36px minmax(0, 1fr) auto; }
-  .full-story-overlay .story-editor.with-undo { grid-template-rows: 40px 62px 38px 36px minmax(0, 1fr) auto; gap: 5px 22px; padding-block: 6px; }
+  .full-story-overlay .story-editor { grid-template-rows: 44px 34px 30px minmax(0, 1fr) auto; }
+  .full-story-overlay .story-editor.with-undo { grid-template-rows: 40px 58px 34px 30px minmax(0, 1fr) auto; gap: 5px 22px; padding-block: 6px; }
 }
 @media (max-width: 370px) {
   .app-shell .stats-hero-card { flex-wrap: wrap; justify-content: center; }

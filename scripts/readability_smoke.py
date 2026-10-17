@@ -17,7 +17,7 @@ def main():
    owner,state=google_member('آزمایش خوانایی');peer,_=google_member('آزمایش دوستی',state['me']['inviteCode']);connect(owner,peer)
    owner.call('checkin',{'status':'done','visibility':'private','nonce':secrets.token_hex(12)})
    ctx,page=page_for(browser,owner,geo=True)
-   page.add_init_script("localStorage.setItem('jishoo:last-seen-release',"+json.dumps("0.2.1" if STAGE=="before" else "0.2.2")+")")
+   page.add_init_script("localStorage.setItem('jishoo:last-seen-release',"+json.dumps("0.2.1" if STAGE=="before" else "0.2.3")+")")
    errors=[];page.on('pageerror',lambda error:errors.append(error.stack))
    for route,selector in [('home','.action-grid'),('stats','.stats-trend'),('profile','.premium-card'),('friends','.connected-card'),('invite','.invitation-quota-card')]:
     page.goto(BASE+'/#/'+route);page.reload();expect(page.locator(selector)).to_be_visible(timeout=25000);screenshot(page,'01-'+route)
@@ -38,7 +38,7 @@ def main():
      for mode in ['پنهان','بی‌نام','با پروفایلم']:
       button=page.get_by_role('button',name=mode,exact=True)
       button.scroll_into_view_if_needed();expect(button).to_be_in_viewport()
-      assert button.evaluate('e=>parseFloat(getComputedStyle(e).fontSize)')>=13
+      assert 12<=button.evaluate('e=>parseFloat(getComputedStyle(e).fontSize)')<=13
      page.get_by_role('button',name='جمع‌کردن گزینه‌های نقشه',exact=True).click();expect(panel).to_be_hidden()
      page.get_by_role('button',name='نمایش گزینه‌های نقشه',exact=True).click();expect(panel).to_be_visible()
      page.wait_for_timeout(300)
@@ -55,10 +55,10 @@ def main():
        assert page.locator('.story-editor').evaluate('e=>e.scrollHeight<=e.clientHeight+1')
       screenshot(page,f'09-{route.replace("/","-")}-{width}')
     page.set_viewport_size({'width':393,'height':852});page.goto(BASE+'/#/home');page.reload();expect(page.locator('.home-notification-card')).to_be_visible(timeout=25000)
-    assert page.locator('.home-notification-card small').evaluate('e=>parseFloat(getComputedStyle(e).fontSize)')>=13
+    assert 11.5<=page.locator('.home-notification-card small').evaluate('e=>parseFloat(getComputedStyle(e).fontSize)')<=12.5
     page.goto(BASE+'/#/stats');expect(page.locator('.trend-navigation')).to_be_visible(timeout=20000)
     for selector in ['.community-heading p','.trend-readout > span','.trend-readout small','.trend-navigation > span','.stats-privacy-note']:
-     assert page.locator(selector).evaluate('e=>parseFloat(getComputedStyle(e).fontSize)')>=13,selector
+     assert 11.5<=page.locator(selector).evaluate('e=>parseFloat(getComputedStyle(e).fontSize)')<=12.5,selector
     early_ctx,early=page_for(browser,owner)
     early.on('pageerror',lambda error:errors.append(error.stack))
     early.goto(BASE+'/#/stories/need');expect(early.get_by_role('button',name='ذخیره PNG',exact=True)).to_be_enabled(timeout=30000)
