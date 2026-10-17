@@ -19,6 +19,22 @@
       "destination": "/api/profile?handle=:handle"
     },
     {
+      "source": "/:screen(home|nearby|discover|friends|profile|settings|stats|invite|achievements|notifications|admin|join|group|stories|circle)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/stories/:kind(need|checkin|weekly|invite)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/circle/:id",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/app/:path*",
+      "destination": "/index.html"
+    },
+    {
       "source": "/changelog",
       "destination": "/index.html"
     },
@@ -79,6 +95,15 @@
         {
           "key": "Service-Worker-Allowed",
           "value": "/"
+        }
+      ]
+    },
+    {
+      "source": "/:screen(home|nearby|discover|friends|profile|settings|stats|invite|achievements|notifications|admin|join|group|stories|circle|app)/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
         }
       ]
     }

@@ -49,7 +49,7 @@ export function relativeTime(value) {
         : "چند روز پیش";
 }
 export const inviteUrl = (data, code) =>
-  `${data?.publicUrl || "https://jishoo.vercel.app"}/${code ? "?invite=" + encodeURIComponent(code) : ""}`;
+  `${data?.publicUrl || "https://jishoo.vercel.app"}${code ? "/join?invite=" + encodeURIComponent(code) : "/home"}`;
 export async function copyText(text) {
   if (navigator.clipboard?.writeText)
     return navigator.clipboard.writeText(text);

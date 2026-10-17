@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { invitationForest, invitationPath } from "../src/invitation-tree.js";
 import { observabilityPage, redactMetricEvent } from "../src/observability.js";
+import { canonicalPath, readPage, screenPath, notificationPath } from "../src/routing.js";
 import { blobatar } from "blobatar/blob";
 import {
   normalizePhone,
@@ -19,6 +20,43 @@ import {
 
 process.env.APP_SECRET =
   "unit-tests-only-a-fixed-secret-of-at-least-32-characters";
+test("clean routes retain legacy bookmarks, invitations, OAuth results and section anchors", () => {
+  for (const [before, after] of [
+    ["/#/profile", "/profile"], ["/#profile", "/profile"],
+    ["/u/ali#/home", "/home"], ["/#/discover", "/nearby"],
+    ["/?invite=PRIVATE#/home", "/join?invite=PRIVATE"],
+    ["/?group=GROUP&invite=PRIVATE", "/group?group=GROUP&invite=PRIVATE"],
+    ["/?login=1#/home", "/home?login=1"],
+    ["/?source=twa#/home", "/home?source=twa"],
+    ["/?google=continue&invite=PRIVATE", "/join?google=continue&invite=PRIVATE"],
+    ["/?adminAccess=SECRET", "/admin?adminAccess=SECRET"],
+    ["/#/circle/group-id", "/circle/group-id"],
+    ["/app/stories/need", "/stories/need"],
+    ["/#how", "/#how"], ["/settings#social-accounts", "/settings#social-accounts"],
+    ["/home#profile", "/home#profile"], ["/friends/", "/friends"],
+  ]) {
+    assert.equal(canonicalPath(before), after, before);
+    assert.equal(canonicalPath(after), after, "idempotent: " + after);
+  }
+  assert.equal(readPage("/circle/old%20id").circleId, "old id");
+  assert.equal(readPage("/circle/%E0").circleId, "%E0");
+  assert.equal(readPage("/stories/need").storyKind, "need");
+  assert.equal(readPage("/stories/invalid").storyKind, null);
+  assert.equal(readPage("/u/ali").handle, "ali");
+  assert.equal(screenPath("circle", "group / id"), "/circle/group%20%2F%20id");
+  assert.equal(screenPath("settings"), "/settings");
+});
+test("stored notification links preserve group destinations and reject external or API navigation", () => {
+  const origin = "https://jishoo.vercel.app";
+  assert.equal(notificationPath("/#/circle/group-id", origin), "/circle/group-id");
+  assert.equal(notificationPath("/friends", origin), "/friends");
+  for (const value of ["https://evil.invalid/friends", "//evil.invalid", "javascript:alert(1)", "/api/app", "/.well-known/assetlinks.json"])
+    assert.equal(notificationPath(value, origin), "/home");
+});
+test("clean route analytics preserve categories and redact handles, codes and group IDs", () => {
+  for (const [url, expected] of [["/profile", "/app/profile"], ["/settings#social-accounts", "/app/settings"], ["/friends", "/app/friends"], ["/circle/PRIVATE", "/app/circle"], ["/stories/need", "/app/stories/need"], ["/join?invite=PRIVATE", "/invite"], ["/admin", null], ["/app/admin", null]])
+    assert.equal(observabilityPage(url), expected, url);
+});
 test("observability categorizes hash routes without private identifiers or query strings", () => {
   assert.equal(observabilityPage("https://jishoo.vercel.app/?invite=PRIVATE#/home"), "/invite");
   assert.equal(observabilityPage("https://jishoo.vercel.app/#/circle/private-group-id"), "/app/circle");
@@ -467,6 +505,8 @@ test("Google return locations stay on the app and cannot redirect to another sit
   ])
     assert.equal(safeReturnPath(path), "/");
   assert.equal(safeReturnPath("/?invite=QA#/friends"), "/?invite=QA#/friends");
+  assert.equal(safeReturnPath("/settings#social-accounts"), "/settings#social-accounts");
+  assert.equal(safeReturnPath("/join?invite=QA"), "/join?invite=QA");
 });
 test("phone authentication is off by default and cannot activate the demo outside testing", async () => {
   const { phoneAuthEnabled, removeGoogle } = await import("../lib/google-auth.js");

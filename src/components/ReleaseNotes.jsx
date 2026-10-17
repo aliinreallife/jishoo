@@ -20,6 +20,6 @@ export function ReleasePage() {
       <span className="release-version">نسخهٔ {release.label}</span><h2>{release.title}</h2>
       <ul>{release.items.map((item) => <li key={item}>{item}</li>)}</ul>
     </article>)}
-    <a className="release-ack" href="/#/home">برم تو جیشو</a>
+    <a className="release-ack" href="/home">برم تو جیشو</a>
   </main>;
 }

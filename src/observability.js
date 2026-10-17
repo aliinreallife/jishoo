@@ -1,20 +1,21 @@
-const appScreens = new Set(["home", "nearby", "friends", "profile", "stats", "notifications", "circle", "circles", "invite", "stories", "achievements"]);
-const publicScreens = new Set(["/", "/terms", "/privacy", "/support", "/install", "/changelog", "/invite", "/group"]);
+import { canonicalPath } from "./routing.js";
+const appScreens = new Set(["home", "nearby", "friends", "profile", "settings", "stats", "notifications", "circle", "circles", "invite", "stories", "achievements"]);
+const publicScreens = new Set(["/", "/terms", "/privacy", "/support", "/install", "/changelog", "/group"]);
 
 // Page categories only: never use invite codes, account handles or group IDs.
 export function observabilityPage(href) {
-  const url = new URL(href, "https://jishoo.vercel.app");
-  const [screen, detail] = url.hash.replace(/^#\//, "").split("/");
-  if (url.searchParams.has("adminAccess") || screen === "admin" || /^\/(api|admin)(\/|$)/.test(url.pathname)) return null;
-  if (url.searchParams.has("invite")) return "/invite";
+  const url = new URL(canonicalPath(href), "https://jishoo.vercel.app");
+  const [screen, detail] = url.pathname.slice(1).split("/");
+  if (url.searchParams.has("adminAccess") || /^\/(api|admin)(\/|$)/.test(url.pathname)) return null;
   if (url.searchParams.has("group")) return "/group";
+  if (url.searchParams.has("invite") || screen === "join") return "/invite";
   if (url.pathname.startsWith("/u/")) return "/u/profile";
   if (url.pathname.startsWith("/app/")) {
     const [part, kind] = url.pathname.slice(5).split("/");
     if (part === "admin") return null;
     return appScreens.has(part) ? `/app/${part}${part === "stories" && ["need", "checkin", "weekly", "invite"].includes(kind) ? "/" + kind : ""}` : "/app/home";
   }
-  if (url.hash.startsWith("#/")) return `/app/${appScreens.has(screen) ? screen : "home"}${screen === "stories" && ["need", "checkin", "weekly", "invite"].includes(detail) ? "/" + detail : ""}`;
+  if (appScreens.has(screen)) return `/app/${screen}${screen === "stories" && ["need", "checkin", "weekly", "invite"].includes(detail) ? "/" + detail : ""}`;
   return publicScreens.has(url.pathname) ? url.pathname : "/";
 }
 

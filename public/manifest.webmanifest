@@ -4,7 +4,7 @@
   "short_name": "جیشو",
   "lang": "fa",
   "dir": "rtl",
-  "start_url": "/#/home",
+  "start_url": "/home",
   "scope": "/",
   "display": "standalone",
   "background_color": "#fffcf5",
@@ -43,12 +43,12 @@
     {
       "name": "خانه",
       "short_name": "خانه",
-      "url": "/#/home"
+      "url": "/home"
     },
     {
       "name": "این نزدیکا",
       "short_name": "نزدیکا",
-      "url": "/#/nearby"
+      "url": "/nearby"
     }
   ]
 }

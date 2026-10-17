@@ -1,6 +1,6 @@
 {
   "name": "jishoo",
-  "version": "0.2.6",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -26,6 +26,7 @@
     "qrcode": "^1.5.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-router-dom": "^7.18.4",
     "sharp": "^0.35.5",
     "undici": "^8.12.2",
     "web-push": "^3.6.7"

@@ -616,7 +616,7 @@ export default async function handler(req, res) {
             kind: "invite",
             title: `${fresh.name} با دعوتت اومد!`,
             body: "با دعوت تو اومد؛ یه رفاقت تازه در راهه.",
-            route: "/#/invite",
+            route: "/invite",
             dedupe: `joined:${fresh.id}`,
           }),
           notifyUser(fresh.id, {
@@ -624,7 +624,7 @@ export default async function handler(req, res) {
             kind: "request",
             title: "یه دعوت، یه شروع دوستی",
             body: "دعوت‌کننده‌ت منتظره به هم وصل بشین.",
-            route: "/#/friends",
+            route: "/friends",
             dedupe: `inviter:${fresh.invited_by}`,
           }),
         ]);
@@ -766,7 +766,7 @@ export default async function handler(req, res) {
         kind: "request",
         title: `${user.name} می‌خواد وصل بشین`,
         body: "یه رفیق تازه پشت دره.",
-        route: "/#/friends",
+        route: "/friends",
         dedupe: `request:${user.id}`,
       });
       return json(res, 200, { friends: await friends(user) });
@@ -852,7 +852,7 @@ export default async function handler(req, res) {
           kind: "social-request",
           title: operation === "request" ? `${user.name} درخواست دیدن حساب‌ها رو فرستاد` : `${user.name} درخواستت رو قبول کرد`,
           body: operation === "request" ? "با قبول درخواست، حساب‌های اجتماعی‌تون برای هم قابل دیدن می‌شه." : "حالا هر دوتون می‌تونین حساب‌های اجتماعی هم رو ببینین.",
-          route: "/#/friends",
+          route: "/friends",
           dedupe: `social:${relation.id}:${randomUUID()}`,
         });
       }

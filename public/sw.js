@@ -68,7 +68,7 @@ self.addEventListener("push", (event) => {
   let payload = {
     title: "جیشو",
     body: "یه لحظه از روزِ دوستات",
-    url: "/#/home",
+    url: "/home",
   };
   try {
     payload = { ...payload, ...event.data.json() };
@@ -87,7 +87,7 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const target = new URL(
-    event.notification.data?.url || "/#/home",
+    event.notification.data?.url || "/home",
     self.location.origin,
   );
   if (target.origin !== self.location.origin) return;

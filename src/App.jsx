@@ -7,6 +7,8 @@ import React, {
   Suspense,
 } from "react";
 import { createPortal } from "react-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { readPage, screenPath, notificationPath } from "./routing";
 import "./styles.css";
 import "./v2.css";
 import "./community.css";
@@ -103,42 +105,6 @@ function LoadingSection() {
     </div>
   );
 }
-const routes = [
-  "home",
-  "nearby",
-  "friends",
-  "stories",
-  "profile",
-  "stats",
-  "invite",
-  "circle",
-  "achievements",
-  "notifications",
-  "admin",
-  "publicProfile",
-  "groupJoin",
-  "privacy",
-  "terms",
-  "support",
-  "install",
-];
-const readRoute = () => {
-  if (
-    ["/privacy", "/terms", "/support", "/install"].includes(location.pathname)
-  )
-    return location.pathname.slice(1);
-  if (new URLSearchParams(location.search).get("group") && !location.hash)
-    return "groupJoin";
-  const value = location.hash.replace(/^#\/?/, "").split("/")[0];
-  if (!value && /^\/u\/[a-z0-9_]+\/?$/i.test(location.pathname))
-    return "publicProfile";
-  if (value === "discover") return "nearby";
-  return routes.includes(value) ? value : "home";
-};
-const readStoryKind = () => {
-  const value = location.hash.split("/")[2];
-  return ["weekly", "checkin", "invite", "need"].includes(value) ? value : null;
-};
 function Button({ children, secondary, lilac, className = "", ...props }) {
   return (
     <button
@@ -796,26 +762,24 @@ function AuthWizard({ invitation, onComplete, notify, authInfo, inviteOnly = tru
 }
 
 export default function App() {
+  const routeLocation = useLocation(), routerNavigate = useNavigate();
+  const page = readPage(routeLocation.pathname + routeLocation.search + routeLocation.hash);
+  const screen = page.screen === "settings" ? "profile" : page.screen;
+  const groupCode = new URLSearchParams(routeLocation.search).get("group") || "";
+  const publicPage = ["terms", "privacy", "support", "install"].includes(screen);
   const [data, setData] = useState(null),
     [loadError, setLoadError] = useState(""),
-    [entered, setEntered] = useState(
-      () =>
-        localStorage.getItem("jishoo:v2-entered") === "true" ||
-        location.pathname.startsWith("/u/") ||
-        location.hash.startsWith("#/"),
-    ),
-    [screen, setScreen] = useState(readRoute),
-    [storyKind, setStoryKind] = useState(readStoryKind),
-    [dialog, setDialog] = useState(null),
+    // Entry owns the public landing; every app URL opens its requested screen.
+    [entered, setEntered] = useState(true),
+    [storyKind, setStoryKind] = useState(page.storyKind),
+    [dialog, setDialogState] = useState(null),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
     [invitation, setInvitation] = useState(null),
     [inviteError, setInviteError] = useState(""),
     [moment, setMoment] = useState(null),
     [selectedFriend, setSelectedFriend] = useState(null),
-    [selectedCircle, setSelectedCircle] = useState(
-      () => location.hash.split("/")[2] || "",
-    ),
+    [dialogCircle, setSelectedCircle] = useState(""),
     [friendCode, setFriendCode] = useState(""),
     [circleName, setCircleName] = useState(""),
     [circleMembers, setCircleMembers] = useState([]),
@@ -831,16 +795,25 @@ export default function App() {
     [inviteLanding, setInviteLanding] = useState(() =>
       Boolean(new URLSearchParams(location.search).get("invite")),
     );
+  const selectedCircle = page.circleId || dialogCircle;
+  function closeSettings() {
+    setDialogState(null);
+    if (page.screen === "settings") {
+      if (routeLocation.state?.settingsFrom) routerNavigate(-1);
+      else routerNavigate("/profile", { replace: true });
+    }
+  }
+  function setDialog(value) {
+    if (value === null && page.screen === "settings") closeSettings();
+    else setDialogState(value);
+  }
   const pendingTimer = useRef(),
     returningVisitor = useRef(localStorage.getItem("jishoo:v2-entered") === "true"),
     releaseHandled = useRef(false),
     pendingRef = useRef(null),
     countdownTimer = useRef(),
-    groupCode = useRef(new URLSearchParams(location.search).get("group") || ""),
     timer = useRef(),
-    adminAccess = useRef(
-      new URLSearchParams(location.search).get("adminAccess"),
-    ),
+    usedAdminAccess = useRef(null),
     scroll = useRef(),
     lastRefresh = useRef(0),
     inviteFromUrl = useRef(
@@ -876,8 +849,9 @@ export default function App() {
     }
   }, []);
   useEffect(() => {
-    if (!["terms", "privacy", "support", "install"].includes(readRoute()))
-      refresh();
+    if (!publicPage && !data) refresh();
+  }, [publicPage, refresh]);
+  useEffect(() => {
     return () => {
       clearTimeout(timer.current);
       clearTimeout(pendingTimer.current);
@@ -885,7 +859,9 @@ export default function App() {
     };
   }, []);
   useEffect(() => {
-    const handle = location.pathname.match(/^\/u\/([a-z0-9_]+)\/?$/i)?.[1];
+    const handle = page.handle;
+    let active = true;
+    setPublicPerson(null);
     if (handle)
       fetch(
         `/api/app?action=profile-public&handle=${encodeURIComponent(handle)}`,
@@ -894,32 +870,26 @@ export default function App() {
         .then(async (r) => {
           const value = await r.json();
           if (!r.ok) throw new Error(value.message);
-          setPublicPerson(value.profile);
+          if (active) setPublicPerson(value.profile);
         })
-        .catch((e) => notify(e.message));
-  }, []);
+        .catch((e) => active && notify(e.message));
+    return () => { active = false; };
+  }, [page.handle]);
   useEffect(() => {
-    if (!data?.me.registered || !adminAccess.current) return;
-    const token = adminAccess.current;
-    adminAccess.current = null;
+    const token = new URLSearchParams(routeLocation.search).get("adminAccess");
+    if (!data?.me.registered || !token || usedAdminAccess.current === token) return;
+    usedAdminAccess.current = token;
     api("admin-redeem", { token })
       .then(async () => {
         await refresh();
         setEntered(true);
-        navigate("admin");
         const params = new URLSearchParams(location.search);
         params.delete("adminAccess");
-        history.replaceState(
-          null,
-          "",
-          location.pathname +
-            (params.size ? "?" + params.toString() : "") +
-            "#/admin",
-        );
+        routerNavigate("/admin" + (params.size ? "?" + params : ""), { replace: true });
         notify("خوش برگشتی، مدیر!");
       })
       .catch((e) => notify(e.message));
-  }, [data?.me.registered]);
+  }, [data?.me.registered, routeLocation.search]);
   useEffect(() => {
     if (
       !data?.me.registered ||
@@ -934,23 +904,23 @@ export default function App() {
       .then(async () => {
         await refresh();
         setInviteLanding(false);
-        navigate("admin");
         sessionStorage.removeItem("jishoo:invite");
-        history.replaceState(null, "", location.pathname + "#/admin");
+        routerNavigate("/admin", { replace: true });
         notify("حساب مدیریتی‌ت آماده‌ست!");
       })
       .catch((error) => notify(error.message));
   }, [data?.me.registered, invitation?.code]);
   useEffect(() => {
-    const change = () => {
-      setScreen(readRoute());
-      setStoryKind(readStoryKind());
-      const parts = location.hash.split("/");
-      if (parts[1] === "circle") setSelectedCircle(parts[2] || "");
-    };
-    window.addEventListener("hashchange", change);
-    return () => window.removeEventListener("hashchange", change);
-  }, []);
+    if (screen === "stories") setStoryKind(page.storyKind);
+    if (page.screen !== "settings") {
+      setDialogState(current => ["settings", "guestSettings"].includes(current) ? null : current);
+    } else if (data) {
+      setProfileName(data.me.name);
+      setProfileHandle(data.me.handle || "");
+      setSocials(data.me.socialLinks || {});
+      setDialogState(data.me.registered ? "settings" : "guestSettings");
+    }
+  }, [routeLocation.pathname, data?.me.id]);
   useEffect(() => {
     localStorage.setItem("jishoo:v2-entered", String(entered));
   }, [entered]);
@@ -990,24 +960,29 @@ export default function App() {
     };
   }, [entered, dialog, refresh]);
   useEffect(() => {
-    const code = inviteFromUrl.current;
+    const code = arrivingInvite || inviteFromUrl.current;
+    setInviteLanding(Boolean(arrivingInvite));
     if (!code) return;
+    let active = true;
+    inviteFromUrl.current = code;
+    setInviteError("");
     sessionStorage.setItem("jishoo:invite", code);
     getInvite(code)
-      .then(setInvitation)
-      .catch((error) => setInviteError(error.message));
-  }, []);
+      .then(value => active && setInvitation(value))
+      .catch((error) => active && setInviteError(error.message));
+    return () => { active = false; };
+  }, [arrivingInvite]);
   useEffect(() => {
     if (!data) return;
     const params = new URLSearchParams(location.search);
     if (params.get("login") !== "1") return;
     params.delete("login");
-    history.replaceState(null, "", location.pathname + (params.size ? "?" + params : "") + location.hash);
+    routerNavigate(location.pathname + (params.size ? "?" + params : "") + location.hash, { replace: true, state: routeLocation.state });
     setEntered(true);
     if (!data.me.registered) setDialog("auth");
   }, [data?.me.id]);
   useEffect(() => {
-    if (!data || !entered || inviteLanding || releaseHandled.current || ["terms", "privacy", "support", "install"].includes(screen)) return;
+    if (!data || !entered || inviteLanding || page.screen === "settings" || releaseHandled.current || ["terms", "privacy", "support", "install"].includes(screen)) return;
     const seen = localStorage.getItem(releaseStorageKey);
     if (seen === currentRelease.version) { releaseHandled.current = true; return; }
     if (!seen && !returningVisitor.current && !data.me.registered) {
@@ -1022,13 +997,7 @@ export default function App() {
       outcome = params.get("google");
     if (!outcome || !data) return;
     params.delete("google");
-    history.replaceState(
-      null,
-      "",
-      location.pathname +
-        (params.size ? "?" + params.toString() : "") +
-        location.hash,
-    );
+    routerNavigate(location.pathname + (params.size ? "?" + params : "") + location.hash, { replace: true, state: routeLocation.state });
     if (outcome === "continue") {
       setDialog("auth");
       notify("گوگلت تایید شد؛ با یه دعوت، حسابت رو بساز.");
@@ -1037,7 +1006,7 @@ export default function App() {
       notify("با این گوگل هنوز عضو نشدی؛ اول دعوتت رو وارد کن.");
     } else if (outcome === "merge_required") {
       setEntered(true);
-      setDialog("settings");
+      openSettings();
       notify("گوگلت یه حساب جدا داره؛ قبل از اتصال، هر دو حساب رو مرور کن.");
     } else if (outcome === "linked") notify("گوگلت به همین حساب وصل شد.");
     else if (outcome === "login") {
@@ -1052,22 +1021,14 @@ export default function App() {
     if (data?.me.registered) syncPush().catch(() => {});
   }, [data?.me.id, data?.me.registered]);
   function navigate(next, id) {
-    if (next === "discover") next = "nearby";
-    setScreen(next);
-    if (next === "stories")
-      setStoryKind(
-        ["weekly", "checkin", "invite", "need"].includes(id) ? id : null,
-      );
-    if (id) setSelectedCircle(id);
-    location.hash = "/" + next + (id ? "/" + id : "");
-    window.dispatchEvent(new Event("jishoo:navigation"));
+    // Query state belongs to its flow, rather than leaking into every page.
+    routerNavigate(screenPath(next, id) + (next === "groupJoin" ? location.search : ""));
   }
   function finishInviteLanding() {
     setInviteLanding(false); setEntered(true); setInvitation(null);
     sessionStorage.removeItem("jishoo:invite"); inviteFromUrl.current = "";
-    navigate("home");
     const params = new URLSearchParams(location.search); params.delete("invite");
-    history.replaceState(null, "", location.pathname + (params.size ? "?" + params : "") + "#/home");
+    routerNavigate("/home" + (params.size ? "?" + params : ""), { replace: true });
   }
   function openAuth() {
     setDialog("auth");
@@ -1089,7 +1050,7 @@ export default function App() {
     navigate(
       result.me.isAdmin
         ? "admin"
-        : screen === "groupJoin" && groupCode.current
+        : screen === "groupJoin" && groupCode
           ? "groupJoin"
           : "home",
     );
@@ -1190,7 +1151,7 @@ export default function App() {
   }
   async function shareGroupLink() {
     if (!circle?.inviteCode) return;
-    const url = new URL(data.publicUrl);
+    const url = new URL("/group", data.publicUrl);
     url.searchParams.set("group", circle.inviteCode);
     if (data.invitationQuota?.remaining !== 0 && me.inviteCode)
       url.searchParams.set("invite", me.inviteCode);
@@ -1232,10 +1193,8 @@ export default function App() {
     }
   }
   function openSettings() {
-    setProfileName(data.me.name);
-    setProfileHandle(data.me.handle || "");
-    setSocials(data.me.socialLinks || {});
-    setDialog("settings");
+    if (page.screen === "settings") return;
+    routerNavigate("/settings", { state: { settingsFrom: routeLocation.pathname + routeLocation.search } });
   }
   async function saveProfile(e) {
     e.preventDefault();
@@ -1391,7 +1350,6 @@ export default function App() {
       setInvitation(null);
       inviteFromUrl.current = "";
       sessionStorage.removeItem("jishoo:invite");
-      history.replaceState(null, "", location.pathname);
       navigate("home");
       await refresh();
     }
@@ -1490,7 +1448,7 @@ export default function App() {
         ) : screen === "groupJoin" ? (
           <Suspense fallback={<LoadingSection />}>
             <GroupJoin
-              code={groupCode.current}
+              code={groupCode}
               data={data}
               onAuth={openAuth}
               notify={notify}
@@ -1912,8 +1870,7 @@ export default function App() {
                   notify={notify}
                   onBack={() => navigate("home")}
                   onNavigate={(route) => {
-                    const value = route.split("#/")[1]?.split("/")[0];
-                    navigate(routes.includes(value) ? value : "home");
+                    routerNavigate(notificationPath(route, location.origin));
                   }}
                 />
               )}

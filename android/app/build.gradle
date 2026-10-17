@@ -11,7 +11,7 @@ android {
         targetSdk 36
         versionCode Integer.parseInt(System.getenv('JISHOO_ANDROID_VERSION_CODE') ?: '1')
         versionName System.getenv('JISHOO_ANDROID_VERSION_NAME') ?: '1.0.0'
-        manifestPlaceholders = [siteHost: siteHost, launchUrl: siteOrigin + '/?source=twa#/home']
+        manifestPlaceholders = [siteHost: siteHost, launchUrl: siteOrigin + '/home?source=twa']
         resValue 'string', 'asset_statements', '[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"web","site":"' + siteOrigin + '"}}]'
     }
     signingConfigs {

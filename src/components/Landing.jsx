@@ -7,7 +7,7 @@ export default function Landing() {
     <a className="landing-skip" href="#landing-main">رفتن به محتوای اصلی</a>
     <header className="landing-header">
       <a href="/" className="landing-brand"><img src="/assets/favicon-v2-64.png" width="40" height="40" alt="" />جیشو</a>
-      <nav aria-label="معرفی جیشو"><a href="#how">چطوریه؟</a><a href="/changelog">تازه‌ها</a><a className="landing-login" href="/?login=1#/home">ورود با گوگل</a></nav>
+      <nav aria-label="معرفی جیشو"><a href="#how">چطوریه؟</a><a href="/changelog">تازه‌ها</a><a className="landing-login" href="/home?login=1">ورود با گوگل</a></nav>
     </header>
     <main id="landing-main">
       <section className="landing-hero">
@@ -15,7 +15,7 @@ export default function Landing() {
           <span className="landing-eyebrow">یه جمع خودمونی، برای لحظه‌های معمولی</span>
           <h1>چیزای کوچیک،<br /><em>رفاقت‌های قشنگ.</em></h1>
           <p>«جیش دارم» یا «جیش کردم»؛ همین یه لحظهٔ ساده، یه لبخند برای دوستات. با آدمای خودت در تماس بمون و خاطره‌های کوچیکتون رو نگه دار.</p>
-          <a className="landing-primary" href="/#/home">بریم جیشو <span aria-hidden="true">←</span></a>
+          <a className="landing-primary" href="/home">بریم جیشو <span aria-hidden="true">←</span></a>
           <small>بدون حساب هم می‌تونی شروع کنی. برای عضویت، دعوت یه دوست لازمه.</small>
         </div>
         <div className="landing-illustration" aria-label="قطرهٔ خجالتی و دوست‌داشتنی جیشو">
@@ -44,7 +44,7 @@ export default function Landing() {
         <details><summary>بدون دعوت می‌شه عضو شد؟</summary><p>فعلاً عضویت فقط با دعوته؛ از یه دوست لینک یا کد دعوت بگیر. تا اون موقع مهمان مایی.</p></details>
         <details><summary>چطور روی گوشی نصبش کنم؟</summary><p>جیشو توی مرورگر هم کار می‌کنه. برای اضافه‌کردنش به صفحهٔ گوشی، <a href="/install">راهنمای نصب</a> رو ببین.</p></details>
       </section>
-      <section className="landing-last"><h2>یه لحظه از روزت، برای دوستات.</h2><a className="landing-primary" href="/#/home">بریم تو جیشو ←</a><p>اگه دوستت دعوتت کرده، از همون لینک وارد شو.</p></section>
+      <section className="landing-last"><h2>یه لحظه از روزت، برای دوستات.</h2><a className="landing-primary" href="/home">بریم تو جیشو ←</a><p>اگه دوستت دعوتت کرده، از همون لینک وارد شو.</p></section>
     </main>
     <footer className="landing-footer"><a className="landing-brand" href="/">جیشو 💧</a><nav aria-label="لینک‌های جیشو"><a href="/terms">شرایط استفاده</a><a href="/privacy">حریم خصوصی</a><a href="/support">پشتیبانی</a><a href="/install">نصب روی گوشی</a><a href="/changelog">تازه‌های جیشو</a></nav><small>یه لحظهٔ ساده، یه لبخند مشترک.</small></footer>
   </div>;
