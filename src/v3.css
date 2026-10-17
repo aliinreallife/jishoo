@@ -748,3 +748,16 @@ button.preference-action:focus-visible,
   border-color: #dfd3ee;
   color: #75638d;
 }
+.premium-trial-notice {
+  margin-block: 23px 24px;
+  padding: 16px;
+  color: #80642b;
+}
+.premium-trial-notice > svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.premium-trial-notice p {
+  font-size: 12px;
+  line-height: 2;
+}

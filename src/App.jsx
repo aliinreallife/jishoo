@@ -2833,7 +2833,7 @@ export default function App() {
                   </ul>
                   {data.testing && <p>در دورهٔ آزمایشی، این‌ها هم برای همه رایگان فعاله.</p>}
                 </section>
-                <div className="invite-rules">
+                <div className="invite-rules premium-trial-notice">
                   <Heart size={19} weight="fill" />
                   <p>
                     با دعوت: ۷ روز برای هر دو نفر. بعداً بدون دعوت: ۳ روز برای

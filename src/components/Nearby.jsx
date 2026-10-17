@@ -13,6 +13,9 @@ import {
   Minus,
   Drop,
   CaretDown,
+  CaretUp,
+  Eye,
+  EyeSlash,
   SlidersHorizontal,
 } from "@phosphor-icons/react";
 import { markerOffsets } from "../map-markers";
@@ -43,6 +46,7 @@ export default function Nearby({
     [peopleOpen, setPeopleOpen] = useState(false),
     [panelOpen, setPanelOpen] = useState(true),
     [peopleBusy, setPeopleBusy] = useState(false),
+    [sharingBusy, setSharingBusy] = useState(false),
     [loading, setLoading] = useState(false),
     [sharing, setSharing] = useState(me.shareLocation);
   useEffect(() => {
@@ -220,11 +224,13 @@ export default function Nearby({
     });
   }, [activity]);
   async function changeSharing(enabled) {
+    if (sharingBusy || peopleBusy) return;
     if (enabled && !position) {
       notify("اول اجازه‌ی مکان بده تا موقعیت تقریبی‌ت مشخص بشه.");
       locate();
       return;
     }
+    setSharingBusy(true);
     try {
       await api("location", { enabled, ...position });
       setSharing(enabled);
@@ -237,9 +243,12 @@ export default function Nearby({
       refresh(position);
     } catch (error) {
       notify(error.message);
+    } finally {
+      setSharingBusy(false);
     }
   }
   async function changeDiscovery() {
+    if (sharingBusy || peopleBusy) return;
     if (!me.registered) {
       onAuth();
       return;
@@ -290,18 +299,23 @@ export default function Nearby({
       <div className="map-controls">
         <button
           aria-label="بزرگ‌نمایی نقشه"
+          title="بزرگ‌نمایی نقشه"
           onClick={() => map.current?.zoomIn()}
         >
           <Plus size={21} />
+          <span>بزرگ‌نمایی</span>
         </button>
         <button
           aria-label="کوچک‌نمایی نقشه"
+          title="کوچک‌نمایی نقشه"
           onClick={() => map.current?.zoomOut()}
         >
           <Minus size={21} />
+          <span>کوچک‌نمایی</span>
         </button>
         <button
           aria-label="مکان من"
+          title="برگشت به مکان من"
           onClick={() =>
             position
               ? map.current?.setView([position.lat, position.lng], 15)
@@ -309,6 +323,7 @@ export default function Nearby({
           }
         >
           <NavigationArrow size={22} />
+          <span>مکان من</span>
         </button>
       </div>
       {!position ? (
@@ -347,54 +362,64 @@ export default function Nearby({
               </button>
             </div>
           </div>
-          <label className="location-choice">
+          <div className={`location-choice map-visibility-choice ${sharing ? "is-visible" : ""}`}>
             <span>
-              خبر من هم با مکان تقریبی نمایش داده بشه
-              <small>برای بقیه بی‌نام؛ برای دوست‌های وصل‌شده با اسم</small>
+              <strong>{sharing ? "خبرم روی نقشه‌ست" : "روی نقشه پنهانم"}</strong>
+              <small id="map-sharing-explanation">
+                {sharing
+                  ? "مکان تقریبی؛ برای بقیه بی‌نام، برای دوست‌هات با اسم."
+                  : "خبر و پروفایلت پنهانه؛ خودت نقشه رو می‌بینی."}
+              </small>
             </span>
-            <input
-              type="checkbox"
-              className="toggle"
-              checked={sharing}
-              onChange={(e) => changeSharing(e.target.checked)}
-            />
-          </label>
+            <button
+              className="map-sharing-action"
+              aria-pressed={Boolean(sharing)}
+              aria-describedby="map-sharing-explanation"
+              disabled={sharingBusy || peopleBusy}
+              onClick={() => changeSharing(!sharing)}
+            >
+              {sharing ? <EyeSlash size={18} /> : <Eye size={18} />}
+              {sharingBusy ? "در حال ذخیره…" : sharing ? "پنهانم کن" : "نمایش خبرم"}
+            </button>
+          </div>
           <button
             className="nearby-people-trigger"
             aria-expanded={peopleOpen}
+            aria-controls="nearby-people-list"
             onClick={() => setPeopleOpen(!peopleOpen)}
           >
-            <span>آدم‌های این نزدیکا</span>
+            <span>{peopleOpen ? "بستن فهرست آدم‌های نزدیک" : "دیدن آدم‌های این نزدیکا"}</span>
             <strong>
               {me.registered ? fa(people.length) : "با ورود به حساب"}
             </strong>
-            <Plus size={17} />
+            {peopleOpen ? <CaretUp size={18} /> : <CaretDown size={18} />}
           </button>
-          {peopleOpen && (
-            <div className="nearby-people-panel">
+            <div className="nearby-people-panel" id="nearby-people-list" hidden={!peopleOpen}>
               {me.registered ? (
                 <>
                   <button
                     className="discovery-visibility"
-                    aria-pressed={Boolean(me.discoverable)}
-                    disabled={peopleBusy}
+                    aria-pressed={Boolean(sharing && me.discoverable)}
+                    disabled={peopleBusy || sharingBusy}
                     onClick={changeDiscovery}
                   >
-                    <ShieldCheck size={19} />
                     <span>
                       <strong>
-                        {me.discoverable
-                          ? "پروفایلم اینجا دیده می‌شه"
+                        {sharing && me.discoverable
+                          ? "پروفایلم برای آدم‌های نزدیک پیداست"
                           : "پروفایلم در فهرست پنهانه"}
                       </strong>
                       <small>
-                        {me.discoverable
-                          ? "برای پنهان‌کردن بزن"
-                          : "برای نمایش نام و پروفایل به آدم‌های نزدیک بزن"}
+                        {sharing && me.discoverable
+                          ? "آدم‌های نزدیک می‌تونن اسمت رو ببینن و درخواست دوستی بفرستن."
+                          : sharing
+                            ? "با انتخاب خودت، اسم و پروفایلت به فهرست اضافه می‌شه."
+                            : "با این انتخاب، نمایش خبرت با مکان تقریبی هم روشن می‌شه."}
                       </small>
                     </span>
                     <span className="discovery-action-label">
-                      {me.discoverable ? "پنهان کن" : "نمایش بده"}
+                      {sharing && me.discoverable ? <EyeSlash size={18} /> : <Eye size={18} />}
+                      {peopleBusy ? "در حال ذخیره…" : sharing && me.discoverable ? "پنهان‌کردن پروفایل" : "نمایش پروفایلم"}
                     </span>
                   </button>
                   <div className="nearby-people-list">
@@ -445,7 +470,6 @@ export default function Nearby({
                 </>
               )}
             </div>
-          )}
           <p className="map-grid-explanation">
             نقطه‌ها محل دقیق افراد نیستن. نشانگرهای یک محدوده برای خوانایی از هم
             باز می‌شن.
