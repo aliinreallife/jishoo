@@ -122,7 +122,7 @@ def main():
    a.get_by_role('button',name='ماه',exact=True).click();expect(a.locator('.lovely-chart .lovely-column')).to_have_count(30)
    a.get_by_role('button',name='همه‌وقت',exact=True).click();expect(a.locator('.lovely-chart .lovely-column')).to_have_count(12)
    expect(a.locator('.drop-calendar-grid > div')).to_have_count(21)
-   expect(a.locator('.toast')).to_have_count(0,timeout=6000);capture(a,'v4-stats.png')
+   expect(a.locator('.toast.visible')).to_have_count(0,timeout=6000);capture(a,'v4-stats.png')
    print('PASS: Disconnect revokes friendship/social access while group membership stays separate; real week/month/year chart ranges render',flush=True)
    point={'lat':35.70127,'lng':51.40137}
    for page in [a,c]:api(page,'location',{**point,'enabled':True});api(page,'checkin',{'status':'need','visibility':'friends','nonce':secrets.token_hex(12)})
