@@ -48,7 +48,7 @@ TRACK_INK = """(() => {
 
 
 def check_ink(records, square, label):
-    left, right, top, bottom = (0, 1080, 0, 1080) if square else (80, 1000, 150, 1720)
+    left, right, top, bottom = (0, 1080, 0, 1080) if square else (80, 1000, 100, 1720)
     for row in records:
         b = row["box"]
         assert b["left"] >= left - 1 and b["right"] <= right + 1 and b["top"] >= top - 1 and b["bottom"] <= bottom + 1, (label, row)
@@ -217,12 +217,12 @@ def main():
                 if case["format"] == "story" and not case["caption"] and case["count"] == 37:
                     previews.append({"kind": case["kind"], "image": "data:image/png;base64," + result["png"]})
             assert not errors, errors
-            print("PASS: All six card types fit the 150px top and 200px bottom allowances, including long names, 100-character captions and empty/single/full weekly counts. Text does not collide.", flush=True)
+            print("PASS: All six card types fit the 100px top and 200px bottom allowances, including long names, 100-character captions and empty/single/full weekly counts. Text does not collide.", flush=True)
 
             # QA-only simulations of account/progress and reply controls. These
             # overlays are not part of exported PNGs or the product preview.
             page.set_viewport_size({"width": 900, "height": 1040})
-            page.set_content("""<style>*{box-sizing:border-box}body{margin:0;padding:20px;background:#e6e1eb;font:14px system-ui}.grid{display:grid;grid-template-columns:repeat(3,270px);gap:20px}figure{margin:0;position:relative;width:270px;height:480px;border-radius:16px;overflow:hidden}img{width:100%;height:100%}.top,.bottom{position:absolute;left:0;right:0;color:white;background:#29233270;padding:14px}.top{top:0;height:7.8125%;padding:7px 10px}.top .bars{margin-bottom:4px}.top .avatar{width:16px;height:16px}.bars{display:flex;gap:3px;margin-bottom:9px}.bars i{height:2px;background:white;flex:1}.id{display:flex;gap:7px;align-items:center;font-size:11px}.avatar{width:20px;height:20px;border:1px solid white;border-radius:50%;background:#b9c9eb}.bottom{bottom:0;height:10.4167%;display:flex;align-items:flex-end;gap:8px;padding:7px 10px}.reply{border:1px solid #ffffff99;border-radius:30px;padding:8px;flex:1;font-size:11px}</style><div class=grid></div>""")
+            page.set_content("""<style>*{box-sizing:border-box}body{margin:0;padding:20px;background:#e6e1eb;font:14px system-ui}.grid{display:grid;grid-template-columns:repeat(3,270px);gap:20px}figure{margin:0;position:relative;width:270px;height:480px;border-radius:16px;overflow:hidden}img{width:100%;height:100%}.top,.bottom{position:absolute;left:0;right:0;color:white;background:#29233270;padding:14px}.top{top:0;height:5.2083%;padding:4px 10px}.top .bars{margin-bottom:2px}.top .avatar{width:13px;height:13px}.top .id{font-size:9px}.bars{display:flex;gap:3px;margin-bottom:9px}.bars i{height:2px;background:white;flex:1}.id{display:flex;gap:7px;align-items:center;font-size:11px}.avatar{width:20px;height:20px;border:1px solid white;border-radius:50%;background:#b9c9eb}.bottom{bottom:0;height:10.4167%;display:flex;align-items:flex-end;gap:8px;padding:7px 10px}.reply{border:1px solid #ffffff99;border-radius:30px;padding:8px;flex:1;font-size:11px}</style><div class=grid></div>""")
             page.evaluate("""items=>{const grid=document.querySelector('.grid');for(const item of items){const figure=document.createElement('figure');const img=new Image();img.src=item.image;figure.append(img);const top=document.createElement('div');top.className='top';top.innerHTML='<div class=bars><i></i><i></i><i></i></div><div class=id><span class=avatar></span>username · 2h <span style="margin-left:auto">••• ×</span></div>';const bottom=document.createElement('div');bottom.className='bottom';bottom.innerHTML='<span class=reply>Send message…</span><span>♡</span><span>➤</span>';figure.append(top,bottom);grid.append(figure)}}""", previews)
             page.screenshot(path=str(OUT / "social-overlay-check.png"), full_page=True)
         finally:

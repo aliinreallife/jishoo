@@ -12,7 +12,7 @@ export const headlines = {
 };
 // Within the ordinary-Story ranges supplied from Hootsuite by the user.
 // Keep both edges reserved; spread existing content through the recovered space.
-export const STORY_SAFE_AREA = Object.freeze({ top: 150, bottom: 200, side: 80 });
+export const STORY_SAFE_AREA = Object.freeze({ top: 100, bottom: 200, side: 80 });
 const assets = `${import.meta.env.BASE_URL}assets/`;
 const images = new Map();
 let fonts;
