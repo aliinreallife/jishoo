@@ -101,7 +101,7 @@ export default function Friends({
             <PairArt size={200} />
             <h2>{group.ownerName} دعوتت کرده</h2>
             <p>
-              با عضویت، اسم و پروفایلت برای اعضا دیده می‌شه. خبرها و لینک‌های
+              با عضویت، اسم و پروفایلت برای اعضا دیده می‌شه. ثبت‌ها و لینک‌های
               اجتماعی فقط با دوستی و اجازهٔ جداگانه نمایش داده می‌شن.
             </p>
             <button
@@ -150,7 +150,7 @@ export default function Friends({
                 <strong>
                   {muted(group.id)
                     ? "این گروه بی‌صداست"
-                    : "خبرهای این گروه روشنه"}
+                    : "اعلان‌های این گروه روشنه"}
                 </strong>
                 <small>
                   {muted(group.id)
@@ -250,7 +250,7 @@ export default function Friends({
       <header className="community-heading">
         <div>
           <h1>رفقای من</h1>
-          <p>خبرهای کوچولو، آدم‌های آشنا.</p>
+          <p>اینجا جمعِ آدمای خودته.</p>
         </div>
         {data.me.registered && (
           <button
@@ -346,7 +346,7 @@ export default function Friends({
                       <p>
                         {friend.latestStatus
                           ? `${friend.latestStatus === "need" ? "جیش داره" : "جیش کرده"} · ${relativeTime(friend.latestAt)}`
-                          : "هنوز خبر تازه‌ای نداده"}
+                          : "هنوز جیشی ثبت نکرده"}
                       </p>
                     </div>
                     <CaretLeft size={20} />
@@ -401,7 +401,7 @@ export default function Friends({
               {!data.circles.filter((c) => !c.pending).length && (
                 <div className="empty-state compact-empty">
                   <UsersThree size={45} />
-                  <h2>یه جمع کوچولو بساز</h2>
+                  <h2>جمع خودت رو بساز</h2>
                   <p>
                     دوست‌های دانشگاه، خانواده یا رفقای همیشگی؛ هر کدوم یه گروه.
                   </p>

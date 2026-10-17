@@ -154,3 +154,57 @@
   overflow-wrap: anywhere;
   font-size: 11px;
 }
+.phone-paused-note {
+  display: block;
+  margin: 14px 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #f5efe1;
+  color: #78694d;
+  font-size: 12px;
+  line-height: 2;
+}
+.account-merge-card {
+  margin: 18px 0;
+  padding: 18px;
+  border: 1px solid #d9cde9;
+  border-radius: 22px;
+  background: #f7f2fc;
+  color: #625074;
+}
+.account-merge-card h4 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+.account-merge-card p,
+.account-merge-card ul {
+  font-size: 12px;
+  line-height: 2;
+}
+.account-merge-card ul {
+  padding-inline-start: 20px;
+  margin-block: 16px;
+}
+.account-merge-card li + li {
+  margin-top: 10px;
+}
+.merge-profile {
+  display: grid;
+  gap: 5px;
+  margin: 12px 0;
+  padding: 12px;
+  background: #fffdf7;
+  border-radius: 14px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.merge-profile > strong,
+.merge-profile > small {
+  color: #8a7c96;
+  font-size: 11px;
+}
+.account-merge-card > .text-link {
+  display: block;
+  margin: 12px auto 0;
+  min-height: 44px;
+}

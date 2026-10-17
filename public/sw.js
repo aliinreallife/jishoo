@@ -62,7 +62,7 @@ self.addEventListener("fetch", (event) => {
 self.addEventListener("push", (event) => {
   let payload = {
     title: "جیشو",
-    body: "یه خبر کوچولو از دوستات",
+    body: "یه لحظه از روزِ دوستات",
     url: "/#/home",
   };
   try {

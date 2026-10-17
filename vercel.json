@@ -19,6 +19,10 @@
       "destination": "/api/profile?handle=:handle"
     },
     {
+      "source": "/changelog",
+      "destination": "/index.html"
+    },
+    {
       "source": "/privacy",
       "destination": "/index.html"
     },

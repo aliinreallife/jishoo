@@ -390,6 +390,45 @@ test("Google return locations stay on the app and cannot redirect to another sit
     assert.equal(safeReturnPath(path), "/");
   assert.equal(safeReturnPath("/?invite=QA#/friends"), "/?invite=QA#/friends");
 });
+test("phone authentication is off by default and cannot activate the demo outside testing", async () => {
+  const { phoneAuthEnabled, removeGoogle } = await import("../lib/google-auth.js");
+  const savedFlag = process.env.PHONE_AUTH_ENABLED, savedTesting = process.env.TESTING_MODE;
+  try {
+    delete process.env.PHONE_AUTH_ENABLED;
+    process.env.TESTING_MODE = "true";
+    assert.equal(phoneAuthEnabled(), false);
+    await assert.rejects(removeGoogle({ registered: true, phone_hash: "exists" }, (_status, message) => { throw new Error(message); }), /تنها راه ورود/);
+    process.env.PHONE_AUTH_ENABLED = "true";
+    process.env.TESTING_MODE = "false";
+    assert.equal(phoneAuthEnabled(), false);
+    process.env.TESTING_MODE = "true";
+    assert.equal(phoneAuthEnabled(), true);
+  } finally {
+    if (savedFlag === undefined) delete process.env.PHONE_AUTH_ENABLED; else process.env.PHONE_AUTH_ENABLED = savedFlag;
+    if (savedTesting === undefined) delete process.env.TESTING_MODE; else process.env.TESTING_MODE = savedTesting;
+  }
+});
+test("account linking does not offer merges into admin, banned or phone-linked accounts", async () => {
+  const { prepareAccountMerge } = await import("../lib/account-merge.js");
+  const source = { phone_hash: "source" };
+  for (const target of [{ role: "admin" }, { role: "member", banned: true }, { role: "member", phone_hash: "other" }])
+    assert.equal(await prepareAccountMerge(source, target, {}, "session"), false);
+  assert.equal(await prepareAccountMerge({}, { role: "member" }, {}, "session"), false);
+});
+test("Persian calendar handles Nowruz and leap Esfand, with Saturday–Friday weeks", async () => {
+  const { persianMonth, persianParts, weekDays, dayKey, periodTotals } = await import("../lib/calendar.js");
+  const nowruz = new Date("2026-03-21T12:00:00Z");
+  assert.deepEqual(persianParts(nowruz), { month: 1, day: 1, year: 1405 });
+  assert.equal(persianMonth(nowruz).days.length, 31);
+  assert.equal(persianMonth(new Date("2025-03-20T12:00:00Z")).days.length, 30);
+  assert.equal(persianMonth(new Date("2026-03-20T12:00:00Z")).days.length, 29);
+  const week = weekDays(new Date("2026-10-21T12:00:00Z"));
+  assert.equal(week[0].getUTCDay(), 6);
+  assert.equal(week[6].getUTCDay(), 5);
+  assert.equal(dayKey(week[0]), "2026-10-17");
+  assert.equal(dayKey(week[6]), "2026-10-23");
+  assert.deepEqual(periodTotals([{ day: "2026-03-20", count: 4 }, { day: "2026-03-21", count: 2 }], nowruz), { week: 2, month: 2 });
+});
 test("Android asset links require real valid signing fingerprints", async () => {
   const { assetLinks } = await import("../lib/android.js");
   assert.deepEqual(assetLinks({}), []);

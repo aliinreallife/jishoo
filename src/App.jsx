@@ -7,6 +7,12 @@ import React, {
   Suspense,
 } from "react";
 import { createPortal } from "react-dom";
+import "./styles.css";
+import "./v2.css";
+import "./community.css";
+import "./v3.css";
+import { currentRelease, releaseStorageKey } from "./releases";
+import { ReleaseNotes } from "./components/ReleaseNotes";
 import {
   House,
   UsersThree,
@@ -448,12 +454,12 @@ function AuthWizard({ invitation, onComplete, notify, authInfo }) {
       {stage === "phone" ? (
         <>
           <div className="dialog-icon blue">
-            <Phone size={30} weight="duotone" />
+            {authInfo?.phoneLoginEnabled ? <Phone size={30} weight="duotone" /> : <Drop size={30} weight="duotone" />}
           </div>
-          <h2>با شماره‌ت بیا تو جمع</h2>
+          <h2>{authInfo?.phoneLoginEnabled ? "با شماره‌ت بیا تو جمع" : "خوش اومدی به جیشو"}</h2>
           <p className="dialog-description">
-            ورود با گوگل یا شماره. اگه عضو جدیدی، دعوت دوستت رو لازم داری. مهمان
-            هم همیشه می‌تونه جیش کنه.
+            با گوگل وارد شو. اگه عضو جدیدی، دعوت دوستت رو لازم داری.
+            مهمان هم همیشه می‌تونه از جیشو استفاده کنه.
           </p>
           {!invitation && (
             <div className="invitation-required">
@@ -478,7 +484,7 @@ function AuthWizard({ invitation, onComplete, notify, authInfo }) {
               <GoogleBanner auth={authInfo} notify={notify} />
             </Suspense>
           )}
-          <form onSubmit={start}>
+          {authInfo?.phoneLoginEnabled ? <><form onSubmit={start}>
             <label className="field-label">
               شماره موبایل
               <input
@@ -509,6 +515,7 @@ function AuthWizard({ invitation, onComplete, notify, authInfo }) {
           <p className="auth-demo-note">
             نسخه‌ی آزمایشی: پیامکی ارسال نمی‌شه و کد خودکار تایید می‌شه.
           </p>
+          </> : <p className="auth-demo-note">ورود با شماره موقتاً غیرفعاله. اگه با شماره عضو شدی و هنوز وارد حسابتی، از تنظیمات همون حساب گوگلت رو وصل کن.</p>}
         </>
       ) : stage === "otp" ? (
         <>
@@ -564,7 +571,7 @@ function AuthWizard({ invitation, onComplete, notify, authInfo }) {
           <h2>به {invite.inviter.name} وصل بشیم؟</h2>
           <p>
             {(completed.bonusDays || completed.lifetimeGift) ? "حسابت ساخته شد!" : "خوش برگشتی!"} با
-            وصل‌شدن، خبرهای کوچولوی هم رو می‌بینین. لینک‌های اجتماعی‌ت فقط با
+            وصل‌شدن، حال‌و‌احوال دوستاتی هم رو می‌بینین. لینک‌های اجتماعی‌ت فقط با
             اجازهٔ جداگانه به اشتراک گذاشته می‌شن.
           </p>
           <Button
@@ -622,8 +629,7 @@ function AuthWizard({ invitation, onComplete, notify, authInfo }) {
           {ticket === "google" && (
             <div className="pending-google-note">
               گوگلت تایید شده. برای عضویت فقط اسمت و دعوت لازمه.
-              <span dir="ltr">{authInfo?.pendingGoogle}</span>شمارهٔ موبایل رو
-              هر وقت خواستی از پروفایل وصل کن.
+              <span dir="ltr">{authInfo?.pendingGoogle}</span>
             </div>
           )}
           <div className="name-character-preview">
@@ -636,9 +642,9 @@ function AuthWizard({ invitation, onComplete, notify, authInfo }) {
           </div>
           <h2>اسمت چیه؟</h2>
           <p className="dialog-description">
-            شخصیتت از روی اسمت ساخته می‌شه؛ یه کوچولوی مخصوص خودت.
+            شخصیتت از روی اسمت ساخته می‌شه؛ یه چهرهٔ مخصوص خودت.
           </p>
-          {ticket === "google" && (
+          {ticket === "google" && authInfo?.phoneLoginEnabled && (
             <button
               className="text-link"
               onClick={() => {
@@ -742,7 +748,7 @@ export default function App() {
       () =>
         localStorage.getItem("jishoo:v2-entered") === "true" ||
         location.pathname.startsWith("/u/") ||
-        location.hash.startsWith("#/admin"),
+        location.hash.startsWith("#/"),
     ),
     [screen, setScreen] = useState(readRoute),
     [storyKind, setStoryKind] = useState(readStoryKind),
@@ -772,6 +778,8 @@ export default function App() {
       Boolean(new URLSearchParams(location.search).get("invite")),
     );
   const pendingTimer = useRef(),
+    returningVisitor = useRef(localStorage.getItem("jishoo:v2-entered") === "true"),
+    releaseHandled = useRef(false),
     pendingRef = useRef(null),
     countdownTimer = useRef(),
     groupCode = useRef(new URLSearchParams(location.search).get("group") || ""),
@@ -786,6 +794,16 @@ export default function App() {
         sessionStorage.getItem("jishoo:invite") ||
         "",
     );
+  const arrivingInvite = new URLSearchParams(location.search).get("invite");
+  const inviteRecognition = !inviteLanding || !data?.me.registered ? null
+    : arrivingInvite && data.me.inviteCode === arrivingInvite ? "own"
+    : (arrivingInvite && data.me.joinedInviteCode === arrivingInvite) ||
+      (invitation?.inviter && (data.me.invitedBy === invitation.inviter.id || data.friends.some((f) => f.id === invitation.inviter.id && f.status === "accepted"))) ? "accepted" : null;
+  useEffect(() => {
+    if (!inviteRecognition || screen === "groupJoin") return;
+    const redirect = setTimeout(finishInviteLanding, 1400);
+    return () => clearTimeout(redirect);
+  }, [inviteRecognition, screen]);
   const notify = useCallback((text) => {
     setNotice(text);
     clearTimeout(timer.current);
@@ -926,6 +944,26 @@ export default function App() {
       .catch((error) => setInviteError(error.message));
   }, []);
   useEffect(() => {
+    if (!data) return;
+    const params = new URLSearchParams(location.search);
+    if (params.get("login") !== "1") return;
+    params.delete("login");
+    history.replaceState(null, "", location.pathname + (params.size ? "?" + params : "") + location.hash);
+    setEntered(true);
+    if (!data.me.registered) setDialog("auth");
+  }, [data?.me.id]);
+  useEffect(() => {
+    if (!data || !entered || inviteLanding || releaseHandled.current || ["terms", "privacy", "support", "install"].includes(screen)) return;
+    const seen = localStorage.getItem(releaseStorageKey);
+    if (seen === currentRelease.version) { releaseHandled.current = true; return; }
+    if (!seen && !returningVisitor.current && !data.me.registered) {
+      localStorage.setItem(releaseStorageKey, currentRelease.version);
+      releaseHandled.current = true;
+      return;
+    }
+    if (!dialog && !pendingCheckin) setDialog("whatsNew");
+  }, [data?.me.id, entered, inviteLanding, dialog, pendingCheckin, screen]);
+  useEffect(() => {
     const params = new URLSearchParams(location.search),
       outcome = params.get("google");
     if (!outcome || !data) return;
@@ -940,6 +978,10 @@ export default function App() {
     if (outcome === "continue") {
       setDialog("auth");
       notify("گوگلت تایید شد؛ با یه دعوت، حسابت رو بساز.");
+    } else if (outcome === "merge_required") {
+      setEntered(true);
+      setDialog("settings");
+      notify("گوگلت یه حساب جدا داره؛ قبل از اتصال، هر دو حساب رو مرور کن.");
     } else if (outcome === "linked") notify("گوگلت به همین حساب وصل شد.");
     else if (outcome === "login") {
       setEntered(true);
@@ -962,10 +1004,26 @@ export default function App() {
     if (id) setSelectedCircle(id);
     location.hash = "/" + next + (id ? "/" + id : "");
   }
+  function finishInviteLanding() {
+    setInviteLanding(false); setEntered(true); setInvitation(null);
+    sessionStorage.removeItem("jishoo:invite"); inviteFromUrl.current = "";
+    navigate("home");
+    const params = new URLSearchParams(location.search); params.delete("invite");
+    history.replaceState(null, "", location.pathname + (params.size ? "?" + params : "") + "#/home");
+  }
   function openAuth() {
     setDialog("auth");
   }
+  function dismissRelease() {
+    localStorage.setItem(releaseStorageKey, currentRelease.version);
+    releaseHandled.current = true;
+    setDialog(null);
+  }
   function openStory(kind) {
+    if (pendingRef.current || pendingCheckin) {
+      notify("اول ثبتت نهایی بشه؛ بعد می‌تونی استوری کنی.");
+      return;
+    }
     setStoryKind(kind);
     setDialog("story");
   }
@@ -1001,7 +1059,7 @@ export default function App() {
     setPendingCheckin(null);
     setBusy(false);
     setDialog(null);
-    notify("ثبت لغو شد؛ خبری فرستاده نشد.");
+    notify("ثبت لغو شد؛ چیزی برای دوستات فرستاده نشد.");
   }
   function checkin(status) {
     if (busy || pendingRef.current) return;
@@ -1108,7 +1166,7 @@ export default function App() {
       if (navigator.share)
         await navigator.share({
           title: "دعوت به جیشو",
-          text: "یه خبر کوچولو، یه جمع خوب. با دعوت من هر دومون ۷ روز پرمیوم می‌گیریم.",
+          text: "جیشو با دوستات قشنگ‌تره. با دعوت من هر دومون ۷ روز پرمیوم می‌گیریم.",
           url,
         });
       else {
@@ -1152,7 +1210,7 @@ export default function App() {
     }
     if (!me.handle) {
       openSettings();
-      notify("اول یه شناسه‌ی کوچولو برای خودت انتخاب کن.");
+      notify("اول یه شناسهٔ مخصوص خودت برای خودت انتخاب کن.");
       return;
     }
     const url = `${data.publicUrl}/u/${me.handle}`;
@@ -1160,7 +1218,7 @@ export default function App() {
       if (navigator.share)
         await navigator.share({
           title: `${me.name} توی جیشو`,
-          text: "یه خبر کوچولو، یه بهونه برای با هم بودن.",
+          text: "یه لحظه از روزت، برای دوستات.",
           url,
         });
       else {
@@ -1322,7 +1380,7 @@ export default function App() {
         <div className="desktop-story">
           <span className="eyebrow">
             <span />
-            یه خبر کوچولو، یه حال خوب
+            یه لحظهٔ ساده، یه لبخند مشترک
           </span>
           <h2>
             دوستی، به همین
@@ -1379,9 +1437,14 @@ export default function App() {
             />
           </Suspense>
         ) : inviteLanding ? (
-          <section className="invite-landing">
+          <section className={`invite-landing ${inviteRecognition ? "invite-status-screen" : ""}`}>
             <Brand small />
-            {invitation ? (
+            {inviteRecognition ? <>
+              <Mascot size={180} mood="happy" />
+              <h1>{inviteRecognition === "own" ? "این دعوتِ خودته 💛" : "این دعوت رو قبلاً پذیرفتی 💛"}</h1>
+              <p>داریم می‌بریمت تو جیشو؛ رفاقتت سر جاشه.</p>
+              <Button lilac onClick={finishInviteLanding}>برم تو جیشو</Button>
+            </> : invitation ? (
               <>
                 <div className="inviter-spotlight">
                   {invitation.inviter ? (
@@ -1389,7 +1452,7 @@ export default function App() {
                   ) : (
                     <Mascot size={100} />
                   )}
-                  <span>یه دعوت کوچولو از</span>
+                  <span>یه دعوت از طرف</span>
                   <h1>{invitation.inviter?.name || "جیشو"}</h1>
                   {invitation.inviter?.handle && (
                     <small dir="ltr">@{invitation.inviter.handle}</small>
@@ -1409,7 +1472,7 @@ export default function App() {
                   </p>
                   <p>
                     <UsersThree size={21} />
-                    دوستات رو پیدا کن و خبرها رو با هم شریک شو.
+                    دوستات رو پیدا کن و از حال‌و‌احوال هم دور نمونین.
                   </p>
                   <p>
                     <ShareNetwork size={21} />
@@ -1484,7 +1547,7 @@ export default function App() {
             <Mascot size={280} animate />
             <h1>یه لحظه از روزت، برای دوستات.</h1>
             <p>
-              یه خبر کوچولو برای دوستات،
+              یه لحظه برای آدمای خودت،
               <br />
               یه حال خوب برای خودت.
             </p>
@@ -1520,12 +1583,12 @@ export default function App() {
                           className="wave-icon"
                         />
                       </h1>
-                      <p>الان چه خبر؟</p>
+                      <p>حالت چطوره؟</p>
                     </div>
                     <div className="home-header-actions">
                       <button
                         className="icon-button notification-bell"
-                        aria-label="خبرهای کوچولو"
+                        aria-label="حال‌و‌احوال دوستات"
                         onClick={() =>
                           me.registered ? navigate("notifications") : openAuth()
                         }
@@ -1556,7 +1619,7 @@ export default function App() {
                         <Avatar person={invitation.inviter} size={49} />
                         <div>
                           <strong>{invitation.inviter.name} دعوتت کرده!</strong>
-                          <p>یه دعوت کوچولو، برای شروع یه رفاقت</p>
+                          <p>یه شروع قشنگ برای رفاقت</p>
                         </div>
                         <button
                           disabled={
@@ -1606,7 +1669,7 @@ export default function App() {
                     >
                       <Mascot size={132} mood="shy" animate />
                       <strong>جیش دارم</strong>
-                      <span>یه خبر کوچولو</span>
+                      <span>یه لحظه از روزم</span>
                       <Drop
                         size={18}
                         weight="duotone"
@@ -1637,7 +1700,7 @@ export default function App() {
                           setAudience(e.target.checked ? "friends" : "private")
                         }
                       />
-                      <span>خبرم برای دوست‌های وصل‌شده هم نمایش داده بشه</span>
+                      <span>این لحظه رو دوست‌هام هم ببینن</span>
                     </label>
                   )}
                   <section className="friends-section">
@@ -1699,7 +1762,7 @@ export default function App() {
                         <p>
                           {me.registered
                             ? "با لینک دعوتت، آدمای خودت رو بیار تو جمع."
-                            : "مهمان هم می‌تونه خبر بده؛ برای وصل‌شدن به دوستات، با دعوت عضو شو."}
+                            : "مهمان هم می‌تونه جیشش رو ثبت کنه؛ برای وصل‌شدن به دوستات، با دعوت عضو شو."}
                         </p>
                         <button
                           onClick={() =>
@@ -1732,7 +1795,7 @@ export default function App() {
                     </div>
                     <div>
                       <h2>این نزدیکا</h2>
-                      <strong>خبرهای دور و برت</strong>
+                      <strong>جیش‌های این نزدیکا</strong>
                       <p>با اجازه‌ی مکان، نقشه رو ببین</p>
                     </div>
                     <CaretLeft className="muted-icon" size={19} />
@@ -1944,7 +2007,7 @@ export default function App() {
                             ? "تا پایان دورهٔ آزمایشی، همهٔ قابلیت‌ها فعاله."
                             : me.trialUntil
                               ? `هدیه‌ی تو تا ${new Date(me.trialUntil).toLocaleDateString("fa-IR")}`
-                              : "خبر و نقشه و استوری همیشه رایگانه."}
+                              : "ثبت جیش، نقشه و استوری همیشه رایگانه."}
                       </p>
                       <small className="premium-free-hint">ثبت جیش، دوست‌ها، آمار، نقشه و استوری شخصی همیشه رایگانه.</small>
                     </div>
@@ -1995,7 +2058,7 @@ export default function App() {
                     >
                       <Bell size={26} weight="duotone" />
                       <div>
-                        <h2>خبرها و اعلان‌ها</h2>
+                        <h2>اعلان‌های من</h2>
                         <p>با اجازه‌ی خودت، برای آدمای خودت</p>
                       </div>
                       <CaretLeft size={18} />
@@ -2028,9 +2091,9 @@ export default function App() {
                     </button>
                   ) : (
                     <div className="soft-signup-card">
-                      <h2>خبرهات با خودت بمونه</h2>
+                      <h2>لحظه‌هات با خودت بمونه</h2>
                       <p>
-                        مهمان به همین مرورگر وصله. با شماره‌ت که عضو بشی،
+                        مهمان به همین مرورگر وصله. با گوگل که عضو بشی،
                         می‌تونی از یه دستگاه دیگه هم برگردی.
                       </p>
                       <Button lilac onClick={openAuth}>
@@ -2039,6 +2102,9 @@ export default function App() {
                       </Button>
                     </div>
                   )}
+                  <button className="profile-community-link" onClick={() => setDialog("whatsNew")}>
+                    <ArrowCounterClockwise size={25} /><div><h2>تازه‌های جیشو</h2><p>چی عوض شده؟ ساده و کوتاه</p></div><CaretLeft size={18} />
+                  </button>
                   <SharedMemories
                     moments={data.moments}
                     onOpen={(item) => {
@@ -2071,7 +2137,7 @@ export default function App() {
                   </div>
                   <h2>با دعوتت، هر دوتون ۷ روز هدیه می‌گیرین.</h2>
                   <p className="invite-page-description">
-                    عضویت فعلاً با دعوت و شماره موبایله. دوستت می‌تونه اول مهمان
+                    عضویت فعلاً با دعوت و گوگله. دوستت می‌تونه اول مهمان
                     باشه؛ اسم فقط موقع ساخت حساب لازمه.
                   </p>
                   {me.registered && (
@@ -2144,7 +2210,7 @@ export default function App() {
                 </section>
               )}
             </div>
-            <nav
+            {screen !== "invite" && <nav
               className="bottom-nav v2-nav"
               aria-label="ناوبری اصلی"
               dir="ltr"
@@ -2165,7 +2231,7 @@ export default function App() {
                   <small>{label}</small>
                 </button>
               ))}
-            </nav>
+            </nav>}
           </>
         )}
 
@@ -2173,15 +2239,18 @@ export default function App() {
           <Modal
             hideClose={["success", "need"].includes(dialog)}
             fullscreen={["success", "need", "auth", "friend", "settings", "profileShare", "groupInvite", "moment", "premium"].includes(dialog)}
-            onClose={() => setDialog(null)}
+            onClose={() => dialog === "whatsNew" ? dismissRelease() : setDialog(null)}
             className={
               ["success", "need"].includes(dialog)
                 ? "success-dialog checkin-dialog full"
                 : dialog === "moment"
                   ? "success-dialog page-dialog full"
-                  : ["auth", "friend", "settings", "profileShare", "groupInvite", "premium"].includes(dialog) ? "page-dialog" : ""
+                  : dialog === "whatsNew" ? "release-dialog"
+                  : dialog === "friend" ? `page-dialog friend-page-dialog social-page-${selectedFriend?.linkConnection || "none"}`
+                  : ["auth", "settings", "profileShare", "groupInvite", "premium"].includes(dialog) ? "page-dialog" : ""
             }
           >
+            {dialog === "whatsNew" && <ReleaseNotes onClose={dismissRelease} />}
             {dialog === "auth" && (
               <AuthWizard
                 invitation={invitation}
@@ -2232,17 +2301,17 @@ export default function App() {
                     {pendingCheckin && !pendingCheckin.saving
                       ? "تا چند لحظه دیگه ثبت می‌شه"
                       : busy
-                        ? "در حال ثبت خبر…"
-                        : "خبرت ثبت شد"}
+                        ? "در حال ثبت…"
+                        : "ثبت شد"}
                   </span>
-                  <IconButton
-                    icon={ShareNetwork}
-                    label="اشتراک این خبر"
-                    disabled={busy}
+                  <button
+                    className="checkin-share"
+                    aria-label="استوری این لحظه"
+                    disabled={busy || Boolean(pendingCheckin)}
                     onClick={() =>
                       openStory(dialog === "need" ? "need" : "checkin")
                     }
-                  />
+                  ><ShareNetwork size={23} /><span>استوری</span></button>
                 </div>
                 <div className="checkin-content">
                   <div className="checkin-art">
@@ -2269,10 +2338,10 @@ export default function App() {
                   </h1>
                   <p className="success-subtitle">
                     {audience === "private" || !me.registered
-                      ? "این خبر برای خودت می‌مونه."
+                      ? "این لحظه فقط برای خودته."
                       : pendingCheckin
-                        ? "بعد از ثبت، دوستات باخبر می‌شن."
-                        : "دوستات ازت باخبر می‌شن."}
+                        ? "بعد از ثبت، دوستات می‌بیننش."
+                        : "دوستات این لحظه رو می‌بینن."}
                   </p>
                   {dialog === "success" && (
                     <div className="today-card">
@@ -2298,7 +2367,7 @@ export default function App() {
                     ) : (
                       <p className="checkin-save-status" role="status">
                         {busy ? <Drop size={18} /> : <Check size={18} />}
-                        {busy ? "داریم خبرت رو ثبت می‌کنیم…" : "خبرت ثبت شد."}
+                        {busy ? "داریم ثبت می‌کنیم…" : "ثبت شد."}
                       </p>
                     )}
                   </div>
@@ -2331,7 +2400,7 @@ export default function App() {
                 <p className="moment-caption">
                   {moment.kind === "together"
                     ? "کمتر از یک دقیقه فاصله، یه خاطره‌ی مشترک."
-                    : "تا پنج دقیقه فاصله، یه اتفاق کوچولو."}
+                    : "تا پنج دقیقه فاصله، یه لحظهٔ مشترک."}
                 </p>
                 <div className="moment-quiet-actions">
                   <Button lilac onClick={() => setDialog(null)}>
@@ -2395,7 +2464,7 @@ export default function App() {
                           !p.enabled,
                       )
                         ? `${selectedFriend.name} بی‌صداست`
-                        : `خبرهای ${selectedFriend.name} روشنه`}
+                        : `اعلان‌های ${selectedFriend.name} روشنه`}
                     </strong>
                     <small>
                       فقط اعلان همین دوست؛ دوستی و لینک‌ها تغییر نمی‌کنه
@@ -2431,7 +2500,7 @@ export default function App() {
                 <Avatar person={selectedFriend} size={90} />
                 <h2>دوستی رو قطع کنیم؟</h2>
                 <p className="dialog-description">
-                  دیگه خبرهای هم رو نمی‌بینین و دسترسی به لینک‌های اجتماعی بسته
+                  دیگه وضعیت‌های هم رو نمی‌بینین و دسترسی به لینک‌های اجتماعی بسته
                   می‌شه. عضویت گروه‌ها جداست؛ هر وقت خواستی می‌تونی درخواست تازه
                   بفرستی.
                 </p>
@@ -2655,7 +2724,7 @@ export default function App() {
                 <Suspense fallback={null}>
                   <AccountConnections
                     data={data}
-                    onUpdate={setData}
+                    onUpdate={(value) => { setData(value); syncPush().catch(() => {}); }}
                     notify={notify}
                   />
                 </Suspense>
@@ -2687,7 +2756,7 @@ export default function App() {
                           disabled={busy}
                         />
                       </label>
-                      <small>یا شخصیت کوچولوی ساخته‌شده از اسمت</small>
+                      <small>یا شخصیت ساخته‌شده از اسمت</small>
                       {me.avatarImage && (
                         <button
                           type="button"
@@ -2774,7 +2843,7 @@ export default function App() {
                   onClick={() => setDialog("deleteAccount")}
                 >
                   <Trash size={15} />
-                  پاک‌کردن حساب و خبرهای من
+                  پاک‌کردن حساب و ثبت‌های من
                 </button>
               </>
             )}
@@ -2783,8 +2852,8 @@ export default function App() {
                 <Avatar person={me} size={95} mood="shy" />
                 <h2>مهمانِ خودمونی</h2>
                 <p className="dialog-description">
-                  جیش و آمار و استوری بدون عضویت کار می‌کنن. با یه دعوت، شماره‌ت
-                  رو اضافه کن تا از دستگاه‌های دیگه هم برگردی.
+                  جیش و آمار و استوری بدون عضویت کار می‌کنن. با یه دعوت و گوگل
+                  عضو شو تا از دستگاه‌های دیگه هم برگردی.
                 </p>
                 <Button lilac onClick={openAuth}>
                   ورود یا عضویت با دعوت
@@ -2794,7 +2863,7 @@ export default function App() {
                   onClick={() => setDialog("deleteAccount")}
                 >
                   <Trash size={15} />
-                  پاک‌کردن خبرهای مهمان
+                  پاک‌کردن ثبت‌های مهمان
                 </button>
               </>
             )}
@@ -2813,15 +2882,15 @@ export default function App() {
                 <p className="dialog-description">
                   {data.testing
                     ? "تا آزمایش تموم نشده، همه‌ی کاربران و مهمان‌ها به قابلیت‌های پرمیوم دسترسی دارن."
-                    : "خبرهای روزانه، آمار، نقشه و استوری عادی همیشه رایگان می‌مونن."}
+                    : "ثبت جیش، آمار، نقشه و استوری شخصی همیشه رایگان می‌مونن."}
                 </p>
                 <section className="premium-feature-group premium-free" aria-label="امکانات همیشه رایگان">
                   <h3><Check size={21} /> همیشه رایگان می‌مونه</h3>
                   <p>برای این کارها، حتی بعد از دورهٔ آزمایشی، اشتراک لازم نیست.</p>
                   <ul>
                     <li>ثبت «جیش دارم» و «جیش کردم» و لغو ثبت</li>
-                    <li>دوست‌ها، گروه‌ها و خبرهای دوستات</li>
-                    <li>آمار شخصی، نقشه و دیدن خبرهای اطراف</li>
+                    <li>دوست‌ها، گروه‌ها و حال‌و‌احوال دوستات</li>
+                    <li>آمار شخصی، نقشه و دیدن ثبت‌های اطراف</li>
                     <li>استوری‌های شخصی و فرستادن دعوت</li>
                   </ul>
                 </section>
@@ -2857,10 +2926,10 @@ export default function App() {
                   <Trash size={29} />
                 </div>
                 <h2>
-                  {me.registered ? "حسابت پاک بشه؟" : "خبرهای مهمان پاک بشه؟"}
+                  {me.registered ? "حسابت پاک بشه؟" : "ثبت‌های مهمان پاک بشه؟"}
                 </h2>
                 <p className="dialog-description">
-                  خبرها، ارتباط‌ها و اطلاعات خودت حذف می‌شن. این کار قابل برگشت
+                  ثبت‌ها، ارتباط‌ها و اطلاعات خودت حذف می‌شن. این کار قابل برگشت
                   نیست.
                 </p>
                 <Button

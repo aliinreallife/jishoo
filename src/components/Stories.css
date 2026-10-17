@@ -1,4 +1,22 @@
 /* A fitted preview leaves the export actions visible, including on short phones. */
+.story-editor img.story-raster-preview {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  width: 1080px;
+  height: auto;
+  max-width: none;
+}
+.story-rendering {
+  width: 1080px;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background: #fff4d1;
+  color: #9a87a6;
+  font-size: 38px;
+}
 .full-story-overlay .story-editor,
 .app-scroll .story-editor {
   display: grid;

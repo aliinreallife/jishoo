@@ -231,3 +231,13 @@
     font-size: 7px;
   }
 }
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  text-align: center;
+  font-size: 9px;
+  color: #9b8b9c;
+  margin-bottom: 10px;
+}
+.calendar-weekdays > span:last-child { color: #be8595; }
+.drop-calendar-grid > div > b { font-size: 11px; color: #87748f; }

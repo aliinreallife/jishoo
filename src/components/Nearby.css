@@ -62,37 +62,6 @@
   line-height: 2;
   color: #86768c;
 }
-.discovery-visibility {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px;
-  background: #f9f4e9;
-  border: 1px solid #e9dfcb;
-  border-radius: 14px;
-  width: 100%;
-  text-align: right;
-  color: #a49a82;
-  margin: 8px 0 12px;
-}
-.discovery-visibility[aria-pressed="true"] {
-  background: #eaf3ef;
-  border-color: #cddfd4;
-  color: #789784;
-}
-.discovery-visibility > span {
-  display: grid;
-  gap: 5px;
-}
-.discovery-visibility strong {
-  font-size: 11px;
-  color: #756b78;
-}
-.discovery-visibility small {
-  font-size: 9px;
-  color: #998b91;
-  line-height: 1.8;
-}
 .nearby-person {
   display: flex;
   align-items: center;
@@ -131,6 +100,64 @@
   max-width: 560px;
   max-height: min(30%, 300px);
   overflow: auto;
+  padding: 12px 16px;
+  scrollbar-width: thin;
+}
+.real-nearby-page .around-panel.is-browsing {
+  max-height: min(50%, 460px);
+}
+.map-visibility-control {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.map-visibility-control legend {
+  font-size: 12px;
+  font-weight: 700;
+  color: #5f5868;
+  margin-bottom: 9px;
+}
+.map-visibility-modes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+.map-visibility-modes > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 57px;
+  border: 1px solid #e4dbcd;
+  border-radius: 14px;
+  background: #f9f4ea;
+  font-size: 11px;
+  font-weight: 700;
+  color: #867a69;
+}
+.map-visibility-modes > button[aria-pressed="true"] {
+  background: #e7f2e9;
+  border: 2px solid #8fb89b;
+  color: #42654c;
+}
+.map-visibility-modes > button:focus-visible {
+  outline: 3px solid #b8a5d6;
+  outline-offset: 2px;
+}
+.map-visibility-control:disabled {
+  opacity: 0.6;
+}
+.map-visibility-control > p {
+  font-size: 11px;
+  line-height: 1.9;
+  margin: 9px 0;
+  color: #796e75;
+}
+.selected-neighbor,
+.map-cluster-list {
+  margin-bottom: 14px;
 }
 .real-nearby-page .around-panel[hidden] {
   display: none;
@@ -142,7 +169,7 @@
 }
 .real-nearby-page .around-panel-top {
   position: sticky;
-  top: -16px;
+  top: -12px;
   z-index: 1;
   padding-block: 6px;
   background: #fffcf4;
@@ -189,34 +216,6 @@
   box-shadow: 0 3px 0 #e1d8ed;
   cursor: pointer;
 }
-.nearby-people-trigger::after {
-  content: none;
-}
-.discovery-visibility {
-  border-color: #d5c8b2;
-  box-shadow: 0 3px 0 #eae1d0;
-  cursor: pointer;
-}
-.discovery-visibility small {
-  font-size: 11px;
-}
-.discovery-visibility:hover {
-  background: #f5ecd9;
-}
-
-.discovery-visibility > span:not(.discovery-action-label) {
-  flex: 1;
-}
-.discovery-action-label {
-  background: #eee0c3;
-  border-radius: 10px;
-  padding: 7px 9px;
-  font-size: 10px;
-  white-space: nowrap;
-}
-.discovery-visibility[aria-pressed="true"] .discovery-action-label {
-  background: #d3e6d9;
-}
 .real-nearby-page .map-controls {
   gap: 6px;
 }
@@ -235,64 +234,7 @@
   font-size: 10px;
   font-weight: 600;
 }
-.map-visibility-choice {
-  padding: 10px;
-  border: 1px solid #e4d9c8;
-  border-radius: 16px;
-  background: #f9f4e9;
-  gap: 10px;
-}
-.map-visibility-choice.is-visible {
-  background: #eef6ef;
-  border-color: #cee1d1;
-}
-.map-visibility-choice > span {
-  min-width: 0;
-}
-.map-visibility-choice strong,
-.discovery-visibility strong {
-  display: block;
-  font-size: 12px;
-  line-height: 1.8;
-  color: #5b5661;
-}
-.map-visibility-choice small,
-.discovery-visibility small {
-  color: #786e6b;
-  font-size: 11px;
-  line-height: 1.9;
-}
-.map-sharing-action,
-.discovery-action-label {
-  flex: 0 0 95px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 9px 7px;
-  min-height: 52px;
-  border-radius: 12px;
-  background: #eee2c7;
-  color: #665530;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1.8;
-  white-space: normal;
-  text-align: center;
-}
-.map-visibility-choice.is-visible .map-sharing-action,
-.discovery-visibility[aria-pressed="true"] .discovery-action-label {
-  background: #d9eadd;
-  color: #496851;
-}
-.map-sharing-action:focus-visible,
 .real-nearby-page .map-controls > button:focus-visible {
   outline: 3px solid #a99bce;
   outline-offset: 3px;
-}
-.map-sharing-action:disabled,
-.discovery-visibility:disabled {
-  cursor: wait;
-  opacity: 0.65;
 }

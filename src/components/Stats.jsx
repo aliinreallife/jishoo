@@ -9,57 +9,23 @@ import {
 } from "@phosphor-icons/react";
 import { Mascot } from "./Mascot";
 import { fa } from "../api";
-const key = (date) =>
-  date.toLocaleDateString("en-CA", { timeZone: "Asia/Tehran" });
+import { dayKey, weekDays, persianMonth, persianParts } from "../../lib/calendar.js";
+const key = dayKey;
 export default function Stats({ data, onBack, onShare }) {
   const [period, setPeriod] = useState("week");
-  const s = data.stats,
-    now = new Date(),
-    [year, month] = key(now).split("-").map(Number);
-  const values =
-    period === "all"
-      ? Array.from({ length: 12 }, (_, i) => {
-          const d = new Date(Date.UTC(year, month - 12 + i, 15));
-          const k = key(d).slice(0, 7);
-          return {
-            key: k,
-            label: d.toLocaleDateString("fa-IR-u-ca-gregory", {
-              month: "short",
-              timeZone: "Asia/Tehran",
-            }),
-            count: s.monthly?.find((x) => x.day === k)?.count || 0,
-          };
-        })
-      : Array.from({ length: period === "week" ? 7 : 30 }, (_, i) => {
-          const d = new Date(
-            Date.now() - ((period === "week" ? 6 : 29) - i) * 86400000,
-          );
-          return {
-            key: key(d),
-            label: d.toLocaleDateString(
-              "fa-IR",
-              period === "week"
-                ? { weekday: "short", timeZone: "Asia/Tehran" }
-                : { day: "numeric", timeZone: "Asia/Tehran" },
-            ),
-            count: s.daily.find((x) => x.day === key(d))?.count || 0,
-          };
-        });
-  const total =
-      period === "week" ? s.week : period === "month" ? s.month : s.total,
-    max = Math.max(1, ...values.map((v) => v.count));
-  const calendar = Array.from({ length: 21 }, (_, i) => {
-    const d = new Date(Date.now() - (20 - i) * 86400000);
-    return {
-      key: key(d),
-      count: s.daily.find((x) => x.day === key(d))?.count || 0,
-      label: d.toLocaleDateString("fa-IR", {
-        day: "numeric",
-        month: "long",
-        timeZone: "Asia/Tehran",
-      }),
-    };
-  });
+  const s = data.stats, now = new Date(), currentMonth = persianMonth(now);
+  const counts = new Map(s.daily.map((row) => [row.day, row.count]));
+  const values = period === "all"
+    ? Array.from({ length: 12 }, (_, i) => {
+      const month = persianMonth(now, i - 11);
+      return { key: `${month.year}-${month.month}`, label: month.start.toLocaleDateString("fa-IR-u-ca-persian", { month: "short", timeZone: "Asia/Tehran" }), count: month.days.reduce((sum, d) => sum + (counts.get(key(d)) || 0), 0) };
+    })
+    : (period === "week" ? weekDays(now) : currentMonth.days).map((d) => ({
+      key: key(d), label: d.toLocaleDateString("fa-IR-u-ca-persian", period === "week" ? { weekday: "short", timeZone: "Asia/Tehran" } : { day: "numeric", timeZone: "Asia/Tehran" }), count: counts.get(key(d)) || 0,
+    }));
+  const total = period === "all" ? s.total : values.reduce((sum, row) => sum + row.count, 0), max = Math.max(1, ...values.map((row) => row.count));
+  const calendar = currentMonth.days.map((d) => ({ key: key(d), count: counts.get(key(d)) || 0, day: persianParts(d).day, label: d.toLocaleDateString("fa-IR-u-ca-persian", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Tehran" }) }));
+  const padding = (7 - (currentMonth.offset + calendar.length) % 7) % 7;
   return (
     <section className="page lovely-stats">
       <header className="community-heading">
@@ -102,8 +68,8 @@ export default function Stats({ data, onBack, onShare }) {
           <h2>{total ? "لحظهٔ سبک‌تر" : "قصه تازه شروع می‌شه"}</h2>
           <p>
             {total
-              ? "خبرهای کوچولویی که خودت ثبت کردی."
-              : "هر وقت خواستی، اولین خبرت رو ثبت کن."}
+              ? "لحظه‌هایی که برای خودت نگه داشتی."
+              : "هر وقت خواستی، اولین جیشت رو ثبت کن."}
           </p>
         </div>
         <Mascot mood={total ? "happy" : "shy"} size={150} />
@@ -114,14 +80,15 @@ export default function Stats({ data, onBack, onShare }) {
           <h2>ردپای قطره‌ها</h2>
           <span>
             {period === "week"
-              ? "۷ روز اخیر"
+              ? "شنبه تا جمعه"
               : period === "month"
-                ? "۳۰ روز اخیر"
-                : "۱۲ ماه میلادی اخیر"}
+                ? currentMonth.label
+                : "۱۲ ماه شمسی اخیر"}
           </span>
         </div>
         <div
           className={`lovely-chart ${period}`}
+          style={{ gridTemplateColumns: `repeat(${values.length}, minmax(0, 1fr))` }}
           aria-label="نمودار جیش کردم"
           role="img"
         >
@@ -149,7 +116,7 @@ export default function Stats({ data, onBack, onShare }) {
                 {(
                   period === "all"
                     ? i % 2 === 0
-                    : period !== "month" || i % 5 === 0 || i === 29
+                    : period !== "month" || i % 5 === 0 || i === values.length - 1
                 )
                   ? v.label
                   : "\u00a0"}
@@ -162,7 +129,7 @@ export default function Stats({ data, onBack, onShare }) {
         </div>
         {!total && (
           <p className="stats-zero-note">
-            اینجا با خبرهای واقعی تو رنگ می‌گیره 💧
+            اینجا با ثبت‌های واقعی تو رنگ می‌گیره 💧
           </p>
         )}
       </div>
@@ -175,13 +142,7 @@ export default function Stats({ data, onBack, onShare }) {
         <div>
           <CalendarBlank size={25} weight="duotone" />
           <strong>
-            {fa(
-              s.daily.filter(
-                (d) =>
-                  d.count > 0 &&
-                  d.day >= key(new Date(Date.now() - 29 * 86400000)),
-              ).length,
-            )}
+            {fa(calendar.filter((d) => d.count > 0).length)}
           </strong>
           <span>روزهای فعالِ این ماه</span>
         </div>
@@ -189,9 +150,11 @@ export default function Stats({ data, onBack, onShare }) {
       <div className="drop-calendar">
         <div className="section-heading">
           <h2>یه تکه از روزهات</h2>
-          <span>۲۱ روز اخیر</span>
+          <span>{currentMonth.label}</span>
         </div>
+        <div className="calendar-weekdays" aria-label="روزهای هفته از شنبه تا جمعه">{["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"].map((day) => <span key={day}>{day}</span>)}</div>
         <div className="drop-calendar-grid">
+          {Array.from({ length: currentMonth.offset }, (_, i) => <span key={`before-${i}`} aria-hidden="true" />)}
           {calendar.map((d) => (
             <div
               key={d.key}
@@ -199,12 +162,14 @@ export default function Stats({ data, onBack, onShare }) {
               title={`${d.label} · ${fa(d.count)} بار`}
               aria-label={`${d.label}، ${fa(d.count)} بار`}
             >
+              <b>{fa(d.day)}</b>
               <Drop size={25} weight={d.count ? "fill" : "regular"} />
               <small>{d.count ? fa(d.count) : "·"}</small>
             </div>
           ))}
+          {Array.from({ length: padding }, (_, i) => <span key={`after-${i}`} aria-hidden="true" />)}
         </div>
-        <p>هر قطره، یه سر زدن کوچولو به خودت.</p>
+        <p>هر قطره، یه سر زدن به حالِ خودت.</p>
       </div>
       <p className="stats-privacy-note">
         این آمار برای خودته؛ فقط با انتخاب تو به تصویر اشتراک تبدیل می‌شه.

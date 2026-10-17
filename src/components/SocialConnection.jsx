@@ -34,7 +34,7 @@ export default function SocialConnection({ friend, premium, busy, onChange }) {
       </>}
       {state === "connected" && <>
         <strong>حساب‌های اجتماعی‌تون برای هم قابل دیدنه</strong>
-        <p>هر وقت خواستی می‌تونی فقط اشتراک حساب‌ها رو قطع کنی؛ همچنان دوست می‌مونین و خبرهای هم رو می‌بینین.</p>
+        <p>هر وقت خواستی می‌تونی فقط اشتراک حساب‌ها رو قطع کنی؛ همچنان دوست می‌مونین و از حال‌و‌احوال هم دور نمی‌مونین.</p>
         <div className="friend-socials">
           {Object.entries(friend.socialLinks).length ? Object.entries(friend.socialLinks).map(([type, url]) => {
             const [Icon, label] = platforms[type] || platforms.website;

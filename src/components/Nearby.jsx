@@ -36,6 +36,7 @@ export default function Nearby({
     markers = useRef(),
     radius = useRef(),
     selfMarker = useRef();
+  const optionsPanel = useRef();
   const [position, setPosition] = useState(null),
     [geoError, setGeoError] = useState(""),
     [locating, setLocating] = useState(false),
@@ -52,6 +53,9 @@ export default function Nearby({
   useEffect(() => {
     setSharing(me.shareLocation);
   }, [me.shareLocation]);
+  useEffect(() => {
+    if (panelOpen && (selected || cluster) && optionsPanel.current) optionsPanel.current.scrollTop = 0;
+  }, [panelOpen, selected, cluster]);
   useEffect(() => {
     map.current = L.map(container.current, {
       zoomControl: false,
@@ -223,69 +227,30 @@ export default function Nearby({
         });
     });
   }, [activity]);
-  async function changeSharing(enabled) {
-    if (sharingBusy || peopleBusy) return;
-    if (enabled && !position) {
-      notify("اول اجازه‌ی مکان بده تا موقعیت تقریبی‌ت مشخص بشه.");
-      locate();
-      return;
-    }
+  const visibilityMode = sharing ? (me.discoverable ? "profile" : "news") : "hidden";
+  async function changeVisibility(mode) {
+    if (sharingBusy || peopleBusy || mode === visibilityMode) return;
+    if (mode === "profile" && !me.registered) { onAuth(); return; }
+    if (mode !== "hidden" && !position) { locate(); return; }
     setSharingBusy(true);
     try {
-      await api("location", { enabled, ...position });
-      setSharing(enabled);
-      onSharingChanged(enabled);
-      notify(
-        enabled
-          ? "فقط موقعیت تقریبی‌ت نمایش داده می‌شه."
-          : "مکانت از نقشه‌ی بقیه پنهان شد.",
-      );
-      refresh(position);
-    } catch (error) {
-      notify(error.message);
-    } finally {
-      setSharingBusy(false);
-    }
-  }
-  async function changeDiscovery() {
-    if (sharingBusy || peopleBusy) return;
-    if (!me.registered) {
-      onAuth();
-      return;
-    }
-    if (!position) {
-      locate();
-      notify("اول اطرافت رو پیدا کن، بعد نمایش پروفایلت رو انتخاب کن.");
-      return;
-    }
-    setPeopleBusy(true);
-    try {
-      const enabled = !me.discoverable;
-      if (enabled && !sharing) {
-        await api("location", { ...position, enabled: true });
-        setSharing(true);
-        onSharingChanged(true);
-      }
-      await api("discoverable", { enabled });
+      await api("map-visibility", { mode, ...position });
+      setSharing(mode !== "hidden");
+      onSharingChanged(mode !== "hidden");
       await refreshAccount();
       await refresh(position);
-      notify(
-        enabled
-          ? "پروفایلت با موقعیت تقریبی در این نزدیکا دیده می‌شه."
-          : "پروفایلت از فهرست این نزدیکا پنهان شد.",
-      );
-    } catch (e) {
-      notify(e.message);
-    } finally {
-      setPeopleBusy(false);
-    }
+      notify(mode === "hidden" ? "ثبت‌ها و پروفایلت از دید بقیه پنهان شد." : mode === "profile" ? "پروفایلت برای آدم‌های نزدیک قابل دیدنه." : "فقط ثبتت با مکان تقریبی نمایش داده می‌شه.");
+    } catch (error) {
+      await refreshAccount();
+      notify(error.message);
+    } finally { setSharingBusy(false); }
   }
   return (
     <section className="real-nearby-page">
       <header className="nearby-heading">
         <div>
           <h1>این نزدیکا</h1>
-          <p>خبرهای تازه و آدم‌های نزدیکت</p>
+          <p>آدم‌های نزدیکت، روی یه نقشه</p>
         </div>
         <span className="tiny-badge">
           <ShieldCheck size={13} /> موقعیت تقریبی
@@ -333,7 +298,7 @@ export default function Nearby({
           </span>
           <h2>کی دور و برته؟</h2>
           <p>
-            اجازه‌ی مکان بده تا خبرهای اطرافت رو ببینی. با این کار، مکانت برای
+            اجازه‌ی مکان بده تا جیش‌های این نزدیکا رو ببینی. با این کار، مکانت برای
             بقیه نمایش داده نمی‌شه.
           </p>
           {geoError && <p className="form-error">{geoError}</p>}
@@ -348,12 +313,12 @@ export default function Nearby({
           <small>فعلاً نقشه‌ی تهران نمایش داده شده؛ این مکان شما نیست.</small>
         </div>
       ) : (
-        <div className="around-panel" id="nearby-map-options" hidden={!panelOpen}>
+        <div ref={optionsPanel} className={`around-panel ${peopleOpen || selected || cluster ? "is-browsing" : ""}`} id="nearby-map-options" hidden={!panelOpen}>
           <div className="around-panel-top">
             <strong>
               {loading
                 ? "در حال تازه‌کردن…"
-                : `${fa(activity.length)} خبر این نزدیکی`}
+                : `${fa(activity.length)} نفر این نزدیکی`}
             </strong>
             <div className="map-panel-actions">
               <button onClick={() => refresh(position)}>تازه‌کردن</button>
@@ -362,26 +327,77 @@ export default function Nearby({
               </button>
             </div>
           </div>
-          <div className={`location-choice map-visibility-choice ${sharing ? "is-visible" : ""}`}>
-            <span>
-              <strong>{sharing ? "خبرم روی نقشه‌ست" : "روی نقشه پنهانم"}</strong>
-              <small id="map-sharing-explanation">
-                {sharing
-                  ? "مکان تقریبی؛ برای بقیه بی‌نام، برای دوست‌هات با اسم."
-                  : "خبر و پروفایلت پنهانه؛ خودت نقشه رو می‌بینی."}
-              </small>
-            </span>
-            <button
-              className="map-sharing-action"
-              aria-pressed={Boolean(sharing)}
-              aria-describedby="map-sharing-explanation"
-              disabled={sharingBusy || peopleBusy}
-              onClick={() => changeSharing(!sharing)}
-            >
-              {sharing ? <EyeSlash size={18} /> : <Eye size={18} />}
-              {sharingBusy ? "در حال ذخیره…" : sharing ? "پنهانم کن" : "نمایش خبرم"}
-            </button>
-          </div>
+          {cluster && (
+            <div className="map-cluster-list">
+              <div>
+                <strong>{fa(cluster.length)} نفر در این محدوده</strong>
+                <button
+                  aria-label="بستن فهرست محدوده"
+                  onClick={() => setCluster(null)}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              {cluster.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setSelected(item);
+                    setCluster(null);
+                  }}
+                >
+                  <span>{item.name}</span>
+                  <small>
+                    {item.status === "need" ? "جیش داره" : "جیش کرده"}
+                  </small>
+                </button>
+              ))}
+            </div>
+          )}
+          {selected && (
+            <div className="selected-neighbor">
+              <Avatar
+                person={selected}
+                size={43}
+                mood={selected.status === "need" ? "shy" : "happy"}
+              />
+              <div>
+                <strong>
+                  {selected.name}
+                  {selected.isFriend && <span>دوستت</span>}
+                </strong>
+                <p>
+                  {selected.status === "need" ? "جیش داره" : "جیش کرد"} ·{" "}
+                  {relativeTime(selected.createdAt)}
+                </p>
+              </div>
+              <button
+                aria-label="بستن وضعیت روی نقشه"
+                onClick={() => setSelected(null)}
+              >
+                <X size={17} />
+              </button>
+            </div>
+          )}
+          <fieldset className="map-visibility-control" disabled={sharingBusy || peopleBusy}>
+            <legend>من چطور دیده بشم؟</legend>
+            <div className="map-visibility-modes">
+              {[
+                ["hidden", "پنهان", EyeSlash],
+                ["news", "بی‌نام", Drop],
+                ["profile", "با پروفایلم", Eye],
+              ].map(([mode, label, Icon]) => <button key={mode} type="button" aria-pressed={visibilityMode === mode} aria-describedby="map-visibility-description" onClick={() => changeVisibility(mode)}>
+                <Icon size={20} /><span>{label}</span>
+              </button>)}
+            </div>
+            <p id="map-visibility-description" aria-live="polite">
+              {sharingBusy ? "داریم انتخابت رو ذخیره می‌کنیم…" : visibilityMode === "hidden"
+                ? "ثبت‌ها و پروفایلت پنهانه؛ خودت هنوز نقشه رو می‌بینی."
+                : visibilityMode === "news"
+                  ? "ثبتت با مکان تقریبی میاد؛ برای بقیه بی‌نام، برای دوست‌هات با اسم."
+                  : "آدم‌های نزدیک اسم و پروفایلت رو می‌بینن و می‌تونن درخواست دوستی بفرستن."}
+            </p>
+          </fieldset>
           <button
             className="nearby-people-trigger"
             aria-expanded={peopleOpen}
@@ -397,31 +413,6 @@ export default function Nearby({
             <div className="nearby-people-panel" id="nearby-people-list" hidden={!peopleOpen}>
               {me.registered ? (
                 <>
-                  <button
-                    className="discovery-visibility"
-                    aria-pressed={Boolean(sharing && me.discoverable)}
-                    disabled={peopleBusy || sharingBusy}
-                    onClick={changeDiscovery}
-                  >
-                    <span>
-                      <strong>
-                        {sharing && me.discoverable
-                          ? "پروفایلم برای آدم‌های نزدیک پیداست"
-                          : "پروفایلم در فهرست پنهانه"}
-                      </strong>
-                      <small>
-                        {sharing && me.discoverable
-                          ? "آدم‌های نزدیک می‌تونن اسمت رو ببینن و درخواست دوستی بفرستن."
-                          : sharing
-                            ? "با انتخاب خودت، اسم و پروفایلت به فهرست اضافه می‌شه."
-                            : "با این انتخاب، نمایش خبرت با مکان تقریبی هم روشن می‌شه."}
-                      </small>
-                    </span>
-                    <span className="discovery-action-label">
-                      {sharing && me.discoverable ? <EyeSlash size={18} /> : <Eye size={18} />}
-                      {peopleBusy ? "در حال ذخیره…" : sharing && me.discoverable ? "پنهان‌کردن پروفایل" : "نمایش پروفایلم"}
-                    </span>
-                  </button>
                   <div className="nearby-people-list">
                     {people.map((person) => (
                       <div className="nearby-person" key={person.id}>
@@ -461,7 +452,7 @@ export default function Nearby({
               ) : (
                 <>
                   <p>
-                    روی نقشه خبرهای بی‌نام رو می‌بینی؛ برای دوستی با آدم‌های
+                    روی نقشه ثبت‌های بی‌نام رو می‌بینی؛ برای دوستی با آدم‌های
                     نزدیک وارد شو.
                   </p>
                   <button className="button button-lilac" onClick={onAuth}>
@@ -470,68 +461,12 @@ export default function Nearby({
                 </>
               )}
             </div>
+          {!selected && !cluster && <p className="map-empty-note">{activity.length ? "روی شخصیت‌ها بزن تا ببینی چه حالی دارن." : "این نزدیکا فعلاً آرومه."}</p>}
           <p className="map-grid-explanation">
             نقطه‌ها محل دقیق افراد نیستن. نشانگرهای یک محدوده برای خوانایی از هم
             باز می‌شن.
           </p>
-          {cluster && (
-            <div className="map-cluster-list">
-              <div>
-                <strong>{fa(cluster.length)} نفر در این محدوده</strong>
-                <button
-                  aria-label="بستن فهرست محدوده"
-                  onClick={() => setCluster(null)}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-              {cluster.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    setSelected(item);
-                    setCluster(null);
-                  }}
-                >
-                  <span>{item.name}</span>
-                  <small>
-                    {item.status === "need" ? "جیش داره" : "جیش کرده"}
-                  </small>
-                </button>
-              ))}
-            </div>
-          )}
-          {selected ? (
-            <div className="selected-neighbor">
-              <Avatar
-                person={selected}
-                size={43}
-                mood={selected.status === "need" ? "shy" : "happy"}
-              />
-              <div>
-                <strong>
-                  {selected.name}
-                  {selected.isFriend && <span>دوستت</span>}
-                </strong>
-                <p>
-                  {selected.status === "need" ? "جیش داره" : "جیش کرد"} ·{" "}
-                  {relativeTime(selected.createdAt)}
-                </p>
-              </div>
-              <button
-                aria-label="بستن خبر اطراف"
-                onClick={() => setSelected(null)}
-              >
-                <X size={17} />
-              </button>
-            </div>
-          ) : (
-            <p className="map-empty-note">
-              {activity.length
-                ? "روی شخصیت‌ها بزن تا خبرشون رو ببینی."
-                : "هنوز خبر تازه‌ای اطرافت نیست. اولین نفر باش!"}{" "}
-            </p>
-          )}
+
         </div>
       )}
       {position && !panelOpen && (

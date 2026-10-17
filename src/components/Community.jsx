@@ -113,7 +113,7 @@ export function Achievements({ data, onBack, onShare }) {
         })}
       </div>
       <p className="soft-note">
-        تکرارِ پشت‌سرهمِ خبرها امتیاز اضافه نمی‌ده؛ «جیش دارم» هم راه میان‌بُرِ
+        تکرارِ پشت‌سرهمِ ثبت‌ها امتیاز اضافه نمی‌ده؛ «جیش دارم» هم راه میان‌بُرِ
         لقب‌ها نیست.
       </p>
     </section>
@@ -155,15 +155,15 @@ export function Notifications({ data, refresh, notify, onBack, onNavigate }) {
           <ArrowRight size={22} />
         </button>
         <div>
-          <h1>خبرهای کوچولو</h1>
-          <p>از آدمای خودت باخبر بمون.</p>
+          <h1>حال‌و‌احوال دوستات</h1>
+          <p>با آدمای خودت در ارتباط بمون.</p>
         </div>
         <Bell size={26} weight="duotone" />
       </header>
       <div className="notification-settings">
         <label>
           <span>
-            خبرهای دوستام<small>روشن یا خاموش برای داخل جیشو و روی گوشی</small>
+            اعلان‌های دوستام<small>روشن یا خاموش برای داخل جیشو و روی گوشی</small>
           </span>
           <input
             type="checkbox"
@@ -183,8 +183,8 @@ export function Notifications({ data, refresh, notify, onBack, onNavigate }) {
         <div className="device-push-card">
           <Mascot size={86} />
           <div>
-            <h2>رفیقت خبر بده، گوشیت بگه</h2>
-            <p>وقتی جیشو بسته‌ست هم خبر جیش‌کردن دوست‌های متصلت می‌رسه.</p>
+            <h2>جیشو بسته‌ست؟ رفاقت بازه!</h2>
+            <p>حتی وقتی توی جیشو نیستی، اعلان جیش‌کردن دوستات می‌رسه.</p>
           </div>
           <span className={`push-device-state ${push ? "active" : ""}`}>
             {push
@@ -197,7 +197,7 @@ export function Notifications({ data, refresh, notify, onBack, onNavigate }) {
             disabled={busy || !data.vapidPublicKey}
             onClick={() => setExplain(true)}
           >
-            {push ? "راهنما و تنظیم اعلان" : "خبر رفیقام رو برسون"}
+            {push ? "راهنما و تنظیم اعلان" : "اعلان دوستام رو روشن کن"}
             <Bell size={18} />
           </Button>
           <button
@@ -234,7 +234,7 @@ export function Notifications({ data, refresh, notify, onBack, onNavigate }) {
           )}
           {!data.me.notificationsEnabled && (
             <p className="form-error">
-              خبرهای دوستات خاموشه؛ گزینهٔ بالایی رو هم روشن کن.
+              حال‌و‌احوال دوستات خاموشه؛ گزینهٔ بالایی رو هم روشن کن.
             </p>
           )}
         </div>
@@ -252,13 +252,13 @@ export function Notifications({ data, refresh, notify, onBack, onNavigate }) {
           onCancel={() => setExplain(false)}
         >
           <Mascot size={126} />
-          <h2 id="push-permission-title">یه خبر کوچولو، حتی وقتی نیستی 💧</h2>
+          <h2 id="push-permission-title">حالِ دوستات، حتی وقتی اینجا نیستی 💧</h2>
           <p>
             وقتی دوستت می‌گه «جیش کردم» یا می‌گه «جیش دارم»، یه اعلان روی گوشی
             می‌گیری؛ لازم نیست جیشو باز باشه.
           </p>
           <ul>
-            <li>فقط خبر آدمایی که بهشون وصلی</li>
+            <li>فقط اعلان آدمایی که بهشون وصلی</li>
             <li>بدون دسترسی به پیام‌ها یا برنامه‌های دیگه</li>
             <li>هر وقت بخوای، خاموش یا بی‌صداش کن</li>
           </ul>
@@ -293,7 +293,7 @@ export function Notifications({ data, refresh, notify, onBack, onNavigate }) {
                 })
               }
             >
-              باشه، خبر رفیقام رو برسون
+              باشه، اعلان دوستام رو روشن کن
               <Bell size={19} />
             </Button>
           )}
@@ -345,8 +345,8 @@ export function Notifications({ data, refresh, notify, onBack, onNavigate }) {
       {!data.notifications?.length && (
         <div className="empty-state compact-empty">
           <Mascot size={120} />
-          <h2>هنوز خبری نیست</h2>
-          <p>وقتی رفیقت اومد یا خبری داد، اینجا می‌بینیش.</p>
+          <h2>اینجا فعلاً آرومه</h2>
+          <p>شروع رفاقت‌ها و جیش‌های دوستات رو اینجا می‌بینی.</p>
         </div>
       )}
     </section>
@@ -419,7 +419,7 @@ export function Admin({ data, notify, refresh }) {
       <header className="community-heading">
         <div>
           <h1>پشت‌صحنه‌ی جیشو</h1>
-          <p>سلام مدیر؛ جمعمون چه خبره؟</p>
+          <p>سلام مدیر؛ نگاهی به جمعمون بنداز.</p>
         </div>
         <ShieldCheck size={28} weight="duotone" />
       </header>
@@ -430,7 +430,7 @@ export function Admin({ data, notify, refresh }) {
           <div className="admin-totals">
             {[
               [dashboard.totals.members, "عضو"],
-              [dashboard.totals.today, "خبر در ۲۴ ساعت"],
+              [dashboard.totals.today, "ثبت در ۲۴ ساعت"],
               [dashboard.totals.lifetime, "پرمیوم همیشگی"],
               [dashboard.totals.suspended, "حساب غیرفعال"],
             ].map(([count, label]) => (
@@ -660,7 +660,7 @@ export function PublicProfile({
       <span className="public-handle" dir="ltr">
         @{profile.handle}
       </span>
-      <p>یه خبر کوچولو، یه بهونه برای با هم بودن.</p>
+      <p>یه لحظه از روزت، برای دوستات.</p>
       <div className="public-achievements">
         {profile.achievements.map((a) => (
           <span key={a.slug}>

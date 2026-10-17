@@ -15,6 +15,12 @@ export default function GroupJoin({
   const [group, setGroup] = useState(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
+  const alreadyJoined = group && data.me.registered && data.circles.some((c) => c.id === group.id && !c.pending);
+  useEffect(() => {
+    if (!alreadyJoined) return;
+    const timer = setTimeout(() => onJoined({ id: group.id, circles: data.circles }), 1400);
+    return () => clearTimeout(timer);
+  }, [Boolean(alreadyJoined), group?.id]);
   useEffect(() => {
     let active = true;
     api("circle-info", undefined, { code })
@@ -29,7 +35,12 @@ export default function GroupJoin({
       <button className="icon-button" aria-label="برگشت" onClick={onBack}>
         <ArrowRight size={22} />
       </button>
-      {group ? (
+      {alreadyJoined ? <>
+        <Avatar person={group.owner} size={95} />
+        <h1>تو قبلاً به این جمع پیوستی 💛</h1>
+        <p>داریم می‌بریمت به «{group.name}».</p>
+        <button className="button button-lilac" onClick={() => onJoined({ id: group.id, circles: data.circles })}>برم تو جمع</button>
+      </> : group ? (
         <>
           <Avatar person={group.owner} size={83} />
           <p>{group.owner.name} دعوتت کرده به</p>
@@ -41,7 +52,7 @@ export default function GroupJoin({
           </span>
           <p>
             یه گروه برای دوست‌های خودمونی. با عضویت، پروفایلت برای اعضا دیده
-            می‌شه؛ شماره، خبرهای خصوصی و لینک‌های اجتماعی خودکار به اشتراک
+            می‌شه؛ شماره، ثبت‌های خصوصی و لینک‌های اجتماعی خودکار به اشتراک
             گذاشته نمی‌شن.
           </p>
           <button

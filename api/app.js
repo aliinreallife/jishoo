@@ -3,8 +3,11 @@ import {
   startGoogle,
   claimPendingGoogle,
   removeGoogle,
+  phoneAuthEnabled,
 } from "../lib/google-auth.js";
 import { mapConfig } from "../lib/public-config.js";
+import { confirmAccountMerge, cancelAccountMerge } from "../lib/account-merge.js";
+import { periodTotals } from "../lib/calendar.js";
 import { supportAction } from "../lib/support.js";
 import { listGroups, groupAction, groupInfo } from "../lib/groups.js";
 import { randomUUID } from "node:crypto";
@@ -152,6 +155,8 @@ function profile(user, own = false) {
       adminPasswordEnabled: Boolean(process.env.ADMIN_PASSWORD_HASH),
       socialLinks: user.social_links,
       shareLocation: user.share_location,
+      invitedBy: user.invited_by,
+      joinedInviteCode: user.joined_invite_code,
     });
   return p;
 }
@@ -162,7 +167,7 @@ async function stats(userId) {
       [userId],
     ),
     query(
-      `SELECT 'day' AS kind,(created_at AT TIME ZONE 'Asia/Tehran')::date::text AS day,COUNT(*)::int AS count FROM checkins WHERE user_id=$1 AND status='done' AND created_at>NOW()-INTERVAL '31 days' GROUP BY 2 UNION ALL SELECT 'month' AS kind,TO_CHAR(created_at AT TIME ZONE 'Asia/Tehran','YYYY-MM') AS day,COUNT(*)::int AS count FROM checkins WHERE user_id=$1 AND status='done' AND created_at>NOW()-INTERVAL '1 year' GROUP BY 2 ORDER BY day`,
+      `SELECT 'day' AS kind,(created_at AT TIME ZONE 'Asia/Tehran')::date::text AS day,COUNT(*)::int AS count FROM checkins WHERE user_id=$1 AND status='done' AND created_at>NOW()-INTERVAL '13 months' GROUP BY 2 UNION ALL SELECT 'month' AS kind,TO_CHAR(created_at AT TIME ZONE 'Asia/Tehran','YYYY-MM') AS day,COUNT(*)::int AS count FROM checkins WHERE user_id=$1 AND status='done' AND created_at>NOW()-INTERVAL '1 year' GROUP BY 2 ORDER BY day`,
       [userId],
     ),
     query(
@@ -172,6 +177,7 @@ async function stats(userId) {
   ]);
   return {
     ...rows[0],
+    ...periodTotals(history.filter((d) => d.kind === "day")),
     daily: history.filter((d) => d.kind === "day"),
     monthly: history.filter((d) => d.kind === "month"),
     latest: latest[0] || null,
@@ -348,6 +354,11 @@ export default async function handler(req, res) {
       fail(400, "درخواست معتبر نیست.");
     if (JSON.stringify(body).length > (action === "avatar" ? 100000 : 16000))
       fail(413, "درخواست خیلی بزرگه.");
+    if (
+      ["auth-start", "auth-verify", "phone-link-start", "phone-link-verify"].includes(action) &&
+      !phoneAuthEnabled()
+    )
+      fail(403, "ورود و اتصال شماره فعلاً غیرفعاله. با گوگل وارد شو.", "phone_auth_disabled");
     await initialize();
     if (
       action === "admin-login" &&
@@ -387,6 +398,16 @@ export default async function handler(req, res) {
     const user = auth.user;
     if (action === "bootstrap")
       return json(res, 200, await bootstrap(user, auth.tokenHash));
+    if (["account-merge-confirm", "account-merge-cancel"].includes(action)) {
+      if (req.method !== "POST") fail(405, "این کار به درخواست امن نیاز داره.");
+      requireAccount(user);
+      if (action === "account-merge-cancel") {
+        await cancelAccountMerge(user, auth.tokenHash);
+        return json(res, 200, await bootstrap(user, auth.tokenHash));
+      }
+      const merged = await confirmAccountMerge(user, auth.tokenHash, body.confirmed, fail);
+      return json(res, 200, await bootstrap(merged, auth.tokenHash));
+    }
     if (action === "google-start") {
       if (req.method !== "POST") fail(405, "درخواست معتبر نیست.");
       return json(res, 200, await startGoogle({ body, user, auth, fail }));
@@ -540,6 +561,8 @@ export default async function handler(req, res) {
       });
     }
     if (action === "register") {
+      if (body.provider !== "google" && !phoneAuthEnabled())
+        fail(403, "عضویت با شماره فعلاً غیرفعاله. با گوگل ادامه بده.", "phone_auth_disabled");
       if (user.registered) fail(409, "حسابت قبلاً ساخته شده.");
       if (typeof body.ticket !== "string" || body.ticket.length > 100)
         fail(400, "اول شماره‌ت رو تایید کن.");
@@ -566,7 +589,7 @@ export default async function handler(req, res) {
           );
       }
       const registered = await query(
-        `WITH candidate AS MATERIALIZED (SELECT id FROM users WHERE id=$3 AND NOT registered FOR UPDATE), ticket AS MATERIALIZED (SELECT id,phone_hash,phone_cipher FROM auth_challenges WHERE id=$2 AND user_id=$3 AND purpose='login' AND verified_at IS NOT NULL AND consumed_at IS NULL AND expires_at>NOW() AND NOT $11::boolean AND EXISTS(SELECT 1 FROM candidate) UNION ALL SELECT session_hash AS id,NULL::text AS phone_hash,NULL::text AS phone_cipher FROM pending_google WHERE session_hash=$10 AND expires_at>NOW() AND $11::boolean AND EXISTS(SELECT 1 FROM candidate)), valid_invite AS (UPDATE invites SET uses=uses+1 WHERE code=$1 AND active AND (max_uses IS NULL OR uses<max_uses) AND EXISTS(SELECT 1 FROM ticket) RETURNING *), joined AS (UPDATE users SET registered=TRUE,terms_version='2026-10-17',terms_accepted_at=NOW(),name=$4,avatar_seed=$4,handle=CASE WHEN COALESCE((SELECT grant_admin FROM valid_invite),FALSE) AND (SELECT reserved_handle FROM valid_invite)='ali' THEN 'ali' ELSE 'u'||SUBSTRING(REPLACE(users.id,'-',''),1,10) END,role=CASE WHEN COALESCE((SELECT grant_admin FROM valid_invite),FALSE) THEN 'admin' ELSE 'member' END,phone_hash=ticket.phone_hash,phone_cipher=ticket.phone_cipher,invite_code=$5,invited_by=(SELECT inviter_id FROM valid_invite),lifetime=COALESCE((SELECT premium_lifetime FROM valid_invite),FALSE),trial_days_bank=CASE WHEN $7::boolean AND NOT COALESCE((SELECT premium_lifetime FROM valid_invite),FALSE) THEN CASE WHEN EXISTS(SELECT 1 FROM valid_invite) THEN COALESCE(NULLIF((SELECT premium_days FROM valid_invite),0),7) ELSE 3 END ELSE 0 END,trial_until=CASE WHEN $7::boolean OR COALESCE((SELECT premium_lifetime FROM valid_invite),FALSE) THEN NULL ELSE NOW()+(CASE WHEN EXISTS(SELECT 1 FROM valid_invite) THEN COALESCE(NULLIF((SELECT premium_days FROM valid_invite),0),7) ELSE 3 END)*INTERVAL '1 day' END FROM ticket WHERE users.id=$3 AND NOT users.registered AND (NOT $6::boolean OR EXISTS(SELECT 1 FROM valid_invite)) RETURNING users.*), google_identity AS (INSERT INTO auth_identities(provider,subject,user_id,email_cipher) SELECT 'google',p.subject,j.id,p.email_cipher FROM pending_google p CROSS JOIN joined j WHERE p.session_hash=$10 AND $11::boolean RETURNING user_id), google_consume AS (DELETE FROM pending_google WHERE session_hash=$10 AND EXISTS(SELECT 1 FROM google_identity) RETURNING session_hash), reward AS (UPDATE users SET trial_days_bank=CASE WHEN $7::boolean THEN trial_days_bank+7 ELSE trial_days_bank END,trial_until=CASE WHEN $7::boolean THEN trial_until ELSE GREATEST(COALESCE(trial_until,NOW()),COALESCE(paid_until,NOW()),NOW())+INTERVAL '7 days' END WHERE id=(SELECT invited_by FROM joined) RETURNING id), consume AS (UPDATE auth_challenges SET consumed_at=NOW() WHERE id=$2 AND EXISTS(SELECT 1 FROM joined) RETURNING id), personal_invite AS (INSERT INTO invites(code,inviter_id,max_uses) SELECT $5,id,CASE WHEN role='admin' THEN 1 WHEN $7::boolean THEN 3 ELSE NULL END FROM joined ON CONFLICT DO NOTHING RETURNING code), auto_connect AS (INSERT INTO connections(id,user_a,user_b,requested_by,status) SELECT $9,LEAST(id,invited_by),GREATEST(id,invited_by),invited_by,CASE WHEN $8::boolean THEN 'accepted' ELSE 'pending' END FROM joined WHERE invited_by IS NOT NULL ON CONFLICT(user_a,user_b) DO NOTHING RETURNING id), admin_session AS(UPDATE sessions SET admin_access=TRUE WHERE token_hash=$10 AND EXISTS(SELECT 1 FROM joined WHERE role='admin') RETURNING token_hash) SELECT * FROM joined`,
+        `WITH candidate AS MATERIALIZED (SELECT id FROM users WHERE id=$3 AND NOT registered FOR UPDATE), ticket AS MATERIALIZED (SELECT id,phone_hash,phone_cipher FROM auth_challenges WHERE id=$2 AND user_id=$3 AND purpose='login' AND verified_at IS NOT NULL AND consumed_at IS NULL AND expires_at>NOW() AND NOT $11::boolean AND EXISTS(SELECT 1 FROM candidate) UNION ALL SELECT session_hash AS id,NULL::text AS phone_hash,NULL::text AS phone_cipher FROM pending_google WHERE session_hash=$10 AND expires_at>NOW() AND $11::boolean AND EXISTS(SELECT 1 FROM candidate)), valid_invite AS (UPDATE invites SET uses=uses+1 WHERE code=$1 AND active AND (max_uses IS NULL OR uses<max_uses) AND EXISTS(SELECT 1 FROM ticket) RETURNING *), joined AS (UPDATE users SET registered=TRUE,terms_version='2026-10-17',terms_accepted_at=NOW(),name=$4,avatar_seed=$4,handle=CASE WHEN COALESCE((SELECT grant_admin FROM valid_invite),FALSE) AND (SELECT reserved_handle FROM valid_invite)='ali' THEN 'ali' ELSE 'u'||SUBSTRING(REPLACE(users.id,'-',''),1,10) END,role=CASE WHEN COALESCE((SELECT grant_admin FROM valid_invite),FALSE) THEN 'admin' ELSE 'member' END,phone_hash=ticket.phone_hash,phone_cipher=ticket.phone_cipher,invite_code=$5,invited_by=(SELECT inviter_id FROM valid_invite),joined_invite_code=$1,lifetime=COALESCE((SELECT premium_lifetime FROM valid_invite),FALSE),trial_days_bank=CASE WHEN $7::boolean AND NOT COALESCE((SELECT premium_lifetime FROM valid_invite),FALSE) THEN CASE WHEN EXISTS(SELECT 1 FROM valid_invite) THEN COALESCE(NULLIF((SELECT premium_days FROM valid_invite),0),7) ELSE 3 END ELSE 0 END,trial_until=CASE WHEN $7::boolean OR COALESCE((SELECT premium_lifetime FROM valid_invite),FALSE) THEN NULL ELSE NOW()+(CASE WHEN EXISTS(SELECT 1 FROM valid_invite) THEN COALESCE(NULLIF((SELECT premium_days FROM valid_invite),0),7) ELSE 3 END)*INTERVAL '1 day' END FROM ticket WHERE users.id=$3 AND NOT users.registered AND (NOT $6::boolean OR EXISTS(SELECT 1 FROM valid_invite)) RETURNING users.*), google_identity AS (INSERT INTO auth_identities(provider,subject,user_id,email_cipher) SELECT 'google',p.subject,j.id,p.email_cipher FROM pending_google p CROSS JOIN joined j WHERE p.session_hash=$10 AND $11::boolean RETURNING user_id), google_consume AS (DELETE FROM pending_google WHERE session_hash=$10 AND EXISTS(SELECT 1 FROM google_identity) RETURNING session_hash), reward AS (UPDATE users SET trial_days_bank=CASE WHEN $7::boolean THEN trial_days_bank+7 ELSE trial_days_bank END,trial_until=CASE WHEN $7::boolean THEN trial_until ELSE GREATEST(COALESCE(trial_until,NOW()),COALESCE(paid_until,NOW()),NOW())+INTERVAL '7 days' END WHERE id=(SELECT invited_by FROM joined) RETURNING id), consume AS (UPDATE auth_challenges SET consumed_at=NOW() WHERE id=$2 AND EXISTS(SELECT 1 FROM joined) RETURNING id), personal_invite AS (INSERT INTO invites(code,inviter_id,max_uses) SELECT $5,id,CASE WHEN role='admin' THEN 1 WHEN $7::boolean THEN 3 ELSE NULL END FROM joined ON CONFLICT DO NOTHING RETURNING code), auto_connect AS (INSERT INTO connections(id,user_a,user_b,requested_by,status) SELECT $9,LEAST(id,invited_by),GREATEST(id,invited_by),invited_by,CASE WHEN $8::boolean THEN 'accepted' ELSE 'pending' END FROM joined WHERE invited_by IS NOT NULL ON CONFLICT(user_a,user_b) DO NOTHING RETURNING id), admin_session AS(UPDATE sessions SET admin_access=TRUE WHERE token_hash=$10 AND EXISTS(SELECT 1 FROM joined WHERE role='admin') RETURNING token_hash) SELECT * FROM joined`,
         [
           code,
           body.ticket,
@@ -613,13 +636,13 @@ export default async function handler(req, res) {
     }
     if (action === "checkin") {
       if (!(await rateLimit(`checkin:${user.id}`, 20, 60)))
-        fail(429, "خبرت ثبت شده؛ یه کم صبر کن، بعد دوباره خبر بده.");
+        fail(429, "ثبتت انجام شده؛ کمی صبر کن، بعد دوباره استفاده کن.");
       if (
         !["need", "done"].includes(body.status) ||
         typeof body.nonce !== "string" ||
         body.nonce.length > 80
       )
-        fail(400, "خبر معتبر نیست.");
+        fail(400, "ثبت معتبر نیست.");
       const visibility =
         user.registered && body.visibility !== "private"
           ? "friends"
@@ -725,7 +748,7 @@ export default async function handler(req, res) {
         ? {
             inviter: (
               await query(
-                "SELECT id,name FROM users WHERE LOWER(handle)=$1 AND registered AND NOT banned",
+                "SELECT u.id,u.name FROM users matched JOIN users u ON u.id=COALESCE(matched.merged_into,matched.id) WHERE LOWER(matched.handle)=$1 AND u.registered AND NOT u.banned",
                 [String(body.handle).toLowerCase()],
               )
             )[0],
@@ -834,6 +857,23 @@ export default async function handler(req, res) {
         });
       }
       return json(res, 200, { friends: await friends(user) });
+    }
+    if (action === "map-visibility") {
+      if (!["hidden", "news", "profile"].includes(body.mode)) fail(400, "نمایش معتبر نیست.");
+      if (body.mode === "profile") requireAccount(user);
+      if (body.mode === "hidden") {
+        await transaction([
+          ["UPDATE users SET share_location=FALSE,discoverable=FALSE,location_lat=NULL,location_lng=NULL,location_updated_at=NULL WHERE id=$1", [user.id]],
+          ["UPDATE checkins SET location_lat=NULL,location_lng=NULL WHERE user_id=$1", [user.id]],
+        ]);
+      } else {
+        if (!(await rateLimit(`map-visibility:${user.id}`, 12, 60))) fail(429, "یه لحظه صبر کن، بعد دوباره انتخاب کن.");
+        let point;
+        try { point = approximateLocation(body.lat, body.lng); }
+        catch (e) { fail(400, e.message); }
+        await query("UPDATE users SET share_location=TRUE,discoverable=$2,location_lat=$3,location_lng=$4,location_updated_at=NOW() WHERE id=$1", [user.id, body.mode === "profile", point.lat, point.lng]);
+      }
+      return json(res, 200, { mode: body.mode });
     }
     if (action === "location") {
       if (typeof body.enabled !== "boolean") fail(400, "انتخاب معتبر نیست.");

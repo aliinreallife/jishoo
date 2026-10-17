@@ -35,7 +35,7 @@ export const inviteGiftLabel = (invite) => invite?.lifetimeGift
   ? "پرمیوم همیشگی هدیه"
   : `${fa(invite?.bonusDays || 7)} روز پرمیوم هدیه`;
 export function relativeTime(value) {
-  if (!value) return "هنوز خبری نداده";
+  if (!value) return "هنوز جیشی ثبت نکرده";
   const minutes = Math.max(
     0,
     Math.floor((Date.now() - new Date(value)) / 60000),

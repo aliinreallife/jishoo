@@ -48,7 +48,7 @@ export default function SharedMemories({ moments, onOpen, onFindFriends }) {
         <div className="memories-empty">
           <PairArt size={175} />
           <h3>جای اولین خاطره‌تون اینجاست</h3>
-          <p>وقتی تو و دوستت با فاصلهٔ کمی خبر بدین، یه خاطرهٔ دونفره اینجا می‌مونه.</p>
+          <p>اگه نزدیک به هم جیش کنین، اینجا یه خاطرهٔ دونفره براتون می‌مونه.</p>
           <button onClick={onFindFriends}>
             <UsersThree size={19} />
             دوستات رو پیدا کن

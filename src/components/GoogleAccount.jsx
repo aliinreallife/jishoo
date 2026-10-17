@@ -6,7 +6,7 @@ import {
   CheckCircle,
   CaretLeft,
 } from "@phosphor-icons/react";
-import { api } from "../api";
+import { api, fa } from "../api";
 import "./GoogleAccount.css";
 export function GoogleBanner({ auth, intent = "login", notify }) {
   const [busy, setBusy] = useState(false);
@@ -26,7 +26,7 @@ export function GoogleBanner({ auth, intent = "login", notify }) {
           <small>
             {intent === "link"
               ? "گوگلت رو به همین حساب وصل کن."
-              : "با دعوت عضو شو یا به حسابت برگرد؛ شماره می‌تونه بعداً وصل بشه."}
+              : "با دعوت عضو شو یا به حسابت برگرد."}
           </small>
         </div>
       </div>
@@ -63,8 +63,10 @@ export default function AccountConnections({ data, onUpdate, notify }) {
   const [phone, setPhone] = useState(""),
     [challenge, setChallenge] = useState(null),
     [code, setCode] = useState(""),
+    [mergeReview, setMergeReview] = useState(false),
     [busy, setBusy] = useState(false);
   const auth = data.auth || {};
+  const merge = auth.pendingMerge;
   useEffect(() => {
     if (!challenge?.demo) return;
     const timer = setTimeout(() => verify("123456"), 1500);
@@ -92,8 +94,7 @@ export default function AccountConnections({ data, onUpdate, notify }) {
     <section className="account-connections">
       <h3>راه‌های ورود به حسابت</h3>
       <p>
-        شماره و گوگل وقتی وصل باشن، هر دو به همین دوست‌ها، آمار و پروفایل
-        می‌رسن. حساب‌های جدا خودکار ادغام نمی‌شن.
+        گوگلت رو به همین پروفایل وصل کن تا دوست‌ها و آمار این حساب رو از دستگاه‌های دیگه هم داشته باشی.
       </p>
       <div className="account-method">
         <Phone size={23} />
@@ -114,7 +115,37 @@ export default function AccountConnections({ data, onUpdate, notify }) {
         </div>
         {auth.phoneConnected && <CheckCircle size={21} />}
       </div>
-      {!auth.phoneConnected && (
+      {!auth.phoneLoginEnabled && <p className="phone-paused-note">ورود و اتصال شماره فعلاً غیرفعاله. شمارهٔ ذخیره‌شده‌ت حفظ می‌شه؛ برای ورود بعدی از گوگل استفاده کن.</p>}
+      {merge && <section className="account-merge-card" aria-label="اتصال دو حساب من">
+        <h4>دو حساب داری؛ می‌خوای یکی‌شون کنیم؟</h4>
+        <p>این گوگل از قبل یه پروفایل جدا داره. بدون تاییدت، چیزی جابه‌جا نمی‌شه.</p>
+        <div className="merge-profile"><strong>پروفایلی که نگه می‌داری</strong><span>{merge.current.name}</span><span dir="ltr">@{merge.current.handle}</span></div>
+        <div className="merge-profile"><strong>حساب گوگلت</strong><span>{merge.other.name}</span><span dir="ltr">{merge.other.email}</span><small>{fa(merge.checkins)} ثبت · {fa(merge.friends)} دوست · {fa(merge.groups)} گروه</small></div>
+        {mergeReview ? <>
+          <ul>
+            <li>آمار، دوست‌ها و گروه‌های دو حسابت جمع می‌شن. اسم و شناسهٔ پروفایل فعلی می‌مونه؛ لینک پروفایل قبلی هم به همین‌جا می‌رسه.</li>
+            <li>بهترین اشتراکت حفظ می‌شه؛ روزهای آزمایشی و سهمیهٔ دعوت دو برابر نمی‌شن. برای دعوت بعدی از لینک همین پروفایل استفاده کن.</li>
+            <li>نمایش روی نقشه خاموش می‌شه. اشتراک حساب‌های اجتماعی دوباره به قبول هر دو نفر نیاز داره.</li>
+            <li>دستگاه‌های دیگه باید دوباره با گوگل وارد بشن. این اتصال قابل برگشت خودکار نیست.</li>
+          </ul>
+          <button className="button button-lilac" disabled={busy} onClick={async () => {
+            setBusy(true);
+            try {
+              onUpdate(await api("account-merge-confirm", { confirmed: true }));
+              setMergeReview(false);
+              notify("دو حسابت یکی شدن؛ گوگلت حالا به همین پروفایل وصله.");
+            } catch (e) { notify(e.message); }
+            finally { setBusy(false); }
+          }}>{busy ? "در حال اتصال…" : "بله، دو حسابم رو یکی کن"}</button>
+        </> : <button className="button button-lilac" onClick={() => setMergeReview(true)}>مرور اتصال دو حساب</button>}
+        <button className="text-link" disabled={busy} onClick={async () => {
+          setBusy(true);
+          try { onUpdate(await api("account-merge-cancel", {})); setMergeReview(false); }
+          catch (e) { notify(e.message); }
+          finally { setBusy(false); }
+        }}>فعلاً جدا بمونن</button>
+      </section>}
+      {!auth.phoneConnected && auth.phoneLoginEnabled && (
         <form
           className="phone-link-form"
           onSubmit={async (e) => {
@@ -184,10 +215,10 @@ export default function AccountConnections({ data, onUpdate, notify }) {
             </div>
             <CheckCircle size={21} />
           </div>
-          <button
+          {auth.phoneLoginEnabled ? <button
             type="button"
             className="text-link"
-            disabled={busy || !auth.phoneConnected}
+            disabled={busy || !auth.phoneConnected || !auth.phoneLoginEnabled}
             onClick={async () => {
               setBusy(true);
               try {
@@ -202,10 +233,10 @@ export default function AccountConnections({ data, onUpdate, notify }) {
             }}
           >
             قطع اتصال گوگل
-          </button>
+          </button> : <small className="phone-paused-note">گوگل تنها راه ورود فعالته؛ اتصالش رو نگه می‌داریم تا از حسابت بیرون نمونی.</small>}
         </div>
       ) : (
-        <GoogleBanner auth={auth} intent="link" notify={notify} />
+        !merge && <GoogleBanner auth={auth} intent="link" notify={notify} />
       )}
     </section>
   );
