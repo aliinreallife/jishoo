@@ -35,7 +35,8 @@ review flag is separate from consent, and existing choices remain unchanged.
 Keeping the current choice only acknowledges this explanation. A new publishing
 choice requests geolocation explicitly; merely viewing nearby data never opts
 someone into sharing. The editor is available on Me, in profile settings and
-through a small map shortcut. Location refreshes cannot reactivate an account
+through a small visibility button in the map header. It is outside the map
+canvas, so it cannot overlap permission prompts, empty notices or selected pins. Location refreshes cannot reactivate an account
 hidden from another tab. World activity stays anonymous in every visibility mode.
 
 The premium worldwide view requires a registered account and server-checked
@@ -93,3 +94,27 @@ the affected person/link and effect. Cancel and Escape send no mutation. The API
 also requires `confirmed: true` after verifying an elevated admin session, so an
 older cached admin interface cannot silently perform these actions. Normal
 seven-day invitation creation remains one click.
+
+## Compact map layout
+
+Permission and empty-state cards dock 12 px above the attribution instead of
+reserving an 83 px bottom gap for a floating visibility button. The location
+prompt is a single explicit action with a mascot, short explanation and yellow
+arrow; before the first geolocation it states that the map shows Tehran and that
+viewing does not publish the viewer. A denied/unavailable location replaces the
+helper copy inline, without adding a nested scrolling panel. The empty state
+keeps its invitation action in a compact row. Neither card scrolls internally.
+
+Zoom controls remain on the left and the location control has its own position
+on the right. Before geolocation, the permission card supplies that action.
+Nearby/list tabs, visible count, automatic-refresh status, viewport/camera state,
+consent behavior and attribution remain. The main tabs keep their shared top
+inset. World anonymity is stated in the existing status line.
+
+`scripts/map_layout_smoke.py` checks permission, denied and empty states across
+seven viewport sizes, including 320×568 and the short desktop phone frame. It
+measures card/viewport scrolling, controls/card intersections, 44 px controls,
+map height and bottom spacing; screenshots and geometry live in ignored
+`artifacts/`. `JISHOO_LAYOUT_CAPTURE_ONLY=1` records a comparison baseline without
+claiming those geometry checks passed. Basemap imagery in synthetic UI tests is
+an explicitly neutral fixture; these checks measure actual application layout.

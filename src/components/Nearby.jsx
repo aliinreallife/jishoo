@@ -4,7 +4,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { blobatar } from "blobatar/blob";
 import { happy, shy } from "blobatar/expression";
-import { MapPin, NavigationArrow, ShieldCheck, X, Plus, Minus, Drop, Eye, EyeSlash, GlobeHemisphereWest, UsersThree, CrownSimple, ArrowClockwise, WifiSlash, MagnifyingGlassPlus } from "@phosphor-icons/react";
+import { MapPin, NavigationArrow, ShieldCheck, X, Plus, Minus, Drop, Eye, EyeSlash, GlobeHemisphereWest, UsersThree, CrownSimple, ArrowClockwise, WifiSlash, MagnifyingGlassPlus, CaretDown } from "@phosphor-icons/react";
 import { api, relativeTime, fa } from "../api";
 import { Avatar } from "./Character";
 import { mapPresentation, nearestLongitude } from "../map-presentation";
@@ -209,29 +209,28 @@ export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, on
   // changes, while avoiding an empty claim for a different, unconfirmed location.
   const empty = view === "map" && loaded && !fetchError && !oldView && count === 0;
   return <section className="real-nearby-page tab-page">
-    <header className="nearby-heading"><div><h1>این نزدیکا</h1><p>{view === "people" ? "آدم‌های نزدیک، با انتخاب خودشون" : scope === "world" ? "ردّ قطره‌ها از همه‌جا" : "ردّ قطره‌ها در اطرافت"}</p></div><span className="tiny-badge"><ShieldCheck size={13} /> مکان تقریبی</span></header>
+    <header className="nearby-heading"><div><h1>این نزدیکا</h1><p><ShieldCheck size={12} />{view === "people" ? "آدم‌های نزدیک، با انتخاب خودشون" : "مکان‌ها تقریبی‌ان"}</p></div><button className={`map-visibility-shortcut is-${mode}`} onClick={onVisibility} aria-label={`نمایش من روی نقشه: ${visibilityLabel(mode)}`} title="تغییر نمایش من روی نقشه"><VisibilityIcon size={17} /><span>{visibilityLabel(mode)}</span><CaretDown size={12} /></button></header>
     <div className="nearby-view-tabs" role="tablist" aria-label="بخش‌های این نزدیکا">
       <button role="tab" id="nearby-map-tab" aria-selected={view === "map"} aria-controls="nearby-map-pane" onClick={() => setView("map")}><MapPin size={20} />نقشه</button>
       <button role="tab" id="nearby-people-tab" aria-selected={view === "people"} aria-controls="nearby-list-pane" onClick={() => setView("people")}><UsersThree size={20} />آدم‌های نزدیک من</button>
     </div>
     <div className="nearby-status-strip">
-      <div className="nearby-count" role="status" aria-live="polite"><strong>{countLabel}</strong><small>{!online && lastUpdate ? `آخرین دریافت: ${relativeTime(lastUpdate)}` : view === "map" ? "ثبت‌های ۳۰ دقیقهٔ اخیر" : "نمایش پروفایل با انتخاب خودشون"}</small></div>
+      <div className="nearby-count" role="status" aria-live="polite"><strong>{countLabel}</strong><small>{!online && lastUpdate ? `آخرین دریافت: ${relativeTime(lastUpdate)}` : view === "map" ? `ثبت‌های ۳۰ دقیقهٔ اخیر${worldwide ? " · همه‌جا بی‌نام" : ""}` : "نمایش پروفایل با انتخاب خودشون"}</small></div>
       <span className={`nearby-refresh ${fetching && online ? "is-fetching" : ""} ${!online || fetchError ? "is-offline" : ""}`} title={worldwide ? "دریافت خودکار هر ۳۰ ثانیه" : "دریافت خودکار هر ۸ ثانیه"}>{online ? <ArrowClockwise size={17} aria-hidden="true" /> : <WifiSlash size={17} aria-hidden="true" />}<span>{refreshLabel}</span></span>
     </div>
     <div className="nearby-map-pane" id="nearby-map-pane" role="tabpanel" aria-labelledby="nearby-map-tab" hidden={view !== "map"} data-presentation={presentation.mode}>
       <div className="real-map" ref={container} aria-label="نقشهٔ فعالیت‌ها با مکان تقریبی" />
       <div className="map-scope-switch" role="group" aria-label="محدودهٔ نقشه"><button aria-pressed={scope === "local"} onClick={() => chooseScope("local")}><MapPin size={17} />اطراف من</button><button aria-pressed={scope === "world"} onClick={() => chooseScope("world")}><GlobeHemisphereWest size={18} />همه‌جا <CrownSimple size={15} /></button></div>
-      <div className="map-controls"><button aria-label="بزرگ‌نمایی نقشه" title="بزرگ‌نمایی نقشه" onClick={() => map.current?.zoomIn()}><Plus size={21} /></button><button aria-label="کوچک‌نمایی نقشه" title="کوچک‌نمایی نقشه" onClick={() => map.current?.zoomOut()}><Minus size={21} /></button><button aria-label="مکان من" title="مکان من" onClick={() => position ? map.current?.setView([position.lat, position.lng], 15) : locate()}><NavigationArrow size={22} /></button></div>
-      {!position && scope === "local" && <div className="map-permission-card"><img src="/assets/shy-drop.webp" width="68" height="78" alt="" /><h2>کی دور و برته؟</h2><p>اجازهٔ مکان بده تا اطرافت رو ببینی. دیدن نقشه مکانت رو منتشر نمی‌کنه.</p>{geoError && <p className="form-error">{geoError}</p>}<button className="button button-primary" onClick={locate} disabled={locating}>{locating ? "داریم مکانت رو پیدا می‌کنیم…" : "نمایش اطراف من"}<NavigationArrow size={18} /></button><small>بدون اجازهٔ مکان، نمای پیش‌فرض تهران رو می‌بینی.</small></div>}
+      <div className="map-controls"><button aria-label="بزرگ‌نمایی نقشه" title="بزرگ‌نمایی نقشه" onClick={() => map.current?.zoomIn()}><Plus size={21} /></button><button aria-label="کوچک‌نمایی نقشه" title="کوچک‌نمایی نقشه" onClick={() => map.current?.zoomOut()}><Minus size={21} /></button></div>
+      {(position || scope === "world") && <button className="map-locate-control" aria-label="مکان من" title="مکان من" onClick={() => position ? map.current?.setView([position.lat, position.lng], 15) : locate()}><NavigationArrow size={22} /></button>}
+      {!position && scope === "local" && <div className="map-permission-card"><button className="map-permission-action" onClick={locate} disabled={locating} aria-label="نمایش اطراف من" aria-busy={locating}><img src="/assets/shy-drop.webp" width="40" height="46" alt="" /><span><strong>{locating ? "داریم مکانت رو پیدا می‌کنیم…" : "نمایش اطراف من"}</strong>{geoError ? <small className="map-permission-error" role="status">{geoError}</small> : <><small>فعلاً نمای تهران؛ با اجازهٔ مکان، اطرافت رو ببین.</small><small>این کار مکانت رو منتشر نمی‌کنه.</small></>}</span><i><NavigationArrow size={21} /></i></button></div>}
       {fetchError && <p className="map-fetch-error" role="status">{fetchError}</p>}
-      {empty && <div className="map-calm-state"><img src="/assets/shy-drop.webp" width="66" height="74" alt="" /><div><strong>هنوز ثبت تازه‌ای اینجا نیست</strong><p>فقط ثبت‌های ۳۰ دقیقهٔ اخیرِ این نما نمایش داده می‌شن.</p><button onClick={onInvite}>دوستام رو دعوت کنم <UsersThree size={16} /></button></div></div>}
+      {empty && <div className="map-calm-state"><img src="/assets/shy-drop.webp" width="38" height="44" alt="" /><div><strong>هنوز ثبت تازه‌ای اینجا نیست</strong><p>ثبت‌های ۳۰ دقیقهٔ اخیرِ این نما</p></div><button onClick={onInvite} aria-label="دوستام رو دعوت کنم" title="دوستام رو دعوت کنم"><UsersThree size={19} /><span>دعوت</span></button></div>}
       {presentation.mode === "heat" && !selected && !group && <button className="map-heat-hint" onClick={seeCharacters}><MagnifyingGlassPlus size={19} /><span>نزدیک‌تر ببین، شخصیت‌ها پیداشون می‌شه</span></button>}
       {(selected || group) && <section className="map-selection-sheet" aria-label="جزئیات محدودهٔ انتخاب‌شده"><button className="map-selection-close" aria-label="بستن جزئیات نقشه" onClick={() => { setSelected(null); setGroup(null); }}><X size={18} /></button>
         {selected && <div className="selected-neighbor">{selected.isFriend || selected.isMe ? <Avatar person={selected} size={46} mood={selected.status === "need" ? "shy" : "happy"} /> : <img src={`/assets/${selected.status === "need" ? "shy-drop.webp" : "happy-drop.webp"}`} width="46" height="52" alt="" />}<div><strong>{selected.name}{selected.isFriend && <span>دوستت</span>}</strong><p>{selected.status === "need" ? "جیش داره" : "جیش کرده"} · {relativeTime(selected.createdAt)}</p></div></div>}
         {group && <><h2>{fa(group.count)} نفر، همین حوالی</h2>{scope === "world" ? <p>ثبت‌های بی‌نام با مکان تقریبی؛ هیچ پروفایلی اینجا نمایش داده نمی‌شه.</p> : <div className="map-group-people">{group.points.map(item => <div key={item.id}><img src={`/assets/${item.status === "need" ? "shy-drop.webp" : "happy-drop.webp"}`} width="28" height="32" alt="" /><span>{item.name}</span><small>{item.status === "need" ? "جیش داره" : "جیش کرده"}</small></div>)}</div>}</>}
       </section>}
-      <button className={`map-visibility-shortcut is-${mode}`} onClick={onVisibility} aria-label={`نمایش من روی نقشه: ${visibilityLabel(mode)}`}><VisibilityIcon size={17} /><span>{visibilityLabel(mode)}</span></button>
-      {scope === "world" && <span className="world-map-note">همه‌جا بی‌نام · مکان تقریبی</span>}
     </div>
     <div className="nearby-list-pane" id="nearby-list-pane" role="tabpanel" aria-labelledby="nearby-people-tab" hidden={view !== "people"}>
       <div className="nearby-list-intro"><UsersThree size={27} /><div><h2>آدم‌های نزدیک من</h2><p>تا ۳ کیلومتر اطرافت؛ فقط کسانی که نمایش پروفایلشون رو روشن کردن.</p></div></div>

@@ -1,0 +1,18 @@
+/* Safari may zoom focused fields below 16px. Keep readable field text on touch
+   devices and iPadOS without limiting the user's ability to pinch-zoom. Higher
+   explicit field sizes remain possible; do not replace this with zoom locks. */
+@media (any-pointer: coarse) {
+  :root body :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [type="button"], [type="submit"], [type="reset"], [type="hidden"], [type="image"]), textarea, select, [contenteditable]:not([contenteditable="false"])) {
+    font-size: 16px;
+    font-size: max(16px, 1rem);
+    scroll-margin-block: 24px;
+  }
+}
+/* iPad with a trackpad may report a fine primary pointer. */
+@supports (-webkit-touch-callout: none) {
+  :root body :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [type="button"], [type="submit"], [type="reset"], [type="hidden"], [type="image"]), textarea, select, [contenteditable]:not([contenteditable="false"])) {
+    font-size: 16px;
+    font-size: max(16px, 1rem);
+    scroll-margin-block: 24px;
+  }
+}
