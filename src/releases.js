@@ -1,4 +1,6 @@
-export const releases = [{
+import { currentRelease } from "./current-release";
+export { currentRelease, releaseStorageKey } from "./current-release";
+export const releases = [currentRelease, {
   version: "0.7.0",
   label: "۰.۷.۰",
   title: "راه برگشت روشن‌تر، ورود ساده‌تر!",
@@ -151,5 +153,3 @@ export const releases = [{
 
   ],
 }];
-export const currentRelease = releases[0];
-export const releaseStorageKey = "jishoo:last-seen-release";

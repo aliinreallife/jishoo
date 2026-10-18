@@ -1,29 +1,36 @@
 import { blockUpdates } from "./updates";
+import { createRequestCoordinator } from "./request-coordinator";
+const requests = createRequestCoordinator();
+const readActions = new Set(["nearby", "discover"]);
+export const apiRevision = requests.revision;
 
 export async function api(action, body, query = {}) {
   const unblock = body === undefined ? null : blockUpdates();
   try {
-    const response = await fetch(
-      `/api/app?${new URLSearchParams({ action, ...query })}`,
-      {
-        method: body === undefined ? "GET" : "POST",
-        credentials: "include",
-        headers: body === undefined ? {} : { "Content-Type": "application/json" },
-        body: body === undefined ? undefined : JSON.stringify(body),
-      },
-    );
-    let data;
-    try {
-      data = await response.json();
-    } catch {
-      throw new Error("ارتباط با جیشو برقرار نشد.");
-    }
-    if (!response.ok) {
-      const error = new Error(data.message || "یه بار دیگه امتحان کن.");
-      error.code = data.error;
-      throw error;
-    }
-    return data;
+    const url = `/api/app?${new URLSearchParams({ action, ...query })}`;
+    return await requests.run(url + (body === undefined ? "" : ":" + JSON.stringify(body)), body !== undefined && !readActions.has(action), async () => {
+      const response = await fetch(
+        url,
+        {
+          method: body === undefined ? "GET" : "POST",
+          credentials: "include",
+          headers: body === undefined ? {} : { "Content-Type": "application/json" },
+          body: body === undefined ? undefined : JSON.stringify(body),
+        },
+      );
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error("ارتباط با جیشو برقرار نشد.");
+      }
+      if (!response.ok) {
+        const error = new Error(data.message || "یه بار دیگه امتحان کن.");
+        error.code = data.error;
+        throw error;
+      }
+      return data;
+    });
   } finally { unblock?.(); }
 }
 export async function getInvite(code) {

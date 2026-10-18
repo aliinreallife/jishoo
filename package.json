@@ -1,13 +1,16 @@
 {
   "name": "jishoo",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test tests/core.test.mjs"
+    "test": "node --test tests/core.test.mjs",
+    "check:bundle": "node scripts/check-bundle.mjs",
+    "test:browser": "python3 scripts/browser_ci.py",
+    "check:production": "python3 scripts/check_production.py"
   },
   "dependencies": {
     "@blobatar/react": "^2.7.0",
@@ -35,5 +38,8 @@
   },
   "devDependencies": {
     "vite": "^7.0.0"
+  },
+  "engines": {
+    "node": "24.x"
   }
 }

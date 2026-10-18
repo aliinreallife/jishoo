@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { Blobatar } from "@blobatar/react";
 import { useGaze } from "@blobatar/react/gaze";
 import { shy, happy, love, idle } from "blobatar/expression";
@@ -10,7 +10,7 @@ function MovingAvatar({ animate, ...props }) {
   return <Blobatar {...props} ref={ref} animate={animate ? "always" : undefined} />;
 }
 
-export function Avatar({
+export const Avatar = memo(function Avatar({
   person,
   name,
   size = 80,
@@ -41,4 +41,4 @@ export function Avatar({
       )}
     </span>
   );
-}
+});

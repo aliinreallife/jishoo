@@ -10,6 +10,9 @@ import { canonicalPath, readPage, screenPath, notificationPath } from "../src/ro
 import { nearbyMomentEligible, nearbyMomentKind, mutualPayload, queueMutualNotice, notifyMutualMoments } from "../lib/mutual-moments.js";
 import { clusterWorldActivity, worldViewport } from "../lib/world-map.js";
 import { mapProfile } from "../lib/map-profile.js";
+import { createRequestCoordinator } from "../src/request-coordinator.js";
+import { stableActivity } from "../src/stable-activity.js";
+import { collectChunkFiles } from "../scripts/check-bundle.mjs";
 import { blobatar } from "blobatar/blob";
 import {
   normalizePhone,
@@ -27,6 +30,45 @@ import {
 
 process.env.APP_SECRET =
   "unit-tests-only-a-fixed-secret-of-at-least-32-characters";
+test("simultaneous reads share work without caching settled results or failures", async () => {
+  const requests = createRequestCoordinator();
+  let calls = 0, release;
+  const load = () => { calls++; return new Promise(resolve => { release = resolve; }); };
+  const first = requests.run("bootstrap", false, load), second = requests.run("bootstrap", false, load);
+  await Promise.resolve(); assert.equal(calls, 1);
+  release({ account: "one" }); assert.deepEqual(await first, await second);
+  assert.equal(await requests.run("bootstrap", false, async () => { calls++; return "fresh"; }), "fresh");
+  assert.equal(calls, 2);
+  await assert.rejects(requests.run("bootstrap", false, async () => { throw Error("offline"); }), /offline/);
+  assert.equal(await requests.run("bootstrap", false, async () => "recovered"), "recovered");
+});
+test("writes separate account generations and never merge duplicate mutation requests", async () => {
+  const requests = createRequestCoordinator();
+  const before = requests.revision();
+  let oldDone, newDone, writes = 0;
+  const old = requests.run("bootstrap", false, () => new Promise(resolve => { oldDone = resolve; }));
+  await Promise.resolve();
+  await Promise.all([1, 2].map(() => requests.run("logout", true, async () => { writes++; })));
+  assert.equal(writes, 2); assert.notEqual(requests.revision(), before);
+  const fresh = requests.run("bootstrap", false, () => new Promise(resolve => { newDone = resolve; }));
+  await Promise.resolve(); oldDone("previous account"); await old;
+  const joined = requests.run("bootstrap", false, () => { throw Error("old cleanup evicted the fresh read"); });
+  newDone("current account"); assert.equal(await fresh, "current account"); assert.equal(await joined, "current account");
+});
+test("map polls retain unchanged marker records but honor identity revocation, activity and viewport changes", () => {
+  const first = [{ id: "a", lat: 35, lng: 51, status: "done", profileHandle: "sara", avatarImage: "photo" }, { id: "b", count: 2 }];
+  assert.equal(stableActivity(first, structuredClone(first)), first);
+  const anonymous = stableActivity(first, [{ id: "a", lat: 35, lng: 51, status: "done", profileHandle: null, avatarImage: null }, first[1]]);
+  assert.notEqual(anonymous, first); assert.equal(anonymous[0].profileHandle, null); assert.equal(anonymous[1], first[1]); assert.equal(first[0].profileHandle, "sara");
+  const reordered = stableActivity(first, [first[1], first[0]]); assert.notEqual(reordered, first); assert.equal(reordered[0], first[1]);
+  assert.equal(stableActivity(first, []).length, 0);
+  assert.equal(stableActivity(first, [{ ...first[0], status: "need" }, { ...first[1], count: 3 }])[1].count, 3);
+});
+test("download budgets count shared static dependencies once and leave optional screens deferred", () => {
+  const manifest = { entry: { file: "entry.js", imports: ["react"], dynamicImports: ["map"], css: ["app.css"] }, app: { file: "app.js", imports: ["entry", "react"] }, react: { file: "react.js" }, map: { file: "map.js" } };
+  assert.deepEqual(collectChunkFiles(manifest, ["entry", "app"]), ["entry.js", "app.css", "react.js", "app.js"]);
+  assert.throws(() => collectChunkFiles(manifest, ["missing"]), /Missing build entry/);
+});
 test("local map profile eligibility protects anonymous members and guests", () => {
   const row = { id: "event", user_id: "other", registered: true, handle: "sara", name: "سارا", avatar_seed: "private-seed", avatar_image: "private-photo" };
   const anonymous = mapProfile(row, "viewer");

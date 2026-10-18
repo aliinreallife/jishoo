@@ -1,3 +1,4 @@
+import { activitySummary } from "../lib/activity-summary.js";
 import { joinWaitlist } from "../lib/waitlist.js";
 import {
   authMethods,
@@ -166,10 +167,10 @@ function profile(user, own = false) {
     });
   return p;
 }
-async function stats(userId) {
+async function stats(userId, activity) {
   const [rows, history, latest] = await Promise.all([
     query(
-      `SELECT COUNT(*) FILTER(WHERE status='done')::int AS total,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date=(NOW() AT TIME ZONE 'Asia/Tehran')::date)::int AS today,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date>=(NOW() AT TIME ZONE 'Asia/Tehran')::date-6)::int AS week,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date>=(NOW() AT TIME ZONE 'Asia/Tehran')::date-29)::int AS month,COUNT(*) FILTER(WHERE status='need')::int AS need,COALESCE(array_agg(DISTINCT TO_CHAR(created_at AT TIME ZONE 'Asia/Tehran','YYYY-MM-DD')) FILTER(WHERE status='done'),ARRAY[]::text[]) AS streak_days FROM checkins WHERE user_id=$1`,
+      `SELECT COUNT(*) FILTER(WHERE status='done')::int AS total,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date=(NOW() AT TIME ZONE 'Asia/Tehran')::date)::int AS today,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date>=(NOW() AT TIME ZONE 'Asia/Tehran')::date-6)::int AS week,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date>=(NOW() AT TIME ZONE 'Asia/Tehran')::date-29)::int AS month,COUNT(*) FILTER(WHERE status='need')::int AS need${activity ? "" : ",COALESCE(array_agg(DISTINCT TO_CHAR(created_at AT TIME ZONE 'Asia/Tehran','YYYY-MM-DD')) FILTER(WHERE status='done'),ARRAY[]::text[]) AS streak_days"} FROM checkins WHERE user_id=$1`,
       [userId],
     ),
     query(
@@ -184,7 +185,7 @@ async function stats(userId) {
   const { streak_days: activeDays, ...totals } = rows[0];
   return {
     ...totals,
-    streak: dailyStreak(activeDays || []),
+    streak: activity ? (await activity).streak : dailyStreak(activeDays || []),
     ...periodTotals(history.filter((d) => d.kind === "day")),
     daily: history.filter((d) => d.kind === "day"),
     monthly: history.filter((d) => d.kind === "month"),
@@ -240,13 +241,17 @@ async function moments(user) {
 }
 const circles = listGroups;
 async function bootstrap(user, sessionHash) {
+  const activity = activitySummary(user.id);
   const [s, f, m, c, community, authInfo] = await Promise.all([
-    stats(user.id),
+    stats(user.id, activity),
     friends(user),
     moments(user),
     circles(user),
-    getCommunity(user),
+    getCommunity(user, activity),
     authMethods(user, sessionHash),
+    // Observe shared-query failures immediately, even while an admin invite
+    // rotation is still preparing the other consumer.
+    activity,
   ]);
   return {
     me: profile(user, true),

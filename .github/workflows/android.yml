@@ -11,22 +11,24 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
       JISHOO_ANDROID_VERSION_CODE: ${{ github.run_number }}
       JISHOO_ANDROID_VERSION_NAME: '1.0.${{ github.run_number }}'
       HAS_RELEASE_SIGNING: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
       - name: Install Android API 36
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
         with:
           gradle-version: '8.13'
       - name: Prepare optional release signing
@@ -59,7 +61,7 @@ jobs:
           else
             printf 'Debug APK is installable for testing. Release APK/AAB are unsigned. Add the Android signing secrets described in android/README.md before distribution. Chrome shows its toolbar until Digital Asset Links matches the installed signing certificate.\n' > android-artifacts/README.txt
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: jishoo-android-${{ github.run_number }}
           path: android-artifacts/

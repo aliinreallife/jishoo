@@ -10,6 +10,7 @@ import { Avatar } from "./Character";
 import { mapPresentation, nearestLongitude } from "../map-presentation";
 import { CuteHeatLayer } from "../map-heat";
 import { visibilityMode, visibilityLabel } from "../map-visibility";
+import { stableActivity } from "../stable-activity";
 
 export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, onProfile, onPremium, onVisibility, onInvite, startingPosition, memory = {}, notify }) {
   const container = useRef(), map = useRef(), layers = useRef(), selfLayer = useRef();
@@ -112,8 +113,8 @@ export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, on
       try {
         const result = await api(view === "people" ? "discover" : "nearby", position);
         if (!active) return;
-        if (view === "people") setPeople(result.people);
-        else { setActivity(result.activity); setLocalLoaded(true); setLocalDataPosition(`${position.lat}:${position.lng}`); }
+        if (view === "people") setPeople(current => stableActivity(current, result.people));
+        else { setActivity(current => stableActivity(current, result.activity)); setLocalLoaded(true); setLocalDataPosition(`${position.lat}:${position.lng}`); }
         setUpdatedAt(Date.now()); setError("");
       } catch (failure) { if (active) setError(failure.message); }
       finally { pending = false; if (active) setLoading(false); }
@@ -133,7 +134,7 @@ export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, on
       try {
         const result = await api("world-map", undefined, { south: Math.max(-90, bounds.getSouth()), north: Math.min(90, bounds.getNorth()), west: full ? -180 : wrap(bounds.getWest()), east: full ? 180 : wrap(bounds.getEast()), zoom: viewport.zoom });
         if (!active) return;
-        setWorldActivity(result.activity); setWorldInfo({ ...result, viewKey: viewport.key }); setWorldLoaded(true); setWorldUpdatedAt(Date.now()); setWorldError("");
+        setWorldActivity(current => stableActivity(current, result.activity)); setWorldInfo({ ...result, viewKey: viewport.key }); setWorldLoaded(true); setWorldUpdatedAt(Date.now()); setWorldError("");
       } catch (failure) { if (active) setWorldError(failure.message); }
       finally { pending = false; if (active) setWorldLoading(false); }
     };

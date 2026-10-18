@@ -9,6 +9,17 @@ const release = { version, buildId: randomUUID(), minimumSupportedVersion: polic
 if (!validRelease(release)) throw new Error("The minimum supported version must not exceed the release version.");
 
 export default defineConfig({
+  build: {
+    manifest: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (/\/node_modules\/(react|react-dom|scheduler)\//.test(id)) return "react-vendor";
+          if (/\/node_modules\/(react-router|react-router-dom)\//.test(id)) return "router-vendor";
+        },
+      },
+    },
+  },
   define: { __JISHOO_BUILD__: JSON.stringify({ version, buildId: release.buildId }) },
   plugins: [{
     name: "jishoo-release",

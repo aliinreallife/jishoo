@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useEffect } from "react";
 import LoadingScreen from "./components/LoadingScreen";
 import Landing from "./components/Landing";
-import { ReleasePage } from "./components/ReleaseNotes";
+const ReleasePage = lazy(() => import("./components/ReleasePage"));
 import { useLocation, useNavigate } from "react-router-dom";
 import { canonicalPath } from "./routing";
 
@@ -22,6 +22,6 @@ export default function Entry() {
     return () => robots.remove();
   }, [pathname]);
   if (pathname === "/") return <Landing />;
-  if (pathname === "/changelog") return <ReleasePage />;
+  if (pathname === "/changelog") return <Suspense fallback={<LoadingScreen />}><ReleasePage /></Suspense>;
   return <Suspense fallback={<LoadingScreen />}><App /></Suspense>;
 }

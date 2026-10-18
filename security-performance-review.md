@@ -93,3 +93,10 @@ The current unit suite has 25 passing checks. `security_release_smoke.py` and `r
 Invitation validation precedes new Google signup on both client and server; validation does not reserve or consume a slot. A separate login intent accepts existing members without an invitation, and a verified unknown identity on that route returns to invitation entry. Final registration still consumes the invitation atomically. No OAuth client credential is sent to the browser.
 
 The user's requested early story sharing supersedes the earlier wait-for-save restriction. Undo remains available in the editor, and exporting does not bypass the delayed API write or notify friends. The illustrated card details have been restored without returning to DOM snapshots; preview/save/share still use one awaited Canvas PNG. Map reads run every eight seconds only while visible/online, skip overlap, and preserve camera state. Notifications are reachable directly from Home, with the explanation before the explicit browser permission gesture. Profile eye movement respects reduced motion. The trend chart uses existing server counts and Shamsi ranges.
+
+
+## Version 0.7.1 performance and automation update
+
+The earlier invitation-first/SMS paragraphs above describe their historical releases. Current signup is Google-first, admission remains invitation-only and phone login/linking remain disabled. The waiting list stores only verified Google identities and optional unverified contact numbers; automatic email/SMS delivery still needs a provider.
+
+The [0.7.1 performance report](docs/performance.md) records measured download reductions, immutable fingerprinted assets, request-generation protection, shared request-local database reads, unchanged-map reuse and the new secret-free CI/browser/security/health workflows. This release passed 56 unit checks, eight browser suites and owned-account preview API scenarios. Dependency audit found no known advisories. Hosted GitHub Actions status could not be read because the API denied access in this cloud session.
