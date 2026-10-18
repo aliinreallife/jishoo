@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { invitationForest, invitationPath } from "../src/invitation-tree.js";
 import { observabilityPage, redactMetricEvent } from "../src/observability.js";
 import { canonicalPath, readPage, screenPath, notificationPath } from "../src/routing.js";
+import { nearbyMomentEligible, nearbyMomentKind, mutualPayload, queueMutualNotice, notifyMutualMoments } from "../lib/mutual-moments.js";
+import { clusterWorldActivity, worldViewport } from "../lib/world-map.js";
 import { blobatar } from "blobatar/blob";
 import {
   normalizePhone,
@@ -20,6 +22,51 @@ import {
 
 process.env.APP_SECRET =
   "unit-tests-only-a-fixed-secret-of-at-least-32-characters";
+test("nearby coincidences require fresh public map consent and the same distance/time window", () => {
+  const now=Date.now(), user={registered:true,share_location:true,location_updated_at:new Date(now)};
+  const event={status:"done",visibility:"friends",location_lat:0,location_lng:0,created_at:new Date(now)};
+  assert.equal(nearbyMomentEligible(user,event,now),true);
+  for(const bad of [{registered:false},{share_location:false},{banned:true},{location_updated_at:new Date(now-3600001)}]) assert.equal(nearbyMomentEligible({...user,...bad},event,now),false);
+  for(const bad of [{status:"need"},{visibility:"private"},{location_lat:null},{created_at:new Date(now-300001)}]) assert.equal(nearbyMomentEligible(user,{...event,...bad},now),false);
+  const peer={location_lat:0,location_lng:.02,event_at:new Date(now-60000)};
+  assert.equal(nearbyMomentKind(event,peer),"together");
+  assert.equal(nearbyMomentKind(event,{...peer,event_at:new Date(now-300000)}),"back-to-back");
+  assert.equal(nearbyMomentKind(event,{...peer,event_at:new Date(now-300001)}),null);
+  assert.equal(nearbyMomentKind(event,{...peer,location_lng:.04}),null);
+});
+test("anonymous coincidence payloads reveal no other person's identity or coordinates", () => {
+  const peer={id:"private-user-id",name:"PRIVATE-NAME",handle:"private_handle",location_lat:35,location_lng:51};
+  for(const kind of ["together","back-to-back"]) {
+    const payload=mutualPayload("nearby",kind,peer), text=JSON.stringify(payload);
+    assert.equal(payload.actorId,null);assert.equal(payload.route,"/nearby");
+    for(const privateValue of [peer.id,peer.name,peer.handle,'location_lat','location_lng'])assert.ok(!text.includes(privateValue));
+  }
+  assert.equal(mutualPayload("friend","together",peer).actorId,peer.id);
+});
+test("both mutual inbox records queue in one transaction and every allowed device delivery is attempted", async () => {
+  const user={id:"b",name:"Second"},peer={id:"a",name:"First"},event={created_at:new Date().toISOString(),location_lat:0,location_lng:0};
+  let statements;
+  const jobs=await queueMutualNotice("nearby","together",user,peer,event,async rows=>{statements=rows;return [[{id:"claim"}],[{id:"mine"}],[{id:"theirs"}]];});
+  assert.equal(statements.length,3);assert.deepEqual(statements[0][1].slice(2,4),["a","b"]);
+  assert.deepEqual(jobs.map(job=>job.userId),["b","a"]);
+  assert.equal(statements[1][1][2],null);assert.equal(statements[2][1][2],null);
+  assert.equal(statements[1][1][8],statements[0][1][0]);
+  const seen=[];
+  await notifyMutualMoments(user,event,[{kind:"together",friend:peer}],{
+    findNearby:async()=>[],queue:async()=>jobs,
+    deliver:async id=>{seen.push(id);if(id==="b")throw Error("one device unavailable");},
+  });
+  assert.deepEqual(seen,["b","a"]);
+});
+test("world map clusters only visible points, strips identities, handles the date line and bounds output", () => {
+  const rows=[{lat:10,lng:179,status:"done",createdAt:"2026-10-18T00:00:00Z",name:"SECRET",userId:"SECRET"},{lat:10,lng:-179,status:"need",createdAt:"2026-10-18T00:00:00Z"},{lat:10,lng:0,status:"done",createdAt:"2026-10-18T00:00:00Z"}];
+  const box=worldViewport(new URLSearchParams({west:"170",east:"-170",zoom:"3"}));
+  const result=clusterWorldActivity(rows,box);
+  assert.equal(result.total,3);assert.equal(result.inView,2);assert.ok(!JSON.stringify(result).includes("SECRET"));
+  const many=clusterWorldActivity(Array.from({length:1000},(_,i)=>({...rows[0],lat:(i%30)-15,lng:Math.floor(i/30)-15})),worldViewport(new URLSearchParams({zoom:"19"})));
+  assert.equal(many.activity.length,240);assert.equal(many.limited,true);assert.equal(many.inView,1000);
+  for(const params of [{north:"NaN"},{south:"30",north:"20"},{west:"-181"},{zoom:"100"}])assert.throws(()=>worldViewport(new URLSearchParams(params)));
+});
 test("clean routes retain legacy bookmarks, invitations, OAuth results and section anchors", () => {
   for (const [before, after] of [
     ["/#/profile", "/profile"], ["/#profile", "/profile"],
@@ -102,6 +149,15 @@ test("invitation ancestry requires an elevated admin session", async () => {
     [{registered:true,role:"admin",session_admin_access:false},403],
   ]) {
     await assert.rejects(communityAction({action:"admin-invitation-tree",body:{},user,req:{method:"GET"},url:new URL("https://jishoo.vercel.app/api/app?action=admin-invitation-tree"),fail}), error => error.status === expected);
+  }
+});
+test("sensitive admin actions require confirmation after checking admin authorization", async () => {
+  const { communityAction }=await import("../lib/community.js");
+  const fail=(status,message,code)=>{throw Object.assign(new Error(message),{status,code});};
+  for(const [action,body] of [["admin-user",{operation:"lifetime",enabled:true}],["admin-invite",{giftLifetime:true}],["admin-invite",{giftDays:30}],["admin-invite-revoke",{code:"EXAMPLE"}],["admin-recovery",{}]]) {
+    const base={action,body,req:{method:"POST"},url:new URL("https://jishoo.vercel.app/api/app"),fail};
+    await assert.rejects(communityAction({...base,user:{registered:true,role:"member"}}),error=>error.status===403);
+    await assert.rejects(communityAction({...base,user:{registered:true,role:"admin",session_admin_access:true}}),error=>error.status===400&&error.code==="confirmation_required");
   }
 });
 test("Iranian, Persian-digit and international phone representations normalize consistently", () => {

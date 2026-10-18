@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, lazy, Suspense } from "react";
+import { createPortal } from "react-dom";
 import {
   Bell,
   BellSlash,
@@ -289,16 +290,43 @@ export function Notifications({ data, refresh, notify, onBack, onNavigate }) {
     </section>
   );
 }
+function AdminConfirmation({ action, busy, onCancel, onConfirm }) {
+  const cancel = useRef(), state = useRef();state.current={busy,onCancel};
+  useEffect(()=>{
+    const previous=document.activeElement, overflow=document.body.style.overflow;
+    document.body.style.overflow="hidden";cancel.current?.focus();
+    const escape=e=>{if(e.key==="Escape"&&!state.current.busy)state.current.onCancel();};
+    window.addEventListener("keydown",escape);
+    return()=>{document.body.style.overflow=overflow;window.removeEventListener("keydown",escape);previous?.focus();};
+  },[]);
+  return createPortal(<div className="admin-confirm-backdrop"><section role="alertdialog" aria-modal="true" aria-labelledby="admin-confirm-title" aria-describedby="admin-confirm-description" className="admin-confirm-card" onKeyDown={event=>{if(event.key!=="Tab")return;const buttons=event.currentTarget.querySelectorAll("button:not(:disabled)");if(!buttons.length){event.preventDefault();return;}if(event.shiftKey&&document.activeElement===buttons[0]){event.preventDefault();buttons[buttons.length-1].focus();}else if(!event.shiftKey&&document.activeElement===buttons[buttons.length-1]){event.preventDefault();buttons[0].focus();}}}>
+    <span className="admin-confirm-symbol"><ShieldCheck size={33}/></span><h2 id="admin-confirm-title">{action.title}</h2><strong className="admin-confirm-target">{action.target}</strong><p id="admin-confirm-description">{action.description}</p>
+    <button ref={cancel} className="button button-secondary" disabled={busy} onClick={onCancel}>نه، برگردیم</button>
+    <button className={`button ${action.danger ? "danger-button" : "button-lilac"}`} disabled={busy} onClick={onConfirm}>{busy ? "در حال انجام…" : action.label}</button>
+  </section></div>,document.querySelector(".app-shell")||document.body);
+}
 export function Admin({ data, notify, refresh }) {
   const [dashboard, setDashboard] = useState(null),
     [created, setCreated] = useState(""),
     [search, setSearch] = useState(""),
     [offset, setOffset] = useState(0),
     [inviteGift, setInviteGift] = useState("normal"),
-    [password, setPassword] = useState("");
+    [password, setPassword] = useState(""),
+    [confirmation, setConfirmation] = useState(null);
+  const confirming = useRef(false);
   const [busy, run] = useWork(notify);
   const load = async () =>
     setDashboard(await api("admin", undefined, { q: search, offset }));
+  async function createGift() {
+    const value=await api("admin-invite",{giftDays:["normal","lifetime"].includes(inviteGift)?0:Number(inviteGift),giftLifetime:inviteGift==="lifetime",confirmed:true});
+    setCreated(value.url);setConfirmation(null);await load();
+  }
+  async function confirmAction() {
+    if(confirming.current||!confirmation)return;
+    confirming.current=true;
+    try { await run(async()=>{await confirmation.execute();setConfirmation(null);}); }
+    finally { confirming.current=false; }
+  }
   useEffect(() => {
     if (!data.me.isAdmin) return;
     const timer = setTimeout(() => run(load), 180);
@@ -385,29 +413,14 @@ export function Admin({ data, notify, refresh }) {
               دعوت‌های مدیر سهمیه‌ی سه‌نفره ندارن؛ هر لینک بعد از یک عضویت مصرف
               می‌شه.
             </p>
-            <label className="admin-gift-picker">
-              پرمیوم همراه این دعوت
-              <select aria-label="پرمیوم همراه دعوت" value={inviteGift} onChange={(e) => setInviteGift(e.target.value)}>
-                <option value="normal">دعوت معمولی · ۷ روز هدیه</option>
-                <option value="30">۳۰ روز پرمیوم</option>
-                <option value="90">۹۰ روز پرمیوم</option>
-                <option value="365">یک سال پرمیوم</option>
-                <option value="lifetime">پرمیوم همیشگی</option>
-              </select>
-              <small>هدیه با عضویت همون یک نفر فعال می‌شه. روزهای مدت‌دار در دورهٔ آزمایشی محفوظ می‌مونن.</small>
-            </label>
+            <fieldset className="admin-gift-picker">
+              <legend>پرمیوم همراه این دعوت</legend>
+              <div className="admin-gift-options">{[["normal","۷ روز","دعوت معمولی"],["30","۳۰ روز","یه ماه مهمون ما"],["90","۹۰ روز","سه ماه با جیشو"],["365","یک سال","یه سال پرمیوم"],["lifetime","همیشگی","یه هدیه برای همیشه"]].map(([value,title,subtitle])=><label key={value} className={inviteGift===value ? "selected" : ""}><input type="radio" name="invite-gift" value={value} checked={inviteGift===value} onChange={()=>setInviteGift(value)}/><CrownSimple size={23}/><strong>{title}</strong><small>{subtitle}</small>{inviteGift===value&&<Check size={17}/>}</label>)}</div>
+              <p>هدیه با عضویت همون یک نفر فعال می‌شه. روزهای مدت‌دار در دورهٔ آزمایشی محفوظ می‌مونن.</p>
+            </fieldset>
             <Button
               disabled={busy}
-              onClick={() =>
-                run(async () => {
-                  const value = await api("admin-invite", {
-                    giftDays: ["normal", "lifetime"].includes(inviteGift) ? 0 : Number(inviteGift),
-                    giftLifetime: inviteGift === "lifetime",
-                  });
-                  setCreated(value.url);
-                  await load();
-                })
-              }
+              onClick={() => inviteGift === "normal" ? run(createGift) : setConfirmation({title:inviteGift === "lifetime" ? "دعوت با پرمیوم همیشگی بسازیم؟" : "دعوت همراه هدیه بسازیم؟",target:inviteGift === "lifetime" ? "یک دعوت · پرمیوم برای همیشه" : `یک دعوت · ${fa(Number(inviteGift))} روز پرمیوم`,description:"این لینک فقط برای یک عضویته. کسی که باهاش عضو بشه، این اشتراک رو می‌گیره. لینک رو فقط برای همون فرد بفرست.",label:"بله، دعوت با این هدیه ساخته بشه",execute:createGift})}
             >
               <Plus size={18} /> ساخت لینک یک‌بارمصرف
             </Button>
@@ -447,12 +460,7 @@ export function Admin({ data, notify, refresh }) {
                 {invite.active && invite.uses === 0 && (
                   <button
                     disabled={busy}
-                    onClick={() =>
-                      run(async () => {
-                        await api("admin-invite-revoke", { code: invite.code });
-                        await load();
-                      })
-                    }
+                    onClick={() => setConfirmation({title:"این دعوت رو لغو کنیم؟",target:invite.code,description:"این لینک دیگه برای عضویت کار نمی‌کنه. اگه لازم شد، باید یه دعوت تازه بسازی.",label:"بله، دعوت لغو بشه",danger:true,execute:async()=>{await api("admin-invite-revoke",{code:invite.code,confirmed:true});setConfirmation(null);await load();}})}
                   >
                     لغو دعوت
                   </button>
@@ -495,31 +503,14 @@ export function Admin({ data, notify, refresh }) {
                       disabled={busy}
                       onChange={(e) => {
                         const enabled = e.target.checked;
-                        run(async () => {
-                          await api("admin-user", {
-                            id: user.id,
-                            operation: "lifetime",
-                            enabled,
-                          });
-                          await load();
-                          await refresh();
-                        });
+                        setConfirmation({title:enabled ? "پرمیوم همیشگی هدیه بدیم؟" : "هدیهٔ همیشگی رو برداریم؟",target:`${user.name} · @${user.handle||"—"}`,description:enabled ? "پرمیوم این حساب بدون تاریخ پایان فعال می‌شه. این هدیه رو برای همین شخص می‌خوای؟" : "پرمیوم همیشگی این حساب برداشته می‌شه؛ اشتراک مدت‌دار یا روزهای هدیهٔ دیگه طبق وضعیت خودشون می‌مونن.",label:enabled ? "بله، هدیهٔ همیشگی فعال بشه" : "بله، هدیهٔ همیشگی برداشته بشه",danger:!enabled,execute:async()=>{await api("admin-user",{id:user.id,operation:"lifetime",enabled,confirmed:true});setConfirmation(null);await load();await refresh();}});
                       }}
                     />
                   </label>
                   {user.role !== "admin" && (
                     <button
                       disabled={busy}
-                      onClick={() =>
-                        run(async () => {
-                          await api("admin-user", {
-                            id: user.id,
-                            operation: "suspend",
-                            enabled: !user.banned,
-                          });
-                          await load();
-                        })
-                      }
+                      onClick={()=>setConfirmation({title:user.banned ? "این حساب دوباره فعال بشه؟" : "این حساب رو غیرفعال کنیم؟",target:`${user.name} · @${user.handle||"—"}`,description:user.banned ? "این شخص دوباره می‌تونه از حسابش استفاده کنه." : "ورود این شخص بسته می‌شه؛ مکانش پنهان و دعوت‌هاش غیرفعال می‌شن. بعداً می‌تونی حساب رو دوباره فعال کنی.",label:user.banned ? "بله، حساب فعال بشه" : "بله، حساب غیرفعال بشه",danger:!user.banned,execute:async()=>{await api("admin-user",{id:user.id,operation:"suspend",enabled:!user.banned,confirmed:true});setConfirmation(null);await load();}})}
                     >
                       {user.banned ? "فعال‌کردن حساب" : "غیرفعال‌کردن حساب"}
                     </button>
@@ -545,13 +536,7 @@ export function Admin({ data, notify, refresh }) {
           <button
             className="button button-secondary admin-recovery"
             disabled={busy}
-            onClick={() =>
-              run(async () => {
-                const value = await api("admin-recovery", {});
-                setCreated(value.url);
-                notify("لینک ورود خصوصی ساخته شد؛ فقط یک بار کار می‌کنه.");
-              })
-            }
+            onClick={()=>setConfirmation({title:"لینک ورود خصوصی بسازیم؟",target:"فقط برای حساب مدیر خودت",description:"این لینک یک‌بارمصرفه و دسترسی مدیریت می‌ده. خصوصی نگهش دار و برای دعوت دوست‌ها نفرست.",label:"بله، لینک خصوصی ساخته بشه",execute:async()=>{const value=await api("admin-recovery",{confirmed:true});setCreated(value.url);setConfirmation(null);notify("لینک ورود خصوصی ساخته شد؛ فقط یک بار کار می‌کنه.");}})}
           >
             ساخت لینک ورود خصوصی برای خودم
           </button>
@@ -572,6 +557,7 @@ export function Admin({ data, notify, refresh }) {
           </details>
         </>
       )}
+      {confirmation&&<AdminConfirmation action={confirmation} busy={busy} onCancel={()=>setConfirmation(null)} onConfirm={confirmAction}/>}
     </section>
   );
 }

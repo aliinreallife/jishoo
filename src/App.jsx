@@ -19,6 +19,7 @@ import { currentRelease, releaseStorageKey } from "./releases";
 import { ReleaseNotes } from "./components/ReleaseNotes";
 import {
   House,
+  Camera,
   UsersThree,
   User,
   MapPin,
@@ -804,6 +805,7 @@ export default function App() {
     }
   }
   function setDialog(value) {
+    if (value === null && dialog === "photo") setPhotoFile(null);
     if (value === null && page.screen === "settings") closeSettings();
     else setDialogState(value);
   }
@@ -815,6 +817,7 @@ export default function App() {
     timer = useRef(),
     usedAdminAccess = useRef(null),
     scroll = useRef(),
+    profilePhotoInput = useRef(),
     lastRefresh = useRef(0),
     inviteFromUrl = useRef(
       new URLSearchParams(location.search).get("invite") ||
@@ -1201,7 +1204,6 @@ export default function App() {
     const result = await perform("profile", {
       name: profileName,
       ...(profileHandle.trim() ? { handle: profileHandle.trim() } : {}),
-      socialLinks: socials,
     });
     if (result) {
       setData(result);
@@ -1212,6 +1214,11 @@ export default function App() {
   function openSocialAccounts() {
     setSocials(data.me.socialLinks || {});
     setDialog("socialAccounts");
+  }
+  function openMySocialAccounts() {
+    if (!me.registered) { openAuth(); return; }
+    setSelectedFriend(null);
+    openSocialAccounts();
   }
   async function saveSocialAccounts(event) {
     event.preventDefault();
@@ -1263,13 +1270,14 @@ export default function App() {
   function uploadAvatar(event) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (file) setPhotoFile(file);
+    if (file) { setPhotoFile(file); setDialog("photo"); }
   }
   async function saveAvatar(image) {
     setBusy(true);
     try {
       setData(await api("avatar", { image }));
       setPhotoFile(null);
+      setDialog(null);
       notify("عکس پروفایلت آماده‌ست!");
     } catch (e) {
       notify(e.message);
@@ -1363,7 +1371,7 @@ export default function App() {
     ["nearby", MapPin, "این نزدیکا"],
     ["friends", UsersThree, "دوست‌ها"],
     ["profile", User, "من"],
-  ];
+  ].reverse();
   const activeTab = [
     "stats",
     "invite",
@@ -1841,6 +1849,7 @@ export default function App() {
                     data={data}
                     refreshAccount={refresh}
                     onAuth={openAuth}
+                    onPremium={() => setDialog("premium")}
                     onConnect={connectHandle}
                     onSharingChanged={(value) =>
                       setData((current) => ({
@@ -1972,9 +1981,11 @@ export default function App() {
                           : setDialog("guestSettings")
                       }
                     />
-                    <div className="profile-avatar personal-character">
+                    <button className="profile-avatar personal-character profile-avatar-picker" aria-label="تغییر عکس پروفایل" onClick={()=>me.registered ? profilePhotoInput.current?.click() : openAuth()}>
                       <Avatar person={me} size={125} mood="shy" animate />
-                    </div>
+                      <span className="profile-camera-badge"><Camera size={19}/></span>
+                    </button>
+                    <input ref={profilePhotoInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={uploadAvatar} hidden aria-label="انتخاب عکس پروفایل"/>
                     <IconButton
                       icon={ShareNetwork}
                       label="اشتراک پروفایل من"
@@ -1982,6 +1993,7 @@ export default function App() {
                     />
                   </div>
                   <h1>{me.name}</h1>
+                  {me.avatarImage && <button className="text-link reset-profile-character" disabled={busy} onClick={async()=>{const value=await perform("avatar",{image:null});if(value)setData(value);}}>برگشت به شخصیت خودم</button>}
                   <p className="handle" dir={me.handle ? "ltr" : undefined}>
                     {me.registered
                       ? me.handle
@@ -2030,7 +2042,7 @@ export default function App() {
                               ? `هدیه‌ی تو تا ${new Date(me.trialUntil).toLocaleDateString("fa-IR")}`
                               : "ثبت جیش، نقشه و استوری همیشه رایگانه."}
                       </p>
-                      <small className="premium-free-hint">ثبت جیش، دوست‌ها، گروه‌ها، آمار، نقشه و استوری شخصی همیشه رایگانن.</small>
+                      <small className="premium-free-hint">ثبت جیش، دوست‌ها، گروه‌ها، آمار، نقشهٔ اطراف و استوری شخصی همیشه رایگانن.</small>
                     </div>
                     <CaretLeft size={17} />
                   </button>
@@ -2059,6 +2071,9 @@ export default function App() {
                     </div>
                     <Drop size={30} weight="duotone" />
                     <CaretLeft size={20} />
+                  </button>
+                  <button className="profile-community-link" onClick={openMySocialAccounts}>
+                    <LinkSimple size={26}/><div><h2>من تو شبکه‌های اجتماعی</h2><p>حساب‌هات؛ با اجازهٔ خودت برای دوستات</p></div><CaretLeft size={18}/>
                   </button>
                   <button
                     className="profile-community-link"
@@ -2258,7 +2273,7 @@ export default function App() {
         {dialog && !["story", "momentStory"].includes(dialog) && (
           <Modal
             hideClose={["success", "need", "socialSetup"].includes(dialog)}
-            fullscreen={["success", "need", "auth", "friend", "settings", "socialAccounts", "profileShare", "groupInvite", "moment", "premium"].includes(dialog)}
+            fullscreen={["success", "need", "auth", "friend", "settings", "socialAccounts", "photo", "profileShare", "groupInvite", "moment", "premium"].includes(dialog)}
             labelledBy={dialog === "socialSetup" ? "social-setup-title" : dialog === "socialAccounts" ? "social-accounts-title" : undefined}
             focusTarget={dialog === "socialSetup" ? ".social-setup-reminder button" : dialog === "socialAccounts" ? ".social-field input" : undefined}
             onClose={() => dialog === "whatsNew" ? dismissRelease() : setDialog(null)}
@@ -2269,7 +2284,7 @@ export default function App() {
                   ? "success-dialog page-dialog full"
                   : dialog === "whatsNew" ? "release-dialog"
                   : dialog === "friend" ? `page-dialog friend-page-dialog social-page-${selectedFriend?.linkConnection || "none"}`
-                  : ["auth", "settings", "socialAccounts", "profileShare", "groupInvite", "premium"].includes(dialog) ? "page-dialog" : ""
+                  : ["auth", "settings", "socialAccounts", "photo", "profileShare", "groupInvite", "premium"].includes(dialog) ? "page-dialog" : ""
             }
           >
             {dialog === "whatsNew" && <ReleaseNotes onClose={dismissRelease} />}
@@ -2536,7 +2551,7 @@ export default function App() {
             {dialog === "socialAccounts" && (
               <div className="social-account-editor">
                 <div className="dialog-icon purple"><LinkSimple size={28} /></div>
-                <h2 id="social-accounts-title">حساب‌های اجتماعی من</h2>
+                <h2 id="social-accounts-title">من تو شبکه‌های اجتماعی</h2>
                 <p className="dialog-description">
                   هر کدوم رو دوست داری اضافه کن؛ پُرکردن همه لازم نیست. دوست‌هایی که تبادل حساب‌ها رو باهاشون قبول کردی، لینک‌های ذخیره‌شده رو می‌بینن.
                 </p>
@@ -2544,7 +2559,7 @@ export default function App() {
                   <SocialAccountFields value={socials} onChange={setSocials} autoFocus />
                   <Button lilac type="submit" disabled={busy}>ذخیره حساب‌ها <Check size={19} /></Button>
                 </form>
-                <Button secondary disabled={busy} onClick={() => setDialog("friend")}>برگشت</Button>
+                <Button secondary disabled={busy} onClick={() => setDialog(selectedFriend ? "friend" : null)}>برگشت</Button>
               </div>
             )}
             {dialog === "disconnect" && selectedFriend && (
@@ -2780,52 +2795,7 @@ export default function App() {
                     notify={notify}
                   />
                 </Suspense>
-                <p className="dialog-description">
-                  لینک‌های اجتماعی فقط با درخواست و قبول هر دو نفر دیده می‌شن.
-                  می‌تونی اشتراک لینک‌ها رو قطع کنی و همچنان دوست بمونی.
-                </p>
                 <form onSubmit={saveProfile}>
-                  {photoFile && (
-                    <Suspense fallback={<LoadingSection />}>
-                      <PhotoEditor
-                        file={photoFile}
-                        busy={busy}
-                        onSave={saveAvatar}
-                        onCancel={() => setPhotoFile(null)}
-                        notify={notify}
-                      />
-                    </Suspense>
-                  )}
-                  <div className="avatar-upload-row">
-                    <Avatar person={me} size={68} />
-                    <div>
-                      <label className="upload-avatar-label">
-                        {busy ? "آماده‌کردن عکس…" : "عکس خودمو بذارم"}
-                        <input
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp"
-                          onChange={uploadAvatar}
-                          disabled={busy}
-                        />
-                      </label>
-                      <small>یا شخصیت ساخته‌شده از اسمت</small>
-                      {me.avatarImage && (
-                        <button
-                          type="button"
-                          className="text-link"
-                          disabled={busy}
-                          onClick={async () => {
-                            const value = await perform("avatar", {
-                              image: null,
-                            });
-                            if (value) setData(value);
-                          }}
-                        >
-                          برگشت به شخصیت من
-                        </button>
-                      )}
-                    </div>
-                  </div>
                   <label className="field-label">
                     اسمت
                     <input
@@ -2855,7 +2825,6 @@ export default function App() {
                       می‌شه.
                     </small>
                   </label>
-                  <SocialAccountFields value={socials} onChange={setSocials} />
                   <Button lilac type="submit" disabled={busy}>
                     ذخیره تغییرات
                     <Check size={19} />
@@ -2879,6 +2848,7 @@ export default function App() {
                 </button>
               </>
             )}
+            {dialog === "photo" && photoFile && <Suspense fallback={<LoadingSection/>}><PhotoEditor file={photoFile} busy={busy} onSave={saveAvatar} onCancel={()=>{setPhotoFile(null);setDialog(null);}} notify={notify}/></Suspense>}
             {dialog === "guestSettings" && (
               <>
                 <Avatar person={me} size={95} mood="shy" />
@@ -2922,7 +2892,7 @@ export default function App() {
                   <ul>
                     <li>ثبت «جیش دارم» و «جیش کردم» و لغو ثبت</li>
                     <li>دوست‌ها، گروه‌ها و حال‌و‌احوال دوستات</li>
-                    <li>آمار شخصی، نقشه و دیدن ثبت‌های اطراف</li>
+                    <li>آمار شخصی و نقشهٔ اطراف</li>
                     <li>استوری‌های شخصی و فرستادن دعوت</li>
                   </ul>
                 </section>
@@ -2930,6 +2900,7 @@ export default function App() {
                   <h3><CrownSimple size={21} /> قابلیت‌های اضافهٔ پرمیوم</h3>
                   <ul>
                     <li>تبادل حساب‌های اجتماعی با درخواست و قبول هر دو نفر</li>
+                    <li>نقشهٔ همه‌جا، با ثبت‌های بی‌نام</li>
                     <li>خاطره‌های «با هم» و «پشت سر هم» و کارت‌های اشتراک‌شون</li>
                   </ul>
                   {data.testing && <p>در دورهٔ آزمایشی، این‌ها هم برای همه رایگان فعاله.</p>}

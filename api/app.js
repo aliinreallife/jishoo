@@ -21,6 +21,8 @@ import {
   publicProfile,
 } from "../lib/community.js";
 import { notifyFriends, notifyUser } from "../lib/notifications.js";
+import { notifyMutualMoments } from "../lib/mutual-moments.js";
+import { worldMap, invalidateWorldMap } from "../lib/world-map.js";
 import { query, transaction, initialize } from "../lib/database.js";
 import {
   testingMode,
@@ -304,7 +306,7 @@ async function detectMoments(user, event) {
     const [a, b] = [user.id, peer.id].sort(),
       [ea, eb] = [event.id, peer.event_id].sort();
     const inserted = await query(
-      `INSERT INTO pair_moments(id,user_a,user_b,event_a,event_b,kind) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(event_a,event_b) DO NOTHING RETURNING *`,
+      `INSERT INTO pair_moments(id,user_a,user_b,event_a,event_b,kind) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(event_a,event_b) DO UPDATE SET kind=pair_moments.kind RETURNING *`,
       [randomUUID(), a, b, ea, eb, kind],
     );
     if (inserted[0])
@@ -396,6 +398,13 @@ export default async function handler(req, res) {
       );
     const auth = await session(req, res);
     const user = auth.user;
+    if (action === "world-map") {
+      requireAccount(user);
+      requirePremium(user);
+      if (req.method !== "GET") fail(405, "این نقشه با درخواست خواندن باز می‌شه.");
+      try { return json(res, 200, await worldMap(url.searchParams)); }
+      catch (error) { if (error.message === "محدودهٔ نقشه معتبر نیست.") fail(400, error.message); throw error; }
+    }
     if (action === "bootstrap")
       return json(res, 200, await bootstrap(user, auth.tokenHash));
     if (["account-merge-confirm", "account-merge-cancel"].includes(action)) {
@@ -668,9 +677,12 @@ export default async function handler(req, res) {
       // Keep real provider delivery alive after the response without making
       // recording a check-in wait for every friend's push service.
       waitUntil(
-        notifyFriends(user, rows[0]).catch(() =>
-          console.warn("[jishoo-push] background delivery failed"),
-        ),
+        Promise.allSettled([
+          notifyFriends(user, rows[0], new Set(matched.map(moment => moment.friend.id))),
+          notifyMutualMoments(user, rows[0], matched),
+        ]).then(results => {
+          if (results.some(result => result.status === "rejected")) console.warn("[jishoo-push] background delivery failed");
+        }),
       );
       return json(res, 200, {
         event: {
@@ -701,7 +713,7 @@ export default async function handler(req, res) {
       requireAccount(user);
       let links;
       try {
-        links = cleanSocialLinks(body.socialLinks || {});
+        links = cleanSocialLinks(body.socialLinks === undefined ? user.social_links : body.socialLinks);
       } catch (error) {
         fail(400, error.message);
       }
@@ -866,6 +878,7 @@ export default async function handler(req, res) {
           ["UPDATE users SET share_location=FALSE,discoverable=FALSE,location_lat=NULL,location_lng=NULL,location_updated_at=NULL WHERE id=$1", [user.id]],
           ["UPDATE checkins SET location_lat=NULL,location_lng=NULL WHERE user_id=$1", [user.id]],
         ]);
+        await invalidateWorldMap();
       } else {
         if (!(await rateLimit(`map-visibility:${user.id}`, 12, 60))) fail(429, "یه لحظه صبر کن، بعد دوباره انتخاب کن.");
         let point;
@@ -888,6 +901,7 @@ export default async function handler(req, res) {
             [user.id],
           ],
         ]);
+        await invalidateWorldMap();
       } else {
         let p;
         try {
@@ -970,6 +984,7 @@ export default async function handler(req, res) {
         ["UPDATE users SET invited_by=NULL WHERE invited_by=$1", [user.id]],
         ["DELETE FROM users WHERE id=$1", [user.id]],
       ]);
+      await invalidateWorldMap();
       res.setHeader(
         "Set-Cookie",
         "jishoo_session=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0",

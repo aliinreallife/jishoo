@@ -56,7 +56,7 @@ def main():
             recipient.call('connection-share',{'id':relation['connectionId'],'operation':'disconnect'})
             request();incoming();page.get_by_role('button',name='قبول درخواست',exact=True).click()
             page.get_by_role('button',name='افزودن حساب‌های من',exact=True).click()
-            editor=page.get_by_role('dialog',name='حساب‌های اجتماعی من',exact=True)
+            editor=page.get_by_role('dialog',name='من تو شبکه‌های اجتماعی',exact=True)
             expect(editor).to_be_visible()
             assert editor.locator('input').count()==4
             expect(page.get_by_label('اینستاگرام',exact=True)).to_be_focused()
@@ -84,7 +84,7 @@ def main():
             expect(page.locator('.social-connected')).to_be_visible()
             expect(page.locator('.social-setup-reminder')).to_have_count(0)
             page.keyboard.press('Escape');page.goto(BASE+'/#/profile')
-            page.get_by_role('button',name='تنظیمات پروفایل',exact=True).click()
+            page.get_by_role('button',name='من تو شبکه‌های اجتماعی',exact=False).click()
             expect(page.get_by_label('اینستاگرام',exact=True)).to_have_value(saved['socialLinks']['instagram'])
             assert not errors,errors
             print('PASS: Empty-profile acceptance opens the responsive reminder; decline/view/filled profiles do not. Skip retains consent, cancel discards drafts, the short editor rejects unsafe links and saves without changing name/handle. Only mutually accepted friends see added accounts; full profile settings still show them.',flush=True)

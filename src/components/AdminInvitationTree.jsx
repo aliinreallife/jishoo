@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { ArrowsClockwise, CaretDown, CaretLeft, TreeStructure } from "@phosphor-icons/react";
 import { api, fa } from "../api";
 import { Avatar } from "./Character";
 import { invitationForest, invitationPath } from "../invitation-tree";
 import "./AdminInvitationTree.css";
+const InvitationGraph = lazy(()=>import("./AdminInvitationGraph"));
 
 function Branch({ node, depth = 0, onFocus }) {
   const [expanded, setExpanded] = useState(depth < 2);
@@ -29,6 +30,7 @@ function Branch({ node, depth = 0, onFocus }) {
 
 export default function AdminInvitationTree() {
   const [members, setMembers] = useState([]), [offset, setOffset] = useState(0), [hasMore, setHasMore] = useState(false);
+  const [view, setView] = useState("graph");
   const [busy, setBusy] = useState(true), [error, setError] = useState(""), [search, setSearch] = useState(""), [focus, setFocus] = useState(null), [rootLimit, setRootLimit] = useState(20);
   const forest = useMemo(() => invitationForest(members), [members]);
   async function load(append = false) {
@@ -51,11 +53,12 @@ export default function AdminInvitationTree() {
     </header>
     <p className="invitation-generations">نسل ۱: دعوت مستقیم · نسل ۲: دعوتِ دعوت‌شده‌ها</p>
     <div className="invitation-tree-totals"><span>{fa(members.length)} عضو{hasMore ? " بارگذاری‌شده" : ""}</span><span>{fa(forest.levels)} نسل{hasMore ? " در این بخش" : ""}</span></div>
+    <div className="invitation-view-switch" role="group" aria-label="نمایش دعوت‌ها"><button aria-pressed={view==="graph"} onClick={()=>setView("graph")}>نمودار دیداری</button><button aria-pressed={view==="tree"} onClick={()=>setView("tree")}>فهرست شاخه‌ها</button></div>
     <label className="tree-search-label">پیداکردن شاخهٔ یک نفر<input aria-label="جستجو در درخت دعوت‌ها" placeholder="اسم یا شناسه، مثلاً ali" value={search} onChange={event => setSearch(event.target.value)} /></label>
     {term && <div className="invitation-tree-results" aria-label="نتیجهٔ جستجوی درخت">{matches.length ? matches.map(node => <button key={node.id} onClick={() => showBranch(node.id)}><strong>{node.name}</strong><span dir="ltr">@{node.handle || "—"}</span><CaretLeft size={16} /></button>) : <p>بین اعضای بارگذاری‌شده پیدا نشد.</p>}</div>}
     {focused && <div className="invitation-focus"><button onClick={() => setFocus(null)}>همهٔ شاخه‌ها</button><p>{invitationPath(forest.nodes, focus).map((node, index) => <React.Fragment key={node.id}>{index > 0 && <span aria-hidden="true"> ← </span>}<button onClick={() => showBranch(node.id)}>{node.name}</button></React.Fragment>)}</p></div>}
     {error && <p className="form-error" role="alert">{error}<button onClick={() => load()}>دوباره تلاش کن</button></p>}
-    {!members.length && busy ? <p role="status">داریم مسیر دعوت‌ها رو می‌چینیم…</p> : !members.length && !error ? <p>هنوز عضوی برای نمایش نیست.</p> : <ol className="invitation-forest" aria-label="شاخه‌های دعوت اعضا">{roots.map(node => <Branch key={node.id + (focus || "all")} node={node} onFocus={showBranch} />)}</ol>}
+    {!members.length && busy ? <p role="status">داریم مسیر دعوت‌ها رو می‌چینیم…</p> : !members.length && !error ? <p>هنوز عضوی برای نمایش نیست.</p> : view === "graph" ? <Suspense fallback={<p>داریم نمودار رو می‌چینیم…</p>}><InvitationGraph roots={roots} onFocus={showBranch}/></Suspense> : <ol className="invitation-forest" aria-label="شاخه‌های دعوت اعضا">{roots.map(node => <Branch key={node.id + (focus || "all")} node={node} onFocus={showBranch} />)}</ol>}
     {!focused && forest.roots.length > rootLimit && <button className="tree-more" onClick={() => setRootLimit(rootLimit + 20)}>شاخه‌های بیشتر</button>}
     {hasMore && <button className="tree-more" disabled={busy} onClick={() => load(true)}>{busy ? "در حال بارگذاری…" : "بارگذاری ادامهٔ درخت"}</button>}
     <p className="invitation-tree-note">فقط عضویت‌های کامل شمرده می‌شن. سرشاخه یعنی دعوت‌کننده‌ای در فهرست فعلی ثبت نشده.{hasMore ? " برای دیدن ادامهٔ نسل‌ها، باقی اعضا رو هم بارگذاری کن." : ""}</p>

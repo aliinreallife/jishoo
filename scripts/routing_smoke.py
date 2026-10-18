@@ -6,6 +6,7 @@ deployment rewrites and the real backend are checked separately.
 import copy
 from datetime import datetime, timedelta
 import json
+from pathlib import Path
 from urllib.parse import urlsplit, parse_qs
 from playwright.sync_api import sync_playwright, expect
 from smoke import BASE, CHROMIUM, verified_https, ARTIFACTS
@@ -44,7 +45,8 @@ def main():
         browser = p.chromium.launch(executable_path=CHROMIUM, headless=True, args=['--no-sandbox'])
         ctx = browser.new_context(viewport={'width': 393, 'height': 852}, service_workers='block')
         verified_https(ctx)
-        ctx.add_init_script("localStorage.setItem('jishoo:v2-entered','true');localStorage.setItem('jishoo:last-seen-release','0.3.0')")
+        version=json.loads((Path(__file__).resolve().parents[1]/'package.json').read_text())['version']
+        ctx.add_init_script("localStorage.setItem('jishoo:v2-entered','true');localStorage.setItem('jishoo:last-seen-release',"+json.dumps(version)+")")
         page = ctx.new_page()
         page.on('pageerror', lambda e: (errors.append(str(e)), print('Browser error:', str(e), flush=True)))
 

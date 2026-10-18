@@ -17,6 +17,9 @@ import {
   Eye,
   EyeSlash,
   SlidersHorizontal,
+  GlobeHemisphereWest,
+  UsersThree,
+  CrownSimple,
 } from "@phosphor-icons/react";
 import { markerOffsets } from "../map-markers";
 import { api, relativeTime, fa } from "../api";
@@ -29,6 +32,7 @@ export default function Nearby({
   onAuth,
   onConnect,
   onSharingChanged,
+  onPremium,
   notify,
 }) {
   const container = useRef(),
@@ -38,14 +42,20 @@ export default function Nearby({
     selfMarker = useRef();
   const optionsPanel = useRef();
   const refreshing = useRef(false), latestRefresh = useRef();
+  const worldSequence = useRef(0), cameras = useRef({}), previousScope = useRef("local");
   const [position, setPosition] = useState(null),
+    [view, setView] = useState("map"),
+    [scope, setScope] = useState("local"),
+    [worldActivity, setWorldActivity] = useState([]),
+    [worldInfo, setWorldInfo] = useState(null),
+    [worldLoading, setWorldLoading] = useState(false),
+    [worldError, setWorldError] = useState(""),
     [geoError, setGeoError] = useState(""),
     [locating, setLocating] = useState(false),
     [activity, setActivity] = useState([]),
     [selected, setSelected] = useState(null),
     [cluster, setCluster] = useState(null),
     [people, setPeople] = useState([]),
-    [peopleOpen, setPeopleOpen] = useState(false),
     [panelOpen, setPanelOpen] = useState(true),
     [peopleBusy, setPeopleBusy] = useState(false),
     [sharingBusy, setSharingBusy] = useState(false),
@@ -68,7 +78,7 @@ export default function Nearby({
       attribution: data.map.attribution,
     }).addTo(map.current);
     markers.current = L.layerGroup().addTo(map.current);
-    const resize = new ResizeObserver(() => map.current?.invalidateSize());
+    const resize = new ResizeObserver(() => { if (container.current?.clientWidth && container.current?.clientHeight) map.current?.invalidateSize({pan:false}); });
     resize.observe(container.current);
     return () => {
       resize.disconnect();
@@ -86,15 +96,19 @@ export default function Nearby({
     if (!quiet) setLoading(true);
     try {
       const [activityResult, peopleResult] = await Promise.allSettled([
-        api("nearby", p), me.registered ? api("discover", p) : Promise.resolve({ people: [] }),
+        view === "map" && scope === "local" ? api("nearby", p) : Promise.resolve(null),
+        view === "people" && me.registered ? api("discover", p) : Promise.resolve(null),
       ]);
-      if (peopleResult.status === "fulfilled") setPeople(peopleResult.value.people);
+      if (peopleResult.status === "fulfilled" && peopleResult.value) setPeople(peopleResult.value.people);
+      if (peopleResult.status === "rejected") throw peopleResult.reason;
       if (activityResult.status === "rejected") throw activityResult.reason;
       const result = activityResult.value;
-      setActivity(result.activity);
-      setSelected(
+      if (result) {
+        setActivity(result.activity);
+        setSelected(
         (current) => result.activity.find((x) => x.id === current?.id) || null,
-      );
+        );
+      }
     } catch (error) {
       if (!quiet) notify(error.message);
     } finally {
@@ -103,6 +117,50 @@ export default function Nearby({
     }
   }
   latestRefresh.current = refresh;
+  useEffect(() => { if (position) latestRefresh.current(position, true); }, [view, scope, position]);
+  useEffect(() => {
+    if (!map.current || previousScope.current === scope) return;
+    cameras.current[previousScope.current] = { center: map.current.getCenter(), zoom: map.current.getZoom(), hasPosition:Boolean(position) };
+    previousScope.current = scope;
+    const saved = cameras.current[scope];
+    if (saved && (scope === "world" || saved.hasPosition || !position)) map.current.setView(saved.center, saved.zoom, { animate: false });
+    else if (scope === "world") map.current.fitWorld({ animate: false });
+    else if (position) map.current.setView([position.lat, position.lng], 15, { animate: false });
+    setSelected(null); setCluster(null); setPanelOpen(true);
+  }, [scope]);
+  useEffect(() => {
+    if (view !== "map" || scope !== "world" || !map.current) return;
+    let timer;
+    const instance = map.current;
+    const wrap = value => ((value + 180) % 360 + 360) % 360 - 180;
+    const update = async () => {
+      if (document.visibilityState !== "visible" || navigator.onLine === false) return;
+      const sequence = ++worldSequence.current, bounds = instance.getBounds();
+      const full = bounds.getEast() - bounds.getWest() >= 360;
+      setWorldLoading(true);
+      try {
+        const result = await api("world-map", undefined, {
+          south: Math.max(-90, bounds.getSouth()), north: Math.min(90, bounds.getNorth()),
+          west: full ? -180 : wrap(bounds.getWest()), east: full ? 180 : wrap(bounds.getEast()), zoom: instance.getZoom(),
+        });
+        if (sequence !== worldSequence.current) return;
+        setWorldActivity(result.activity); setWorldInfo(result); setWorldError("");
+      } catch (error) { if (sequence === worldSequence.current) setWorldError(error.message); }
+      finally { if (sequence === worldSequence.current) setWorldLoading(false); }
+    };
+    const moved = () => { clearTimeout(timer); timer = setTimeout(update, 400); };
+    instance.on("moveend", moved);
+    const poll = setInterval(update, 30000);
+    document.addEventListener("visibilitychange", update);
+    window.addEventListener("online", update);
+    update();
+    return () => { ++worldSequence.current; clearTimeout(timer); clearInterval(poll); instance.off("moveend", moved); document.removeEventListener("visibilitychange", update); window.removeEventListener("online", update); };
+  }, [scope, view]);
+  function chooseScope(next) {
+    if (next === "world" && !me.registered) { onAuth(); return; }
+    if (next === "world" && !me.premium) { onPremium(); return; }
+    setScope(next);
+  }
   function locate() {
     if (!navigator.geolocation) {
       setGeoError("این مرورگر از مکان‌یابی پشتیبانی نمی‌کنه.");
@@ -115,7 +173,7 @@ export default function Nearby({
         const p = { lat: coords.latitude, lng: coords.longitude };
         setPosition(p);
         setLocating(false);
-        map.current?.setView([p.lat, p.lng], 15);
+        if (view === "map") map.current?.setView([p.lat, p.lng], 15);
         if (sharing)
           try {
             await api("location", { ...p, enabled: true });
@@ -169,12 +227,20 @@ export default function Nearby({
       window.removeEventListener("online", update);
     };
   }, [position]);
+  const shownActivity = scope === "world" ? worldActivity : activity;
   useEffect(() => {
     if (!markers.current) return;
     markers.current.clearLayers();
-    const offsets = markerOffsets(activity),
+    const offsets = markerOffsets(shownActivity),
       clustered = new Set();
-    activity.forEach((item) => {
+    shownActivity.forEach((item) => {
+      if (item.count > 1) {
+        const badge = document.createElement("button"); badge.className = "map-cluster-count world-cluster-count";
+        badge.textContent = fa(item.count); badge.setAttribute("aria-label", `${fa(item.count)} نفر؛ برای دیدن محدوده بزرگ‌نمایی کن`);
+        L.marker([item.lat,item.lng], { icon: L.divIcon({html:badge,className:"map-cluster-icon",iconSize:[50,50],iconAnchor:[25,25]}) })
+          .addTo(markers.current).on("click",()=>map.current?.setView([item.lat,item.lng],Math.min(19,map.current.getZoom()+2)));
+        return;
+      }
       const offset = offsets.get(item.id);
       if (offset.cluster) {
         const key = `${item.lat}:${item.lng}`;
@@ -244,7 +310,7 @@ export default function Nearby({
           setSelected(item);
         });
     });
-  }, [activity]);
+  }, [shownActivity]);
   const visibilityMode = sharing ? (me.discoverable ? "profile" : "news") : "hidden";
   async function changeVisibility(mode) {
     if (sharingBusy || peopleBusy || mode === visibilityMode) return;
@@ -268,17 +334,26 @@ export default function Nearby({
       <header className="nearby-heading">
         <div>
           <h1>این نزدیکا</h1>
-          <p>جیش‌های اطراف، با مکان تقریبی</p>
+          <p>{view === "people" ? "پروفایل‌های نزدیک، با انتخاب خودشون" : scope === "world" ? "ثبت‌های بی‌نام از همه‌جا" : "جیش‌های اطراف، با مکان تقریبی"}</p>
         </div>
         <span className="tiny-badge">
           <ShieldCheck size={13} /> موقعیت تقریبی
         </span>
       </header>
+      <div className="nearby-view-tabs" role="tablist" aria-label="بخش‌های این نزدیکا">
+        <button role="tab" id="nearby-map-tab" aria-selected={view === "map"} aria-controls="nearby-map-pane" onClick={()=>setView("map")}><MapPin size={20}/>نقشه</button>
+        <button role="tab" id="nearby-people-tab" aria-selected={view === "people"} aria-controls="nearby-list-pane" onClick={()=>setView("people")}><UsersThree size={20}/>آدم‌های نزدیک من</button>
+      </div>
+      <div className="nearby-map-pane" id="nearby-map-pane" role="tabpanel" aria-labelledby="nearby-map-tab" hidden={view !== "map"}>
       <div
         className="real-map"
         ref={container}
         aria-label="نقشه‌ی فعالیت‌های اطراف"
       />
+      <div className="map-scope-switch" role="group" aria-label="محدودهٔ نقشه">
+        <button aria-pressed={scope === "local"} onClick={()=>chooseScope("local")}><MapPin size={17}/>اطراف من</button>
+        <button aria-pressed={scope === "world"} onClick={()=>chooseScope("world")}><GlobeHemisphereWest size={18}/>همه‌جا <CrownSimple size={15}/></button>
+      </div>
       <div className="map-controls">
         <button
           aria-label="بزرگ‌نمایی نقشه"
@@ -309,7 +384,7 @@ export default function Nearby({
           <span>مکان من</span>
         </button>
       </div>
-      {!position ? (
+      {!position && scope === "local" ? (
         <div className="map-permission-card">
           <span className="dialog-icon blue">
             <MapPin size={29} weight="duotone" />
@@ -331,12 +406,12 @@ export default function Nearby({
           <small>تا وقتی اجازه ندی، فقط نقشهٔ پیش‌فرض تهران نمایش داده می‌شه.</small>
         </div>
       ) : (
-        <div ref={optionsPanel} className={`around-panel ${peopleOpen || selected || cluster ? "is-browsing" : ""}`} id="nearby-map-options" hidden={!panelOpen}>
+        <div ref={optionsPanel} className={`around-panel ${selected || cluster ? "is-browsing" : ""}`} id="nearby-map-options" hidden={!panelOpen}>
           <div className="around-panel-top">
             <strong>
-              {loading
+              {(scope === "world" ? worldLoading : loading)
                 ? "در حال تازه‌کردن…"
-                : `${fa(activity.length)} نفر این نزدیکی`}
+                : scope === "world" ? `${fa(worldInfo?.inView)} نفر در این نما` : `${fa(activity.length)} نفر این نزدیکی`}
             </strong>
             <div className="map-panel-actions">
               <span className="map-live-state" aria-label="نقشه خودکار به‌روز می‌شه" title="نقشه هر چند ثانیه خودکار تازه می‌شه"><i aria-hidden="true" />خودکار</span>
@@ -397,7 +472,9 @@ export default function Nearby({
               </button>
             </div>
           )}
-          <fieldset className="map-visibility-control" disabled={sharingBusy || peopleBusy}>
+          {scope === "world" && <p className="world-map-note">ثبت‌های ۳۰ دقیقهٔ اخیر؛ بی‌نام و با مکان تقریبی. هر ۳۰ ثانیه تازه می‌شه.{worldInfo?.limited && " برای دیدن جزئیات، نزدیک‌تر شو."}</p>}
+          {worldError && scope === "world" && <p className="form-error">{worldError}</p>}
+          {scope === "local" && <fieldset className="map-visibility-control" disabled={sharingBusy || peopleBusy}>
             <legend>من چطور دیده بشم؟</legend>
             <div className="map-visibility-modes">
               {[
@@ -412,23 +489,24 @@ export default function Nearby({
               {sharingBusy ? "داریم انتخابت رو ذخیره می‌کنیم…" : visibilityMode === "hidden"
                 ? "کسی موقعیت یا جیشت رو روی نقشه نمی‌بینه."
                 : visibilityMode === "news"
-                  ? "جیشت با مکان تقریبی دیده می‌شه؛ فقط دوستات اسمت رو می‌بینن."
-                  : "آدم‌های اطراف اسم و پروفایلت رو هم می‌بینن."}
+                  ? "ثبتت با مکان تقریبی روی نقشهٔ اطراف و همه‌جا دیده می‌شه؛ فقط دوست‌های نزدیک اسمت رو می‌بینن."
+                  : "آدم‌های نزدیک اسم و پروفایلت رو می‌بینن؛ ثبتت توی نقشهٔ همه‌جا بی‌نامه."}
             </p>
-          </fieldset>
-          <button
-            className="nearby-people-trigger"
-            aria-expanded={peopleOpen}
-            aria-controls="nearby-people-list"
-            onClick={() => setPeopleOpen(!peopleOpen)}
-          >
-            <span>{peopleOpen ? "بستن فهرست آدم‌های نزدیک" : "دیدن آدم‌های این نزدیکا"}</span>
-            <strong>
-              {me.registered ? fa(people.length) : "با ورود به حساب"}
-            </strong>
-            {peopleOpen ? <CaretUp size={18} /> : <CaretDown size={18} />}
-          </button>
-            <div className="nearby-people-panel" id="nearby-people-list" hidden={!peopleOpen}>
+          </fieldset>}
+          {!selected && !cluster && <p className="map-empty-note">{shownActivity.length ? "روی شخصیت‌ها بزن تا ببینی چه حالی دارن." : scope === "world" ? "این محدوده فعلاً آرومه؛ می‌تونی جاهای دیگه رو هم ببینی." : "این نزدیکا فعلاً آرومه."}</p>}
+          <p className="map-grid-explanation">نقطه‌ها محل دقیق افراد نیستن. برای دیدن جزئیات، روی نقشه بزرگ‌نمایی کن.</p>
+        </div>
+      )}
+      {(position || scope === "world") && !panelOpen && (
+        <button className="map-options-restore" aria-controls="nearby-map-options" aria-expanded={false} onClick={() => setPanelOpen(true)}>
+          <SlidersHorizontal size={20} /> نمایش گزینه‌های نقشه
+        </button>
+      )}
+      </div>
+      <div className="nearby-list-pane" id="nearby-list-pane" role="tabpanel" aria-labelledby="nearby-people-tab" hidden={view !== "people"}>
+        <div className="nearby-list-intro"><UsersThree size={28}/><div><h2>آدم‌های نزدیک من</h2><p>تا ۳ کیلومتر اطرافت؛ فقط کسانی که نمایش پروفایلشون رو روشن کردن.</p></div></div>
+        {!position && <div className="nearby-list-permission"><img src="/assets/shy-drop.webp" alt="قطرهٔ خجالتی جیشو" width="100" height="100"/><p>برای دیدن آدم‌های این نزدیکا، مکانت رو پیدا کنیم؟ مکانت با این کار منتشر نمی‌شه.</p>{geoError && <p className="form-error">{geoError}</p>}<button className="button button-primary" onClick={locate} disabled={locating}>{locating ? "داریم مکانت رو پیدا می‌کنیم…" : "نمایش آدم‌های نزدیک"}</button></div>}
+        {position && <div className="nearby-people-panel" id="nearby-people-list">
               {me.registered ? (
                 <>
                   <div className="nearby-people-list">
@@ -479,19 +557,8 @@ export default function Nearby({
                 </>
               )}
             </div>
-          {!selected && !cluster && <p className="map-empty-note">{activity.length ? "روی شخصیت‌ها بزن تا ببینی چه حالی دارن." : "این نزدیکا فعلاً آرومه."}</p>}
-          <p className="map-grid-explanation">
-            نقطه‌ها محل دقیق افراد نیستن. نشانگرهای یک محدوده برای خوانایی از هم
-            باز می‌شن.
-          </p>
-
-        </div>
-      )}
-      {position && !panelOpen && (
-        <button className="map-options-restore" aria-controls="nearby-map-options" aria-expanded={false} onClick={() => setPanelOpen(true)}>
-          <SlidersHorizontal size={20} /> نمایش گزینه‌های نقشه
-        </button>
-      )}
+        }
+      </div>
     </section>
   );
 }

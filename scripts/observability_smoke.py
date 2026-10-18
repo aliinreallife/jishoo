@@ -4,6 +4,8 @@ Build with both VITE_VERCEL_*_ENABLED=true, serve on JISHOO_BASE_URL, and run
 against the real QA API bridge. Only the external provider scripts are stubbed.
 """
 from playwright.sync_api import sync_playwright, expect
+import json
+from pathlib import Path
 from api_smoke import Client
 from smoke import BASE, CHROMIUM, context
 
@@ -17,7 +19,8 @@ def main():
             ctx,page = context(browser)
             token = next(c.value for c in guest.cookies if c.name == 'jishoo_session')
             ctx.add_cookies([{'name':'jishoo_session','value':token,'url':BASE,'httpOnly':True,'sameSite':'Lax'}])
-            ctx.add_init_script("localStorage.setItem('jishoo:v2-entered','true');localStorage.setItem('jishoo:last-seen-release','0.3.0')")
+            version=json.loads((Path(__file__).resolve().parents[1]/'package.json').read_text())['version']
+            ctx.add_init_script("localStorage.setItem('jishoo:v2-entered','true');localStorage.setItem('jishoo:last-seen-release',"+json.dumps(version)+")")
             page.route('**/_vercel/insights/script.js',lambda route:route.fulfill(content_type='application/javascript',body="""
               window.qaViews=[];
               window.va=(kind,data)=>{if(kind==='beforeSend')window.qaAnalyticsFilter=data;

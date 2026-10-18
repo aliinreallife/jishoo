@@ -28,3 +28,14 @@
 .invitation-node-copy small { font-size:11px; line-height:1.8; color:#75657e; }
 .invitation-deeper,.tree-more { display:flex; align-items:center; justify-content:center; gap:6px; min-height:44px; font-size:12px; color:#6e4c88; background:#eee4f7; border:1px solid #d8c6e6; border-radius:12px; padding:8px; margin-top:10px; width:100%; }
 .admin-invitation-tree .form-error button { display:block; min-height:44px; text-decoration:underline; }
+.invitation-view-switch { display:flex; gap:5px; padding:4px; margin-bottom:15px; border-radius:14px; background:#ebe1f3; }
+.invitation-view-switch button { flex:1; min-height:42px; border-radius:11px; font-size:12px; color:#8b7897; }
+.invitation-view-switch [aria-pressed="true"] { background:#fffdf9; color:#6b4d82; font-weight:700; box-shadow:0 2px 7px #77568c12; }
+.invitation-graph { height:420px; margin:14px 0; border:1px solid #e0d3ea; border-radius:18px; overflow:hidden; background:#fcf8ff; }
+.invitation-graph-member { display:flex; align-items:center; gap:9px; width:185px; min-height:88px; padding:12px; border:1.5px solid #d4bee4; border-radius:17px; background:#fffdf7; box-shadow:0 4px 12px #795b8d12; }
+.invitation-graph-member.suspended { border-style:dashed; opacity:.7; }
+.invitation-graph-member > div { min-width:0; display:grid; gap:4px; text-align:right; }
+.invitation-graph-member strong { font-size:13px; white-space:nowrap; max-width:117px; overflow:hidden; text-overflow:ellipsis; }
+.invitation-graph-member span,.invitation-graph-member small { font-size:10px; color:#8d7d98; }
+.invitation-graph .react-flow__handle { background:#bda4d0; border:0; }
+.invitation-graph .react-flow__controls button { min-width:32px; min-height:32px; background:#fffcf7; }

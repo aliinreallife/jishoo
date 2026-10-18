@@ -1634,3 +1634,24 @@
   margin-top: 14px;
   font-size: 12px;
 }
+.admin-gift-picker { border:0; padding:0; margin:20px 0; min-width:0; }
+.admin-gift-picker legend { font-size:14px; font-weight:700; margin-bottom:12px; }
+.admin-gift-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+.admin-gift-options label { position:relative; display:grid; justify-items:start; gap:6px; padding:14px 12px; border:1px solid #dfd5e6; border-radius:17px; background:#fffcf6; cursor:pointer; }
+.admin-gift-options label:last-child { grid-column:1/-1; background:linear-gradient(120deg,#fff2c2,#f4e4fa); }
+.admin-gift-options label.selected { border:2px solid #aa8cc5; padding:13px 11px; box-shadow:0 3px 10px #8d6dac18; }
+.admin-gift-options input { position:absolute; width:18px; height:18px; left:12px; top:12px; accent-color:#9b7cba; }
+.admin-gift-options label > svg:last-child:not(:first-of-type) { position:absolute; bottom:12px; left:12px; color:#8a68a7; }
+.admin-gift-options strong { font-size:16px; }
+.admin-gift-options small,.admin-gift-picker > p { font-size:11px; color:#8c7b91; line-height:1.9; }
+.admin-gift-picker > p { margin-top:12px; }
+.profile-avatar-picker { position:relative; padding:0; border:0; background:transparent; cursor:pointer; }
+.profile-camera-badge { position:absolute; bottom:1px; inset-inline-end:0; display:grid; place-items:center; width:32px; height:32px; border:3px solid #fffcf5; border-radius:50%; background:#ffe16c; color:#72613b; }
+.reset-profile-character { font-size:11px; margin:8px auto; }
+.admin-confirm-backdrop { position:fixed; inset:0; z-index:2200; display:flex; align-items:center; justify-content:center; padding:20px; background:#3c334a61; backdrop-filter:blur(5px); }
+.admin-confirm-card { width:min(100%,380px); max-height:100%; overflow:auto; padding:26px 22px 22px; border:1px solid #f4e9da; border-radius:27px; background:#fffcf5; box-shadow:0 16px 55px #3f30452b; text-align:center; }
+.admin-confirm-symbol { display:grid; place-items:center; width:66px; height:66px; margin:0 auto 14px; border-radius:21px; background:#f1e7fa; color:#9574b0; }
+.admin-confirm-card h2 { font-size:20px; line-height:1.7; }
+.admin-confirm-target { display:block; margin:14px 0 10px; padding:12px; border-radius:13px; background:#f6efdf; overflow-wrap:anywhere; font-size:14px; }
+.admin-confirm-card p { font-size:13px; line-height:2; color:#89798a; margin-bottom:20px; }
+.admin-confirm-card > button { margin-top:9px; font-size:13px; min-height:46px; }
