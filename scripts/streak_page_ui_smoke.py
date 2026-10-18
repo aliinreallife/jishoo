@@ -22,7 +22,7 @@ def main():
   ctx.add_init_script("localStorage.setItem('jishoo:v2-entered','true');localStorage.setItem('jishoo:last-seen-release',"+json.dumps(version)+")")
   # Retain the rendered Blob for byte checks; production CSP intentionally blocks fetch(blob:).
   ctx.add_init_script("window.qaBlobs=new Map();const create=URL.createObjectURL;URL.createObjectURL=function(blob){const url=create.call(this,blob);window.qaBlobs.set(url,blob);return url}")
-  ctx.add_init_script("window.qaInk=[];const fill=CanvasRenderingContext2D.prototype.fillText;CanvasRenderingContext2D.prototype.fillText=function(value,x,y,...rest){if(this.canvas.width===1080){const m=this.measureText(String(value));window.qaInk.push({value:String(value),top:y-m.actualBoundingBoxAscent,bottom:y+m.actualBoundingBoxDescent})}return fill.call(this,value,x,y,...rest)}")
+  ctx.add_init_script("window.qaInk=[];const fill=CanvasRenderingContext2D.prototype.fillText;CanvasRenderingContext2D.prototype.fillText=function(value,x,y,...rest){if(this.canvas.width===1080){const m=this.measureText(String(value));window.qaInk.push({value:String(value),left:x-m.actualBoundingBoxLeft,right:x+m.actualBoundingBoxRight,top:y-m.actualBoundingBoxAscent,bottom:y+m.actualBoundingBoxDescent})}return fill.call(this,value,x,y,...rest)}")
   page=ctx.new_page();page.on('pageerror',lambda e:(errors.append(str(e)),print('Browser error:',str(e),flush=True)))
   def go(path):page.goto(BASE+path,wait_until='domcontentloaded')
   def ready():expect(page.get_by_role('button',name='ذخیره PNG',exact=True)).to_be_enabled(timeout=30000)
@@ -39,6 +39,7 @@ def main():
   print('PASS: Streak moved from Home/Stats to a clickable Me card; its clean page shows freezes, progress and eight distinct earned badges.',flush=True)
   page.get_by_role('button',name='اشتراک نشان یک دور با خورشید',exact=True).click();expect(page).to_have_url(BASE+'/stories/streak?milestone=365');ready()
   year=preview();year_path=ARTIFACTS/'streak-year-story.png';year_path.write_bytes(year);assert Image.open(year_path).size==(1080,1920)
+  assert page.evaluate("()=>{const note=window.qaInk.filter(t=>t.value==='این نشان رو با روزهای واقعی گرفتم.').at(-1),label=window.qaInk.filter(t=>t.value==='لینک برنامه').at(-1);return note.right<label.left||note.bottom<label.top}")
   with page.expect_download() as d:page.get_by_role('button',name='ذخیره PNG',exact=True).click()
   assert Path(d.value.path()).read_bytes()==year,'Downloaded PNG must match visible preview exactly'
   page.evaluate("Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true});Object.defineProperty(navigator,'share',{configurable:true,value:async o=>{const b=await o.files[0].arrayBuffer();let s='';for(const n of new Uint8Array(b))s+=String.fromCharCode(n);window.qaShare={bytes:btoa(s),text:o.text}}})")

@@ -1,36 +1,47 @@
-import React, { useId } from "react";
+import React, { useId, useState } from "react";
 import { socialProfile, socialFieldError } from "../../lib/social-links";
-import { LinkSimple, Check, X, InstagramLogo, TelegramLogo, XLogo, ArrowSquareOut } from "@phosphor-icons/react";
+import { LinkSimple, Check, CheckCircle, X, InstagramLogo, TelegramLogo, XLogo, SpotifyLogo, ArrowSquareOut } from "@phosphor-icons/react";
 import "./SocialConnection.css";
 
 const platforms = {
   instagram: [InstagramLogo, "اینستاگرام"],
   telegram: [TelegramLogo, "تلگرام"],
   x: [XLogo, "ایکس"],
+  spotify: [SpotifyLogo, "اسپاتیفای"],
   website: [LinkSimple, "سایت"],
 };
 
 export function SocialAccountFields({ value, onChange, autoFocus = false }) {
-  const prefix = useId();
+  const prefix = useId(), [focused, setFocused] = useState(null);
   return [
     ["instagram", "اینستاگرام", "@username"],
     ["telegram", "تلگرام", "@username"],
     ["x", "ایکس", "@username"],
-    ["website", "وب‌سایت", "https://..."],
+    ["spotify", "اسپاتیفای", "open.spotify.com/user/..."],
+    ["website", "وب‌سایت", "example.com"],
   ].map(([key, label, placeholder], index) => {
     const input = value[key] || "", error = socialFieldError(key, input);
-    const url = !error && input.trim() ? socialProfile(key, input).url : "";
+    const profile = !error && input.trim() ? socialProfile(key, input) : null;
+    const url = profile?.url;
+    const compact = profile && key !== "website" && (key !== "spotify" || url.includes("/user/")) ? `@${profile.handle}` : url || input;
+    const [Icon] = platforms[key];
     return (
-    <label className="field-label social-field" key={key}>
-      {label}
+    <label className={`social-field social-field-${key} ${error ? "has-error" : ""}`} key={key}>
+      <span className="social-field-mark" aria-hidden="true"><Icon size={23} weight="duotone" /></span>
+      <span className="social-field-content">
+      <span className="social-field-name">{label}</span>
       <input
-        value={input}
+        value={focused === key ? input : compact}
         aria-label={label}
         aria-invalid={Boolean(error)}
-        aria-describedby={`${prefix}-${key}-help`}
+        aria-describedby={error ? `${prefix}-${key}-error` : undefined}
         ref={node => node?.setCustomValidity(error)}
+        onFocus={() => {
+          setFocused(key);
+          if (!error && compact !== input) onChange(current => ({ ...current, [key]: compact }));
+        }}
         onChange={event => onChange(current => ({ ...current, [key]: event.target.value }))}
-        onBlur={() => { if (url && url !== input) onChange(current => ({ ...current, [key]: url })); }}
+        onBlur={() => { setFocused(null); if (url && url !== input) onChange(current => ({ ...current, [key]: url })); }}
         placeholder={placeholder}
         dir="ltr"
         maxLength={300}
@@ -40,9 +51,9 @@ export function SocialAccountFields({ value, onChange, autoFocus = false }) {
         inputMode={key === "website" ? "url" : "text"}
         autoFocus={autoFocus && index === 0}
       />
-      <small id={`${prefix}-${key}-help`} className={error ? "social-field-error" : "social-field-help"}>
-        {error || (url ? <><span>لینک پروفایل:</span> <span dir="ltr">{url}</span></> : key === "website" ? "آدرس وب‌سایتت؛ با https یا بدون اون." : "شناسه با @ یا بدون اون، یا لینک پروفایلت.")}
-      </small>
+      {error && <small id={`${prefix}-${key}-error`} className="social-field-error">{error}</small>}
+      </span>
+      {url && <CheckCircle className="social-field-valid" size={19} weight="fill" aria-label="قالب معتبر" />}
     </label>
   ); });
 }

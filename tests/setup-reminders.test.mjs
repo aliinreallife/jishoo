@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { socialProfile, cleanSocialLinks, socialFieldError } from "../lib/social-links.js";
+import { socialProfile, cleanSocialLinks, socialFieldError, socialKinds } from "../lib/social-links.js";
 import { reminderDue, pushReminderDue, REMINDER_INACTIVE_MS, REMINDER_COOLDOWN_MS } from "../src/reminder-policy.js";
 import { sendCheckinReminders, reminderPreferences } from "../lib/reminders.js";
 import reminders, { authorizedCron } from "../api/reminders.js";
@@ -28,12 +28,23 @@ test("wrong platforms, posts, invitations and malformed social IDs cannot be sav
     assert.throws(() => socialProfile(kind, value), undefined, `${kind}: ${value}`);
     assert.ok(socialFieldError(kind, value), `${kind}: inline error`);
   }
-  for (const kind of ["instagram", "telegram", "x", "website"]) {
+  for (const kind of socialKinds) {
     for (const value of ["javascript:alert(1)", "data:text/html,x", "https://user:pass@example.org/ali", "al i", "ali\\name", "a\nli", "x".repeat(301)]) assert.throws(() => socialProfile(kind, value));
   }
   for (const value of ["localhost", "https://localhost/a", "https://127.0.0.1", "http://2130706433", "https://[::1]", "https://foo.local", "https://foo.internal", "https://example.org."]) assert.throws(() => socialProfile("website", value));
   assert.throws(() => cleanSocialLinks([]));
   assert.throws(() => cleanSocialLinks({ x: { url: "https://x.com/ali" } }));
+});
+
+test("Spotify accepts account IDs, profile links and artist profiles while rejecting content or impostor links", () => {
+  for (const input of ["ali.music", "@ali.music", "open.spotify.com/user/ali.music?si=tracking", "spotify:user:ali.music", "http://open.spotify.com/user/ali.music/#bio"])
+    assert.equal(socialProfile("spotify", input).url, "https://open.spotify.com/user/ali.music");
+  const artist = "0OdUWJ0sBjDrqHygGUXeCF";
+  for (const input of [`https://open.spotify.com/artist/${artist}?si=tracking`, `spotify:artist:${artist}`, `https://open.spotify.com/intl-en/artist/${artist}`])
+    assert.equal(socialProfile("spotify", input).url, `https://open.spotify.com/artist/${artist}`);
+  assert.deepEqual(cleanSocialLinks({ spotify: "spotify:user:123456789" }), { spotify: "https://open.spotify.com/user/123456789" });
+  for (const input of ["https://open.spotify.com/track/abc", "https://open.spotify.com/album/abc", "https://open.spotify.com/playlist/abc", "https://open.spotify.com/user", "https://open.spotify.com/user/ali/music", "https://open.spotify.com/artist/abc", "https://open.spotify.com.evil.org/user/ali", "https://spotify.link/abc", "spotify:user:ali:playlist:abc", "spotify:user:ali?tracking=1", "spotify:user:../artist/0OdUWJ0sBjDrqHygGUXeCF", ".", "..", "ali/music", "a".repeat(101)])
+    assert.throws(() => socialProfile("spotify", input), undefined, input);
 });
 
 test("inactivity uses completed check-ins, waits 48 hours and respects personal snooze/opt-out", () => {

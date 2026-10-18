@@ -83,18 +83,29 @@ function drop(ctx, x, y, size) {
 }
 
 function websiteBadge(ctx, domain, square, safeBottom) {
-  const w = square ? 410 : 460, h = square ? 46 : 72;
-  const x = 985 - w, y = safeBottom - (square ? 85 : 115), cy = y + h / 2;
+  const w = square ? 410 : 460, h = square ? 46 : 58;
+  const x = 985 - w, y = safeBottom - (square ? 77 : 96), cy = y + h / 2;
   ctx.save();
-  rounded(ctx, x, y, w, h, h / 2, "#fffdf5e6");
-  ctx.strokeStyle = "#bca2cd"; ctx.lineWidth = 2; ctx.stroke();
-  const radius = square ? 13 : 18, cx = x + (square ? 27 : 38);
-  ctx.strokeStyle = "#79588f"; ctx.lineWidth = square ? 2 : 2.5;
-  ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.stroke();
-  ctx.beginPath(); ctx.ellipse(cx, cy, radius * .43, radius, 0, 0, Math.PI * 2); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx - radius, cy); ctx.lineTo(cx + radius, cy); ctx.stroke();
-  text(ctx, domain, x + w - (square ? 18 : 24), cy + (square ? 10 : 13), square ? 28 : 36, "#684580", 700, "right", "JishooStory", w - (square ? 64 : 90));
+  // A small raised sticker, using the same warm bevel as the app's buttons.
+  ctx.translate(x + w / 2, cy); ctx.rotate(-.012);
+  rounded(ctx, -w / 2, -h / 2 + (square ? 5 : 7), w, h, h / 2, "#d8b951");
+  const face = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+  face.addColorStop(0, "#fff0aa"); face.addColorStop(1, "#ffe078");
+  rounded(ctx, -w / 2, -h / 2, w, h, h / 2, face);
+  ctx.strokeStyle = "#efcf72"; ctx.lineWidth = 2; ctx.stroke();
+  text(ctx, domain, 0, square ? 10 : 12, square ? 28 : 35, "#73583e", 700, "center", "JishooStory", w - 40);
   ctx.restore();
+  // The curved pen stroke points at the sticker, with an explicit app label.
+  const labelY = y - (square ? 11 : 19);
+  text(ctx, "لینک برنامه", x + w / 2 - 10, labelY, square ? 21 : 28, "#947651", 400, "center", "JishooStoryWordmark", 240);
+  ctx.save(); ctx.strokeStyle = "#a48660"; ctx.lineWidth = square ? 2.5 : 3.5;
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.beginPath(); ctx.moveTo(851, labelY - 8);
+  ctx.bezierCurveTo(908, y - 52, 994, y - 35, 991, y - 3);
+  ctx.quadraticCurveTo(992, y + 7, 979, y + 15);
+  ctx.moveTo(979, y + 15); ctx.lineTo(976, y - 3);
+  ctx.moveTo(979, y + 15); ctx.lineTo(997, y + 7);
+  ctx.stroke(); ctx.restore();
 }
 
 // Render once into a plain canvas. The preview, download and native share use
@@ -138,7 +149,7 @@ export async function renderStoryImage({ kind, format, theme, caption, data, mom
       text(ctx, number ? "روز پشت‌سرهم" : "از امروز، یه قرار تازه", 540, square ? 775 : 1320, square ? 38 : 55, "#8b7286");
     }
     paragraph(ctx, caption || (award ? "یه قرار ساده؛ یه نشان که همیشه مال منه." : "از یه قطره شروع شد؛ هنوز ادامه داره."), square ? 856 : 1430, square ? 28 : 40, square ? 118 : 180, "#8c768a", 850, 18);
-    if (award) text(ctx, "این نشان رو با روزهای واقعی گرفتم.", 540, square ? 975 : 1600, square ? 20 : 29, "#9c8192", 400);
+    if (award) text(ctx, "این نشان رو با روزهای واقعی گرفتم.", 95, square ? 975 : 1600, square ? 20 : 26, "#9c8192", 400, "left", "JishooStory", 410);
   } else if (kind === "weekly") {
     ctx.save(); ctx.translate(540, square ? 555 : 955); ctx.rotate(-.055);
     const w = 880, h = square ? 800 : 1320;
@@ -187,13 +198,13 @@ export async function renderStoryImage({ kind, format, theme, caption, data, mom
       if (qrImage) fitImage(ctx, qrImage, square ? 95 : 115, y + 25, square ? 130 : 190, square ? 130 : 190);
       text(ctx, me.registered ? "با دعوت من بیا تو جمع" : "تو هم بیا تو جمع", 650, y + (square ? 48 : 55), square ? 24 : 33, "#88708c", 700, "center", "JishooStory", 560);
       if (code) text(ctx, code, 650, y + (square ? 103 : 125), square ? 40 : 58, "#554260", 900, "center", "JishooStory", 560);
-      text(ctx, code && me.registered ? "۷ روز پرمیوم برای هر دومون" : "یه لحظهٔ ساده، یه لبخند مشترک.", 650, y + (square ? 149 : 190), square ? 20 : 29, "#927a65", 400, "center", "JishooStory", 560);
+      text(ctx, code && me.registered ? "۷ روز پرمیوم برای هر دومون" : "یه لحظهٔ ساده، یه لبخند مشترک.", 650, y + (square ? 126 : 165), square ? 20 : 29, "#927a65", 400, "center", "JishooStory", 560);
     }
   }
   text(ctx, me.handle ? `@${me.handle}` : "jishoo", 95, safeBottom - (square ? 52 : 66), square ? 20 : 27, "#8a7995", 400, "left", "JishooStory", 420);
   websiteBadge(ctx, storyWebsite(data.publicUrl), square, safeBottom);
   heart(ctx, square ? 325 : 250, square ? height - 17 : safeBottom - 20, square ? 14 : 25, "#d9a8b7");
-  text(ctx, "یه لحظه از روزت، برای دوستات.", 540, safeBottom - (square ? 12 : 6), square ? 17 : 28, "#9f8b9b", 400);
+  text(ctx, "یه لحظه از روزت، برای دوستات.", 540, safeBottom - (square ? 8 : 6), square ? 17 : 28, "#9f8b9b", 400);
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
   canvas.width = canvas.height = 0;
   if (!blob) throw new Error("تصویر کارت آماده نشد؛ دوباره امتحان کن.");

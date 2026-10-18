@@ -2,6 +2,16 @@ import { currentRelease } from "./current-release";
 export { currentRelease, releaseStorageKey } from "./current-release";
 // This is the public changelog. Keep infrastructure and admin-only notes in docs.
 export const releases = [currentRelease, {
+  version: "0.7.3",
+  label: "۰.۷.۳",
+  title: "جیشو، به سلیقهٔ تو!",
+  items: [
+    "توی «من»، قدم‌های آماده‌سازی رو با یه حلقه ببین؛ اعلان، حساب‌های اجتماعی و نمایش روی نقشه همگی با انتخاب توئن.",
+    "شناسه یا لینک شبکه‌های اجتماعیت رو وارد کن؛ لینک‌ها مرتب می‌شن و اگه اشتباه باشن، قبل از ذخیره راهنمایی می‌گیری.",
+    "بعد از دو روز بدون ثبت، یه یادآوری آروم داری؛ اعلان روی گوشی فقط با انتخاب جداگانهٔ تو روشن می‌شه و می‌تونی ساکتش کنی.",
+    "آدرس سایت روی استوری‌ها خواناتر شده و اسم برنامهٔ نصب‌شده jishoo نوشته می‌شه.",
+  ],
+}, {
   version: "0.7.2",
   label: "۰.۷.۲",
   title: "یه دور، دور و بر تو!",

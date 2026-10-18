@@ -22,7 +22,7 @@ import "./flow-fixes.css";
 import LoadingScreen from "./components/LoadingScreen";
 import "./components/MapVisibility.css";
 import { visibilityMode, visibilityLabel } from "./map-visibility";
-import { cleanSocialLinks, socialFieldError } from "../lib/social-links";
+import { cleanSocialLinks, socialFieldError, socialKinds } from "../lib/social-links";
 import { currentRelease, releaseStorageKey } from "./current-release";
 import { ReleaseNotes } from "./components/ReleaseNotes";
 const DailyStreak = lazy(() => import("./components/DailyStreak"));
@@ -1864,10 +1864,10 @@ export default function App() {
 
         {dialog && !["story", "momentStory"].includes(dialog) && (
           <Modal
-            hideClose={["success", "need", "socialSetup"].includes(dialog)}
+            hideClose={["success", "need", "socialSetup", "socialAccounts"].includes(dialog)}
             fullscreen={["success", "need", "auth", "friend", "settings", "socialAccounts", "photo", "profileShare", "groupInvite", "moment", "premium"].includes(dialog)}
             labelledBy={dialog === "whatsNew" ? "release-title" : dialog === "mapVisibility" ? "visibility-title" : dialog === "socialSetup" ? "social-setup-title" : dialog === "socialAccounts" ? "social-accounts-title" : undefined}
-            focusTarget={dialog === "whatsNew" ? "#release-title" : dialog === "socialSetup" ? ".social-setup-reminder button" : dialog === "socialAccounts" ? ".social-field input" : undefined}
+            focusTarget={dialog === "whatsNew" ? "#release-title" : dialog === "socialSetup" ? ".social-setup-reminder button" : dialog === "socialAccounts" ? "#social-accounts-title" : undefined}
             onClose={() => dialog === "mapVisibility" ? visibilityEditor.current?.dismiss() : dialog === "whatsNew" ? dismissRelease() : setDialog(null)}
             className={
               ["success", "need"].includes(dialog)
@@ -1877,6 +1877,7 @@ export default function App() {
                   : dialog === "whatsNew" ? "release-dialog"
                   : dialog === "mapVisibility" ? "map-visibility-dialog"
                   : dialog === "friend" ? `page-dialog friend-page-dialog social-page-${selectedFriend?.linkConnection || "none"}`
+                  : dialog === "socialAccounts" ? "page-dialog social-accounts-page"
                   : ["auth", "settings", "socialAccounts", "photo", "profileShare", "groupInvite", "premium"].includes(dialog) ? "page-dialog" : ""
             }
           >
@@ -2146,16 +2147,22 @@ export default function App() {
             )}
             {dialog === "socialAccounts" && (
               <div className="social-account-editor">
-                <div className="dialog-icon purple"><LinkSimple size={28} /></div>
-                <h2 id="social-accounts-title">من تو شبکه‌های اجتماعی</h2>
-                <p className="dialog-description">
-                  هر کدوم رو دوست داری اضافه کن؛ پُرکردن همه لازم نیست. دوست‌هایی که تبادل حساب‌ها رو باهاشون قبول کردی، لینک‌های ذخیره‌شده رو می‌بینن.
-                </p>
-                <form onSubmit={saveSocialAccounts}>
-                  <Suspense fallback={<LoadingSection />}> <SocialAccountFields value={socials} onChange={setSocials} autoFocus /> </Suspense>
-                  <Button lilac type="submit" disabled={busy || ["instagram", "telegram", "x", "website"].some(kind => socialFieldError(kind, socials[kind]))}>ذخیره حساب‌ها <Check size={19} /></Button>
+                <header className="social-editor-header">
+                  <span className="social-editor-symbol"><LinkSimple size={23} /></span>
+                  <div><span>یه راه دیگه برای پیدا کردنم</span><h2 id="social-accounts-title" tabIndex={-1}>من تو شبکه‌های اجتماعی</h2></div>
+                  <button className="social-editor-back" aria-label="برگشت" onClick={() => setDialog(selectedFriend ? "friend" : null)}><ArrowRight size={23} /></button>
+                </header>
+                <form onSubmit={saveSocialAccounts} className="social-editor-form">
+                  <div className="social-editor-scroll">
+                    <p className="social-editor-intro">شناسه یا لینک پروفایلت رو بذار؛ هر کدوم رو که دوست داری.</p>
+                    <div className="social-editor-fields"><Suspense fallback={<LoadingSection />}><SocialAccountFields value={socials} onChange={setSocials} /></Suspense></div>
+                    <div className="social-editor-privacy"><ShieldCheck size={23} /><p><strong>فقط با قبولِ هر دوتون</strong><span>لینک‌هات فقط برای دوست‌هایی باز می‌شن که تبادل حساب‌ها رو با هم قبول کردین. هر وقت خواستی، دسترسی رو قطع کن.</span></p></div>
+                  </div>
+                  <footer className="social-editor-actions">
+                    <Button lilac type="submit" disabled={busy || socialKinds.some(kind => socialFieldError(kind, socials[kind]))}>ذخیره حساب‌ها <Check size={19} /></Button>
+                    <small>همه‌ش اختیاریه؛ بعداً هم می‌تونی عوضش کنی.</small>
+                  </footer>
                 </form>
-                <Button secondary disabled={busy} onClick={() => setDialog(selectedFriend ? "friend" : null)}>برگشت</Button>
               </div>
             )}
             {dialog === "disconnect" && selectedFriend && (

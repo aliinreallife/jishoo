@@ -15,6 +15,13 @@ posts, invitations, bad handle syntax, credentials and unsafe protocols are
 blocked before saving and revalidated on the server. This checks syntax, not
 account existence or ownership. Unrelated profile edits preserve existing links.
 
+Version 0.7.4 adds Spotify user/artist profiles (including Spotify profile URIs),
+platform icons, compact handle display, a scrollable form body and a fixed Save
+footer. IDs and full URLs are still accepted and saved as canonical HTTPS URLs;
+track/album/playlist links are rejected. Opening the editor focuses its heading
+and keeps the native keyboard closed until an input is selected. The same mutual
+social-sharing grant covers Spotify; it is not exposed in public profiles.
+
 The quiet Home card is eligible 48 hours after the last completed check-in, or
 account creation if none exist. A `need` record does not reset it. Its CTA queues
 a **private** completed check-in through the existing three-second undo flow.
@@ -41,9 +48,10 @@ does not create friend notices or check-ins. Account merging conservatively
 preserves opt-outs and the latest cooldown/snooze. Account deletion removes the
 preferences with its user row and subscriptions through existing deletion logic.
 
-Story website badges derive their lowercase host from bootstrap's `publicUrl`
+Story website stickers derive their lowercase host from bootstrap's `publicUrl`
 (`PUBLIC_APP_URL`); no deployment hostname lives in the renderer. Both Story and
-square layouts reserve a bordered globe badge above the tagline. Existing
+square layouts reserve a raised yellow sticker, curved pen arrow and explicit
+«لینک برنامه» label above the tagline. Existing
 100px top / 200px bottom Story safe areas and the shared preview/download/share
 PNG remain intact. PWA, Apple installed title and Android branding use `jishoo`.
 Previously installed app labels can depend on the OS manifest refresh cycle.

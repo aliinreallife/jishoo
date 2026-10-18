@@ -58,8 +58,8 @@ def main():
             page.get_by_role('button',name='افزودن حساب‌های من',exact=True).click()
             editor=page.get_by_role('dialog',name='من تو شبکه‌های اجتماعی',exact=True)
             expect(editor).to_be_visible()
-            assert editor.locator('input').count()==4
-            expect(page.get_by_label('اینستاگرام',exact=True)).to_be_focused()
+            expect(editor.locator('input')).to_have_count(5,timeout=20000)
+            expect(page.locator('#social-accounts-title')).to_be_focused()
             page.get_by_label('اینستاگرام',exact=True).fill('not_saved')
             editor.get_by_role('button',name='برگشت',exact=True).click()
             assert recipient.bootstrap()['me']['socialLinks']=={}
@@ -72,21 +72,29 @@ def main():
             expect(editor).to_be_visible()
             assert recipient.bootstrap()['me']['socialLinks']=={}
             page.get_by_label('وب‌سایت',exact=True).fill('')
+            page.get_by_label('اسپاتیفای',exact=True).fill('spotify:user:qa.music')
             capture(page,'social-accounts-editor.png')
             page.get_by_role('button',name='ذخیره حساب‌ها',exact=True).click()
             expect(page.locator('.social-connected')).to_be_visible(timeout=20000)
             saved=recipient.bootstrap()['me']
             assert saved['name']==r['me']['name'] and saved['handle']==r['me']['handle']
             assert 'qa_social_account' in saved['socialLinks']['instagram']
+            assert saved['socialLinks']['spotify']=='https://open.spotify.com/user/qa.music'
             assert next(f for f in sender.bootstrap()['friends'] if f['id']==r['me']['id'])['socialLinks']==saved['socialLinks']
             assert next(f for f in outsider.bootstrap()['friends'] if f['id']==r['me']['id'])['socialLinks']=={}
+            sender_ctx,sender_page=page_for(browser,sender)
+            sender_page.goto(BASE+'/friends');sender_page.locator('.connected-card').first.click()
+            spotify_link=sender_page.get_by_role('link',name='اسپاتیفای',exact=False)
+            expect(spotify_link).to_have_attribute('href','https://open.spotify.com/user/qa.music')
+            expect(spotify_link).to_be_visible();sender_ctx.close()
             recipient.call('connection-share',{'id':relation['connectionId'],'operation':'disconnect'})
             request();incoming();page.get_by_role('button',name='قبول درخواست',exact=True).click()
             expect(page.locator('.social-connected')).to_be_visible()
             expect(page.locator('.social-setup-reminder')).to_have_count(0)
             page.keyboard.press('Escape');page.goto(BASE+'/#/profile')
             page.get_by_role('button',name='من تو شبکه‌های اجتماعی',exact=False).click()
-            expect(page.get_by_label('اینستاگرام',exact=True)).to_have_value(saved['socialLinks']['instagram'])
+            expect(page.get_by_label('اینستاگرام',exact=True)).to_have_value('@qa_social_account')
+            expect(page.get_by_label('اسپاتیفای',exact=True)).to_have_value('@qa.music')
             assert not errors,errors
             print('PASS: Empty-profile acceptance opens the responsive reminder; decline/view/filled profiles do not. Skip retains consent, cancel discards drafts, the short editor rejects unsafe links and saves without changing name/handle. Only mutually accepted friends see added accounts; full profile settings still show them.',flush=True)
             ctx.close()

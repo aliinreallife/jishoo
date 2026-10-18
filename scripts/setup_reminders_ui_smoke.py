@@ -43,7 +43,10 @@ def main():
         ctx.add_init_script("""localStorage.setItem('jishoo:v2-entered','true');
           window.__gpsCalls=0; navigator.geolocation.getCurrentPosition=(_,deny)=>{window.__gpsCalls++;deny({code:1})};
           window.__storyText=[];const fill=CanvasRenderingContext2D.prototype.fillText;
-          CanvasRenderingContext2D.prototype.fillText=function(value,x,y,...rest){const m=this.measureText(value);window.__storyText.push({value:String(value),x,y,top:y-m.actualBoundingBoxAscent,bottom:y+m.actualBoundingBoxDescent});return fill.call(this,value,x,y,...rest)};
+          CanvasRenderingContext2D.prototype.fillText=function(value,x,y,...rest){
+            const m=this.measureText(value),matrix=this.getTransform(),point=new DOMPoint(x,y).matrixTransform(matrix);
+            const corners=[[x-m.actualBoundingBoxLeft,y-m.actualBoundingBoxAscent],[x+m.actualBoundingBoxRight,y-m.actualBoundingBoxAscent],[x-m.actualBoundingBoxLeft,y+m.actualBoundingBoxDescent],[x+m.actualBoundingBoxRight,y+m.actualBoundingBoxDescent]].map(([a,b])=>new DOMPoint(a,b).matrixTransform(matrix));
+            window.__storyText.push({value:String(value),x:point.x,y:point.y,top:Math.min(...corners.map(p=>p.y)),bottom:Math.max(...corners.map(p=>p.y))});return fill.call(this,value,x,y,...rest)};
           window.__storyBlobs=new Map();const create=URL.createObjectURL;
           URL.createObjectURL=function(blob){const url=create.call(this,blob);window.__storyBlobs.set(url,blob);return url};
         """)
@@ -82,16 +85,29 @@ def main():
 
         page.get_by_role('button',name='من تو شبکه‌های اجتماعی',exact=False).last.click()
         editor=page.get_by_role('dialog',name='من تو شبکه‌های اجتماعی',exact=True);expect(editor).to_be_visible()
+        expect(page.locator('#social-accounts-title')).to_be_focused()
+        for width,height in [(320,568),(393,852),(812,375),(1440,900)]:
+            page.set_viewport_size({'width':width,'height':height})
+            assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
+            box=editor.get_by_role('button',name='ذخیره حساب‌ها',exact=True).bounding_box()
+            assert box['y']>=0 and box['y']+box['height']<=height+1,(width,height,box)
+        page.set_viewport_size({'width':393,'height':852})
         ig=page.get_by_label('اینستاگرام',exact=True);tg=page.get_by_label('تلگرام',exact=True)
         ig.fill('https://x.com/ali');expect(ig).to_have_attribute('aria-invalid','true')
         expect(page.get_by_role('button',name='ذخیره حساب‌ها',exact=True)).to_be_disabled()
         before=sum(a=='profile' for a,_ in requests);assert before==0
         ig.fill('@ali.real');tg.fill('@AliInRealLife');page.get_by_label('ایکس',exact=True).fill('http://twitter.com/AliInRealLife_?s=21')
+        spotify=page.get_by_label('اسپاتیفای',exact=True)
+        spotify.fill('https://open.spotify.com/track/abc')
+        expect(spotify).to_have_attribute('aria-invalid','true');expect(page.get_by_role('button',name='ذخیره حساب‌ها',exact=True)).to_be_disabled()
+        spotify.fill('spotify:user:ali.music')
         page.get_by_label('وب‌سایت',exact=True).fill('example.org/about');ig.focus();tg.focus()
-        expect(ig).to_have_value('https://www.instagram.com/ali.real')
+        expect(ig).to_have_value('@ali.real');expect(spotify).to_have_value('@ali.music')
+        expect(editor).not_to_contain_text('لینک پروفایل:')
         editor.screenshot(path=str(ARTIFACTS/'social-validation-editor.png'))
+        editor.screenshot(path=str(ARTIFACTS/'social-design-02-after.png'))
         page.get_by_role('button',name='ذخیره حساب‌ها',exact=True).click();expect(editor).to_have_count(0)
-        assert data['me']['socialLinks']=={'instagram':'https://www.instagram.com/ali.real','telegram':'https://t.me/AliInRealLife','x':'https://x.com/AliInRealLife_','website':'https://example.org/about'}
+        assert data['me']['socialLinks']=={'instagram':'https://www.instagram.com/ali.real','telegram':'https://t.me/AliInRealLife','x':'https://x.com/AliInRealLife_','spotify':'https://open.spotify.com/user/ali.music','website':'https://example.org/about'}
         print('PASS: Invalid platform URLs block Save; IDs and URLs normalize consistently in fields and the saved payload.',flush=True)
 
         page.goto(BASE+'/notifications');settings=page.locator('.reminder-settings');expect(settings).to_be_visible()
@@ -119,6 +135,7 @@ def main():
             page.goto(BASE+'/stories/'+kind);preview=page.locator('.story-raster-preview');expect(preview).to_be_visible(timeout=20000)
             page.wait_for_function('()=>document.querySelector(".story-raster-preview")?.naturalHeight===1920')
             assert page.evaluate('window.__storyText.some(t=>t.value==="jishoo.example"&&t.y<=1720&&t.y>=1600)')
+            assert page.evaluate('window.__storyText.some(t=>t.value==="لینک برنامه")')
             with page.expect_download() as output:page.get_by_role('button',name='ذخیره',exact=False).click()
             path=Path(output.value.path());raw=path.read_bytes()
             # Retain the actual preview Blob: production CSP correctly blocks

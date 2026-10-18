@@ -75,9 +75,41 @@
 .social-setup-reminder > .mascot-character { margin:0 auto 12px; }
 .social-setup-reminder .social-setup-privacy { font-size:12px; line-height:1.9; color:#786a84; background:#f4edf9; border-radius:14px; padding:12px; margin:14px 0 18px; }
 .social-setup-reminder > .button + .button { margin-top:9px; }
-.social-account-editor > .button { margin-top:10px; }
-.social-field > small { display:block; font-size:11px; font-weight:400; line-height:1.85; margin-top:6px; }
-.social-field-help { color:#85758c; }
-.social-field-help span[dir="ltr"] { display:block; text-align:left; overflow-wrap:anywhere; }
-.social-field-error { color:#a34f51; }
-.social-field input[aria-invalid="true"] { border-color:#c88a83; background:#fff9f5; }
+.dialog.page-dialog.social-accounts-page { overflow:hidden; padding:0; }
+.social-accounts-page > .social-account-editor { width:100%; height:100%; max-width:520px; display:flex; flex-direction:column; min-height:0; text-align:right; }
+.social-editor-header { flex-shrink:0; display:flex; align-items:center; gap:10px; padding:max(20px,env(safe-area-inset-top)) 20px 13px; border-bottom:1px solid #eee7da; }
+.social-editor-symbol { display:grid; place-items:center; flex-shrink:0; width:40px; height:40px; border-radius:15px; background:#eee3f7; color:#9276ad; }
+.social-editor-header > div { flex:1; min-width:0; }
+.social-editor-header > div > span { display:block; font-size:10.5px; color:#8c7c94; line-height:1.8; margin-bottom:3px; }
+.dialog .social-editor-header h2 { font-size:18px; line-height:1.7; margin:0; color:#3f354a; }
+.social-editor-header h2:focus { outline:none; }
+.social-editor-back { flex-shrink:0; display:grid; place-items:center; width:44px; height:44px; border-radius:50%; color:#81718b; background:#f3ecdf; }
+.social-editor-form { flex:1; min-height:0; display:flex; flex-direction:column; width:100%; }
+.social-editor-scroll { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:13px 20px 16px; scroll-padding:18px; }
+.dialog .social-editor-intro { font-size:12px; color:#887a8c; line-height:1.9; margin:0 0 14px; }
+.social-editor-fields { display:grid; gap:10px; }
+.social-editor-fields .social-field { display:flex; align-items:center; gap:10px; min-width:0; margin:0; padding:10px 12px; border:1px solid #e9e2d8; border-radius:18px; background:#fffef9; text-align:right; transition:border-color .15s,box-shadow .15s; }
+.social-editor-fields .social-field:focus-within { border-color:#9475ae; box-shadow:0 0 0 3px #decff344; }
+.social-field-mark { display:grid; place-items:center; width:36px; height:36px; border-radius:13px; flex-shrink:0; background:#efe8f8; color:#9277af; }
+.social-field-instagram .social-field-mark { color:#b06a8a; background:#f9eaf0; }
+.social-field-telegram .social-field-mark { color:#659abb; background:#e7f3fa; }
+.social-field-x .social-field-mark { color:#655f75; background:#eeedf3; }
+.social-field-spotify .social-field-mark { color:#62956c; background:#e8f3e7; }
+.social-field-content { display:block; flex:1; min-width:0; }
+.social-field-name { display:block; color:#79677f; font-size:11.5px; line-height:1.7; }
+.dialog .social-field input { width:100%; min-width:0; min-height:44px; margin:0; padding:5px 0; border:0; border-radius:0; background:transparent; color:#4f4657; font-size:16px; line-height:1.8; text-align:left; outline:none; }
+.dialog .social-field input::placeholder { color:#7e7184; font-size:14px; }
+.social-field-valid { color:#a1b99b; flex-shrink:0; }
+.social-field.has-error { border-color:#cb9391; background:#fff9f5; }
+.social-field-error { display:block; color:#a34f51; font-size:11.5px; line-height:1.85; margin:4px 0; }
+.social-editor-privacy { display:flex; align-items:flex-start; gap:9px; padding:13px 12px; margin-top:15px; border-radius:16px; background:#f2edf7; color:#8d77a4; }
+.social-editor-privacy > svg { flex-shrink:0; margin-top:2px; }
+.social-editor-privacy p { margin:0; font-size:11px; line-height:1.95; color:#89768f; }
+.social-editor-privacy strong { display:block; margin-bottom:3px; font-size:12px; color:#786287; }
+.social-editor-privacy span { display:block; }
+.social-editor-actions { flex-shrink:0; padding:12px 20px max(12px,env(safe-area-inset-bottom)); border-top:1px solid #eae1d1; background:#fffcf4; box-shadow:0 -6px 18px #81714905; }
+.social-editor-actions .button { width:100%; margin:0; box-shadow:0 4px 0 #c3b2dd; border:1px solid #d8c7ef; background:#e6d8f7; color:#6b5281; }
+.social-editor-actions > small { display:block; text-align:center; font-size:10.5px; color:#96869a; line-height:1.8; margin-top:10px; }
+.social-editor-back:focus-visible { outline:3px solid #9475ae; outline-offset:2px; }
+@media (max-width:350px) { .social-editor-header { padding-inline:14px; gap:8px; } .dialog .social-editor-header h2 { font-size:16px; } .social-editor-symbol { width:34px; height:34px; } .social-editor-scroll,.social-editor-actions { padding-inline:14px; } }
+@media (prefers-reduced-motion:reduce) { .social-field { transition:none; } }
