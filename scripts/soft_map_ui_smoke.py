@@ -28,6 +28,7 @@ def main():
    data['me']['mapVisibilityReviewed']=True;result={'mode':'profile' if data['me']['discoverable'] else 'news' if data['me']['shareLocation'] else 'hidden'}
   elif action=='location':result={'enabled':data['me']['shareLocation']}
   elif action=='world-map':
+   if hold['enabled']:held.append(route);return
    points=rows();south=float(qs.get('south',[-90])[0]);north=float(qs.get('north',[90])[0]);west=float(qs.get('west',[-180])[0]);east=float(qs.get('east',[180])[0]);points=[row for row in points if south<=row['lat']<=north and (west<=row['lng']<=east if west<=east else row['lng']>=west or row['lng']<=east)]
    result={'activity':[{**row,'count':1,'isFriend':False,'name':'یه نفر روی نقشه'} for row in points],'total':len(rows()),'inView':len(points),'refreshSeconds':30}
   elif action=='profile':data['me'].update(body);result=data
@@ -87,6 +88,16 @@ def main():
   expect(page.locator('.map-calm-state')).to_be_visible(timeout=15000)
   expect(page.locator('.nearby-count')).to_contain_text('۰ نفر در این نما')
   page.screenshot(path=str(ARTIFACTS/'soft-map-calm-empty.png'))
+  hold['enabled']=True;page.evaluate('window.dispatchEvent(new Event("focus"))')
+  expect(page.locator('.nearby-refresh')).to_contain_text('در حال تازه‌شدن')
+  expect(page.locator('.map-calm-state')).to_be_visible()
+  empty_node=page.locator('.map-calm-state').element_handle()
+  page.wait_for_timeout(2100)
+  assert empty_node.evaluate('node=>node.isConnected'), 'An empty-to-empty refresh must keep the same card mounted'
+  held.pop().fulfill(json={'activity':[],'approximate':True});hold['enabled']=False
+  expect(page.locator('.nearby-refresh')).to_contain_text('به‌روزرسانی خودکار')
+  assert empty_node.evaluate('node=>node.isConnected')
+  print('PASS: A slow empty-to-empty local refresh preserves the same empty card while only the refresh indicator changes.',flush=True)
   print('PASS: Count remains during real fetching, automatic refresh preserves the camera, offline is explicit and an empty view has an honest friendly invitation state.',flush=True)
   phase['kind']='one';page.get_by_role('tab',name='آدم‌های نزدیک من',exact=True).click()
   expect(page.locator('.nearby-person')).to_have_count(1)
@@ -126,6 +137,19 @@ def main():
    assert page.locator('.real-map').bounding_box()['height']>170
    for button in page.locator('.map-controls button').all():assert button.bounding_box()['height']>=44
    page.screenshot(path=str(ARTIFACTS/f'soft-map-layout-{width}.png'))
+  phase['kind']='empty';page.evaluate('window.dispatchEvent(new Event("online"))')
+  expect(page.locator('.map-calm-state')).to_be_visible(timeout=15000)
+  hold['enabled']=True;page.evaluate('window.dispatchEvent(new Event("online"))')
+  expect(page.locator('.nearby-refresh')).to_contain_text('در حال تازه‌شدن')
+  world_empty=page.locator('.map-calm-state').element_handle()
+  page.wait_for_timeout(2100);assert world_empty.evaluate('node=>node.isConnected')
+  held.pop().fulfill(json={'activity':[],'total':0,'inView':0,'refreshSeconds':30});hold['enabled']=False
+  expect(page.locator('.nearby-refresh')).to_contain_text('به‌روزرسانی خودکار')
+  assert world_empty.evaluate('node=>node.isConnected')
+  phase['kind']='one';page.evaluate('window.dispatchEvent(new Event("online"))')
+  expect(page.locator('.nearby-count')).to_contain_text('۱ نفر در این نما',timeout=15000)
+  expect(page.locator('.map-calm-state')).to_have_count(0)
+  print('PASS: The world map also keeps confirmed emptiness during a slow refresh and removes it when real activity arrives.',flush=True)
   assert not errors,errors
   browser.close()
  print('PASS: Streak inventory/help renders, the anonymous world view works before geolocation and map/status controls fit small phones and desktop.',flush=True)

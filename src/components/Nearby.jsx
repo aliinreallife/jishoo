@@ -1,5 +1,5 @@
 import "./Nearby.css";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { blobatar } from "blobatar/blob";
@@ -17,10 +17,19 @@ export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, on
   const [position, setPosition] = useState(startingPosition || null), [view, setView] = useState("map"), [scope, setScope] = useState("local");
   const [viewport, setViewport] = useState(null), [activity, setActivity] = useState([]), [worldActivity, setWorldActivity] = useState([]), [people, setPeople] = useState([]);
   const [worldInfo, setWorldInfo] = useState(null), [localLoaded, setLocalLoaded] = useState(false), [worldLoaded, setWorldLoaded] = useState(false);
+  const [localDataPosition, setLocalDataPosition] = useState(null);
   const [loading, setLoading] = useState(false), [worldLoading, setWorldLoading] = useState(false), [error, setError] = useState(""), [worldError, setWorldError] = useState("");
   const [updatedAt, setUpdatedAt] = useState(null), [worldUpdatedAt, setWorldUpdatedAt] = useState(null), [online, setOnline] = useState(navigator.onLine);
   const [selected, setSelected] = useState(null), [group, setGroup] = useState(null), [geoError, setGeoError] = useState(""), [locating, setLocating] = useState(false), [peopleBusy, setPeopleBusy] = useState(false);
-  const [presentation, setPresentation] = useState({ mode: "characters", groups: [], visible: [], count: 0 });
+  const items = useMemo(() => {
+    const instance = map.current;
+    if (!instance || !viewport) return [];
+    return (scope === "world" ? worldActivity : activity.filter(item => !item.isMe || me.shareLocation)).map(item => {
+      const point = instance.latLngToContainerPoint([item.lat, nearestLongitude(item.lng, instance.getCenter().lng)]);
+      return { ...item, x: point.x, y: point.y };
+    });
+  }, [viewport?.key, scope, activity, worldActivity, me.shareLocation]);
+  const presentation = useMemo(() => mapPresentation(items, viewport?.zoom || 0, viewport?.size.x || 0, viewport?.size.y || 0), [items, viewport?.key]);
   const mode = visibilityMode(me), VisibilityIcon = mode === "hidden" ? EyeSlash : mode === "profile" ? Eye : Drop;
   selection.current = { presentation, scope };
 
@@ -88,7 +97,7 @@ export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, on
         const result = await api(view === "people" ? "discover" : "nearby", position);
         if (!active) return;
         if (view === "people") setPeople(result.people);
-        else { setActivity(result.activity); setLocalLoaded(true); }
+        else { setActivity(result.activity); setLocalLoaded(true); setLocalDataPosition(`${position.lat}:${position.lng}`); }
         setUpdatedAt(Date.now()); setError("");
       } catch (failure) { if (active) setError(failure.message); }
       finally { pending = false; if (active) setLoading(false); }
@@ -129,18 +138,14 @@ export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, on
   useEffect(() => {
     if (!viewport || !map.current || !layers.current) return;
     const instance = map.current;
-    const items = (scope === "world" ? worldActivity : activity.filter(item => !item.isMe || me.shareLocation)).map(item => {
-      const point = instance.latLngToContainerPoint([item.lat, nearestLongitude(item.lng, instance.getCenter().lng)]);
-      return { ...item, x: point.x, y: point.y };
-    });
-    const result = mapPresentation(items, viewport.zoom, viewport.size.x, viewport.size.y);
+    const result = presentation;
     setSelected(current => current ? items.find(item => item.id === current.id) || null : null);
     setGroup(current => {
       if (!current) return null;
       const points = current.points.map(point => items.find(item => item.id === point.id)).filter(Boolean);
       return points.length ? { ...current, points, count: points.reduce((sum, point) => sum + Math.max(1, Number(point.count) || 1), 0) } : null;
     });
-    setPresentation(result); layers.current.clearLayers();
+    layers.current.clearLayers();
     if (result.mode === "heat") { new CuteHeatLayer(items).addTo(layers.current); return; }
     result.groups.forEach(item => {
       const first = item.points[0], multiple = item.count > 1;
@@ -166,7 +171,7 @@ export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, on
           setGroup(multiple ? item : null); setSelected(multiple ? null : first);
         });
     });
-  }, [viewport?.key, scope, activity, worldActivity, me.shareLocation]);
+  }, [items, presentation]);
 
   async function locate() {
     if (!navigator.geolocation) { setGeoError("این مرورگر از مکان‌یابی پشتیبانی نمی‌کنه."); return; }
@@ -196,10 +201,13 @@ export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, on
   const worldwide = view === "map" && scope === "world", fetching = worldwide ? worldLoading : loading;
   const fetchError = worldwide ? worldError : error, lastUpdate = worldwide ? worldUpdatedAt : updatedAt;
   const loaded = worldwide ? worldLoaded : localLoaded, oldWorldView = worldwide && worldInfo?.viewKey !== viewport?.key;
+  const oldView = worldwide ? oldWorldView : localDataPosition !== (position ? `${position.lat}:${position.lng}` : null);
   const count = worldwide ? worldInfo?.inView || 0 : presentation.count;
-  const countLabel = view === "people" ? `${fa(people.length)} پروفایل نزدیک` : !loaded ? (worldwide || position ? "داریم نقشه رو آماده می‌کنیم…" : "اطرافت رو پیدا کنیم؟") : `${fa(count)} نفر ${oldWorldView ? "در نمای قبلی" : "در این نما"}`;
+  const countLabel = view === "people" ? `${fa(people.length)} پروفایل نزدیک` : !loaded ? (worldwide || position ? "داریم نقشه رو آماده می‌کنیم…" : "اطرافت رو پیدا کنیم؟") : `${fa(count)} نفر ${oldView ? "در نمای قبلی" : "در این نما"}`;
   const refreshLabel = !online ? "اتصال قطع شده" : fetchError ? "تلاش دوباره برای دریافت" : fetching ? "در حال تازه‌شدن…" : "به‌روزرسانی خودکار";
-  const empty = view === "map" && loaded && !fetching && !fetchError && !oldWorldView && count === 0;
+  // A refresh is not a new result. Keep confirmed emptiness visible until data
+  // changes, while avoiding an empty claim for a different, unconfirmed location.
+  const empty = view === "map" && loaded && !fetchError && !oldView && count === 0;
   return <section className="real-nearby-page tab-page">
     <header className="nearby-heading"><div><h1>این نزدیکا</h1><p>{view === "people" ? "آدم‌های نزدیک، با انتخاب خودشون" : scope === "world" ? "ردّ قطره‌ها از همه‌جا" : "ردّ قطره‌ها در اطرافت"}</p></div><span className="tiny-badge"><ShieldCheck size={13} /> مکان تقریبی</span></header>
     <div className="nearby-view-tabs" role="tablist" aria-label="بخش‌های این نزدیکا">

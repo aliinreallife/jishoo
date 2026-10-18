@@ -15,6 +15,11 @@ explicit refresh icon/status sit above the map, including fetch/offline states.
 The old world count is labelled as belonging to the previous view until the new
 viewport response arrives. Tapping a character opens a compact, dismissible
 selection sheet. Selected data disappears when the participant disappears.
+Confirmed empty views retain the same empty-state card during background refresh;
+loading only changes the refresh indicator. Counts and marker presentation derive
+from the same response during render, avoiding transient false emptiness. A new
+location or world viewport must receive a matching response before claiming it is
+empty.
 
 Screen-space collision grouping drives the presentation. Up to five people keep
 visible characters at any zoom. Larger crowded views use a weighted butter,
