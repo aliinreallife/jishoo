@@ -12,6 +12,9 @@ from routing_smoke import fixture
 from smoke import BASE, CHROMIUM, verified_https, ARTIFACTS
 
 def main():
+    # The verified HTTPS adapter serializes cloud reads. Local CI keeps its
+    # strict default assertions; deployed checks allow network/proxy overhead.
+    if BASE.startswith('https://'):expect.set_options(timeout=60000)
     data = fixture(); requests = []; errors = []
     data['me'].update(createdAt=(datetime.now(timezone.utc)-timedelta(days=3)).isoformat(), mapVisibilityReviewed=False,
                       checkinReminders={'inApp': True, 'push': False, 'snoozedUntil': None})
@@ -41,6 +44,8 @@ def main():
           window.__gpsCalls=0; navigator.geolocation.getCurrentPosition=(_,deny)=>{window.__gpsCalls++;deny({code:1})};
           window.__storyText=[];const fill=CanvasRenderingContext2D.prototype.fillText;
           CanvasRenderingContext2D.prototype.fillText=function(value,x,y,...rest){const m=this.measureText(value);window.__storyText.push({value:String(value),x,y,top:y-m.actualBoundingBoxAscent,bottom:y+m.actualBoundingBoxDescent});return fill.call(this,value,x,y,...rest)};
+          window.__storyBlobs=new Map();const create=URL.createObjectURL;
+          URL.createObjectURL=function(blob){const url=create.call(this,blob);window.__storyBlobs.set(url,blob);return url};
         """)
         page=ctx.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
         page.goto(BASE+'/home',wait_until='domcontentloaded')
@@ -116,7 +121,9 @@ def main():
             assert page.evaluate('window.__storyText.some(t=>t.value==="jishoo.example"&&t.y<=1720&&t.y>=1600)')
             with page.expect_download() as output:page.get_by_role('button',name='ذخیره',exact=False).click()
             path=Path(output.value.path());raw=path.read_bytes()
-            visible=page.evaluate('async()=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",await (await fetch(document.querySelector(".story-raster-preview").src)).arrayBuffer())),b=>b.toString(16).padStart(2,"0")).join("")')
+            # Retain the actual preview Blob: production CSP correctly blocks
+            # fetch(blob:) and must not be weakened for a test.
+            visible=page.evaluate('async()=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",await window.__storyBlobs.get(document.querySelector(".story-raster-preview").src).arrayBuffer())),b=>b.toString(16).padStart(2,"0")).join("")')
             assert visible==hashlib.sha256(raw).hexdigest()
             with Image.open(path) as image:
                 assert image.size==(1080,1920);image.save(ARTIFACTS/f'story-website-{kind}.png')
