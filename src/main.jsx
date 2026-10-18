@@ -6,7 +6,10 @@ import "./fonts.css";
 import "@fontsource/lalezar/arabic-400.css";
 import Entry from "./Entry";
 import Observability from "./components/Observability";
+import AppUpdate from "./components/AppUpdate";
+import { startUpdates } from "./updates";
 
-createRoot(document.getElementById("root")).render(<BrowserRouter><Entry /><Observability /></BrowserRouter>);
+createRoot(document.getElementById("root")).render(<BrowserRouter><Entry /><AppUpdate /><Observability /></BrowserRouter>);
 
 registerPwa();
+startUpdates();

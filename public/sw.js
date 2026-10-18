@@ -1,4 +1,6 @@
 const CACHE = "jishoo-public-v2";
+// Stamped for every production build, even when worker behavior is unchanged.
+const BUILD_ID = "__JISHOO_BUILD_ID__";
 self.addEventListener("install", (event) =>
   event.waitUntil(
     caches
@@ -14,10 +16,14 @@ self.addEventListener("install", (event) =>
           "/assets/app-icon-v2-maskable-512.png",
           "/assets/notification-badge-v2.png",
         ]),
-      )
-      .then(() => self.skipWaiting()),
+      ),
   ),
 );
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "JISHOO_SKIP_WAITING" && event.data.buildId === BUILD_ID) {
+    event.waitUntil(self.skipWaiting());
+  }
+});
 self.addEventListener("activate", (event) =>
   event.waitUntil(
     caches

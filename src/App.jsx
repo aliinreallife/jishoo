@@ -1,6 +1,7 @@
 import React, {
   useState,
   useEffect,
+  useLayoutEffect,
   useRef,
   useCallback,
   lazy,
@@ -17,6 +18,7 @@ import "./readability.css";
 import "./desktop-frame.css";
 import { currentRelease, releaseStorageKey } from "./releases";
 import { ReleaseNotes } from "./components/ReleaseNotes";
+import { blockUpdates } from "./updates";
 import {
   House,
   Camera,
@@ -797,6 +799,10 @@ export default function App() {
       Boolean(new URLSearchParams(location.search).get("invite")),
     );
   const selectedCircle = page.circleId || dialogCircle;
+  const updateBlocked = !publicPage && ((!data && !loadError) || Boolean(dialog) || busy || Boolean(pendingCheckin) || inviteLanding || ["stories", "groupJoin"].includes(screen));
+  useLayoutEffect(() => {
+    if (updateBlocked) return blockUpdates();
+  }, [updateBlocked]);
   function closeSettings() {
     setDialogState(null);
     if (page.screen === "settings") {

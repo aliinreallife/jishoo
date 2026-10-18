@@ -1,25 +1,30 @@
+import { blockUpdates } from "./updates";
+
 export async function api(action, body, query = {}) {
-  const response = await fetch(
-    `/api/app?${new URLSearchParams({ action, ...query })}`,
-    {
-      method: body === undefined ? "GET" : "POST",
-      credentials: "include",
-      headers: body === undefined ? {} : { "Content-Type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    },
-  );
-  let data;
+  const unblock = body === undefined ? null : blockUpdates();
   try {
-    data = await response.json();
-  } catch {
-    throw new Error("ارتباط با جیشو برقرار نشد.");
-  }
-  if (!response.ok) {
-    const error = new Error(data.message || "یه بار دیگه امتحان کن.");
-    error.code = data.error;
-    throw error;
-  }
-  return data;
+    const response = await fetch(
+      `/api/app?${new URLSearchParams({ action, ...query })}`,
+      {
+        method: body === undefined ? "GET" : "POST",
+        credentials: "include",
+        headers: body === undefined ? {} : { "Content-Type": "application/json" },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      },
+    );
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error("ارتباط با جیشو برقرار نشد.");
+    }
+    if (!response.ok) {
+      const error = new Error(data.message || "یه بار دیگه امتحان کن.");
+      error.code = data.error;
+      throw error;
+    }
+    return data;
+  } finally { unblock?.(); }
 }
 export async function getInvite(code) {
   const response = await fetch(

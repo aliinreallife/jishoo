@@ -1,3 +1,5 @@
+import { observeUpdateWorker } from "./updates";
+
 let installPrompt = null;
 export const isStandalone = () =>
   matchMedia("(display-mode: standalone)").matches ||
@@ -36,6 +38,7 @@ export function registerPwa() {
       navigator.serviceWorker
         .register("/sw.js", { updateViaCache: "none" })
         .then((r) => {
+          observeUpdateWorker(r);
           r.update().catch(() => {});
         })
         .catch(() => {});

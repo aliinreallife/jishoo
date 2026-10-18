@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { compareVersions, validRelease, updateRequired } from "../src/update-rules.js";
 import { invitationForest, invitationPath } from "../src/invitation-tree.js";
 import { observabilityPage, redactMetricEvent } from "../src/observability.js";
 import { canonicalPath, readPage, screenPath, notificationPath } from "../src/routing.js";
@@ -22,6 +23,22 @@ import {
 
 process.env.APP_SECRET =
   "unit-tests-only-a-fixed-secret-of-at-least-32-characters";
+test("update versions use numeric ordering, including double-digit releases", () => {
+  assert.equal(compareVersions("0.4.9", "0.4.10"), -1);
+  assert.equal(compareVersions("1.0.0", "0.99.99"), 1);
+  assert.equal(compareVersions("0.4.1", "0.4.1"), 0);
+  for (const invalid of [undefined, "", "next", "0.4", "1.2.3-beta"]) assert.equal(compareVersions(invalid, "1.0.0"), null);
+});
+test("only a valid published compatibility floor requires an update", () => {
+  const release = { version: "0.4.2", buildId: "test-build-42", minimumSupportedVersion: "0.4.1" };
+  assert.equal(validRelease(release), true);
+  assert.equal(updateRequired("0.4.0", release), true);
+  assert.equal(updateRequired("0.4.1", release), false);
+  assert.equal(updateRequired("0.5.0", release), false);
+  assert.equal(validRelease({ ...release, minimumSupportedVersion: "0.4.3" }), false);
+  for (const buildId of [null, "", "../../bad", "x".repeat(81)]) assert.equal(validRelease({ ...release, buildId }), false);
+  assert.equal(updateRequired("0.4.0", { ...release, minimumSupportedVersion: "invalid" }), false);
+});
 test("nearby coincidences require fresh public map consent and the same distance/time window", () => {
   const now=Date.now(), user={registered:true,share_location:true,location_updated_at:new Date(now)};
   const event={status:"done",visibility:"friends",location_lat:0,location_lng:0,created_at:new Date(now)};
@@ -320,6 +337,23 @@ test("server photo processing decodes actual JPEGs, bounds their dimensions, and
   await assert.rejects(
     sanitizeAvatar("data:image/jpeg;base64," + fake.toString("base64")),
   );
+});
+test("service-worker updates wait for an explicit matching-build activation message", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { runInNewContext } = await import("node:vm");
+  const handlers = {};
+  let skipped = 0, installation;
+  runInNewContext(readFileSync(new URL("../public/sw.js", import.meta.url), "utf8"), {
+    self: { addEventListener: (name, fn) => (handlers[name] = fn), skipWaiting: async () => skipped++ },
+    caches: { open: async () => ({ addAll: async () => {} }) },
+  });
+  handlers.install({ waitUntil: (promise) => { installation = promise; } });
+  await installation;
+  assert.equal(skipped, 0);
+  handlers.message({ data: { type: "JISHOO_SKIP_WAITING", buildId: "stale-build" }, waitUntil: () => assert.fail("Wrong build activated") });
+  handlers.message({ data: { type: "JISHOO_SKIP_WAITING", buildId: "__JISHOO_BUILD_ID__" }, waitUntil: (promise) => { installation = promise; } });
+  await installation;
+  assert.equal(skipped, 1);
 });
 test("service worker displays a push with no app window open and only navigates to its own origin", async () => {
   const { readFileSync } = await import("node:fs");
