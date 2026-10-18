@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { compareVersions, validRelease, updateRequired } from "../src/update-rules.js";
+import { dailyStreak } from "../lib/streaks.js";
+import { mapPresentation, nearestLongitude } from "../src/map-presentation.js";
 import { invitationForest, invitationPath } from "../src/invitation-tree.js";
 import { observabilityPage, redactMetricEvent } from "../src/observability.js";
 import { canonicalPath, readPage, screenPath, notificationPath } from "../src/routing.js";
@@ -81,8 +83,74 @@ test("world map clusters only visible points, strips identities, handles the dat
   const result=clusterWorldActivity(rows,box);
   assert.equal(result.total,3);assert.equal(result.inView,2);assert.ok(!JSON.stringify(result).includes("SECRET"));
   const many=clusterWorldActivity(Array.from({length:1000},(_,i)=>({...rows[0],lat:(i%30)-15,lng:Math.floor(i/30)-15})),worldViewport(new URLSearchParams({zoom:"19"})));
-  assert.equal(many.activity.length,240);assert.equal(many.limited,true);assert.equal(many.inView,1000);
+  assert.ok(many.activity.length<=240);assert.equal(many.limited,true);assert.equal(many.inView,1000);
+  assert.equal(many.activity.reduce((sum,item)=>sum+item.count,0),1000,"Every person remains represented after coarsening");
+  const lone=clusterWorldActivity([{lat:35.7,lng:51.4,status:"done",createdAt:rows[0].createdAt}],worldViewport(new URLSearchParams({zoom:"0"})));
+  assert.ok(Math.abs(lone.activity[0].lat-35.7)<.002 && Math.abs(lone.activity[0].lng-51.4)<.002,"Sparse global activity stays near its approximate city");
   for(const params of [{north:"NaN"},{south:"30",north:"20"},{west:"-181"},{zoom:"100"}])assert.throws(()=>worldViewport(new URLSearchParams(params)));
+});
+test("map density keeps sparse characters and uses a heatmap for crowded screen positions", () => {
+  const points=Array.from({length:30},(_,i)=>({id:String(i),x:100+i%6,y:100+Math.floor(i/6),count:1}));
+  assert.equal(mapPresentation(points.slice(0,1),2,393,550).mode,"characters");
+  assert.equal(mapPresentation(points.slice(0,5),2,393,550).mode,"characters");
+  assert.equal(mapPresentation(points,12,393,550).mode,"heat");
+  assert.equal(mapPresentation(points,18,393,550).mode,"characters");
+  const sparse=points.map((p,i)=>({...p,x:20+(i%6)*80,y:20+Math.floor(i/6)*90}));
+  assert.equal(mapPresentation(sparse,2,500,550).mode,"characters");
+});
+test("viewport counts use people weights and longitude wrapping without changing private coordinates", () => {
+  const points=[{id:"a",x:20,y:20,count:4},{id:"b",x:200,y:100,count:3},{id:"outside",x:450,y:100,count:99}];
+  const before=JSON.stringify(points),result=mapPresentation(points,14,393,550);
+  assert.equal(result.count,7);assert.equal(JSON.stringify(points),before);
+  assert.equal(nearestLongitude(179,-179),-181);assert.equal(nearestLongitude(-179,179),181);
+});
+const streakDays=(start,count)=>Array.from({length:count},(_,i)=>new Date(Date.parse(start+"T12:00:00Z")+i*86400000).toISOString().slice(0,10));
+const streakAt=day=>new Date(day+"T12:00:00Z");
+test("daily streaks count distinct completed days, ignore future/invalid days and award the first free freeze at three", () => {
+  const first=dailyStreak(Array(10000).fill("2026-09-01"),streakAt("2026-09-01"));
+  assert.equal(first.current,1);assert.equal(first.charges,0);
+  const three=dailyStreak([...streakDays("2026-09-01",3),"invalid","2026-02-30","2026-09-30"],streakAt("2026-09-03"));
+  assert.equal(three.current,3);assert.equal(three.charges,1);assert.equal(three.capacity,1);
+  assert.equal(three.activeToday,true);
+});
+test("freezes wait until a day has finished, protect missed days once and cannot protect beyond the balance", () => {
+  const days=streakDays("2026-09-01",3);
+  assert.equal(dailyStreak(days,streakAt("2026-09-04")).charges,1);
+  const protectedDay=dailyStreak(days,streakAt("2026-09-05"));
+  assert.equal(protectedDay.current,3);assert.equal(protectedDay.charges,0);assert.equal(protectedDay.protectedYesterday,true);assert.equal(protectedDay.freezesUsed,1);
+  assert.deepEqual(dailyStreak(days,streakAt("2026-09-05")),protectedDay);
+  const broken=dailyStreak(days,streakAt("2026-09-06"));
+  assert.equal(broken.current,0);assert.equal(broken.best,3);assert.equal(broken.freezesUsed,1);
+});
+test("a used freeze recharges after three actual consecutive active days, and repeated taps cannot refill it", () => {
+  const first=streakDays("2026-09-01",3);
+  for(let n=1;n<=3;n++) {
+    const days=[...first,...streakDays("2026-09-05",n)],today=days.at(-1);
+    const value=dailyStreak([...days,...Array(50).fill(today)],streakAt(today));
+    assert.equal(value.current,3+n);assert.equal(value.charges,n===3?1:0);assert.equal(value.freezesUsed,1);
+  }
+});
+test("a 21-day streak unlocks and grants the second free slot permanently", () => {
+  const days=streakDays("2026-09-01",21),value=dailyStreak(days,streakAt("2026-09-21"));
+  assert.equal(value.current,21);assert.equal(value.charges,2);assert.equal(value.capacity,2);
+  const frozen=dailyStreak(days,streakAt("2026-09-24"));
+  assert.equal(frozen.current,21);assert.equal(frozen.charges,0);assert.equal(frozen.freezesUsed,2);
+  const broken=dailyStreak(days,streakAt("2026-09-25"));
+  assert.equal(broken.current,0);assert.equal(broken.capacity,2);assert.equal(broken.best,21);
+});
+test("a preserved streak has no additional daily credit for frozen days and recharge requires real consecutive days", () => {
+  const days=[...streakDays("2026-09-01",21),"2026-09-24","2026-09-25"];
+  const value=dailyStreak(days,streakAt("2026-09-25"));
+  assert.equal(value.current,23);assert.equal(value.charges,0);assert.equal(value.rechargeProgress,2);
+  const recharged=dailyStreak([...days,"2026-09-26"],streakAt("2026-09-26"));
+  assert.equal(recharged.charges,1);assert.equal(recharged.capacity,2);
+});
+test("daily streaks use Tehran midnight and retain Saturday-to-Friday week order", () => {
+  const before=dailyStreak(["2026-10-18"],new Date("2026-10-17T20:29:59Z"));
+  const after=dailyStreak(["2026-10-18"],new Date("2026-10-17T20:30:00Z"));
+  assert.equal(before.current,0);assert.equal(after.current,1);assert.equal(after.activeToday,true);
+  assert.equal(after.week[0].label,"ش");assert.equal(after.week[6].label,"ج");
+  const year=dailyStreak(streakDays("2026-12-31",3),streakAt("2027-01-02"));assert.equal(year.charges,1);
 });
 test("clean routes retain legacy bookmarks, invitations, OAuth results and section anchors", () => {
   for (const [before, after] of [

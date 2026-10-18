@@ -45,7 +45,7 @@ def main():
         go('/nearby')
         expect(page.get_by_role('tab',name='نقشه',exact=True)).to_have_attribute('aria-selected','true')
         page.get_by_role('button',name='همه‌جا',exact=True).click()
-        expect(page.locator('.world-cluster-count')).to_have_text('۴',timeout=20000)
+        expect(page.locator('.map-mascot-count')).to_have_text('۴',timeout=20000)
         assert not [r for r in requests if r[0] in ['location','map-visibility','nearby','discover']]
         assert not page.locator('.map-permission-card').count()
         page.get_by_role('tab',name='آدم‌های نزدیک من',exact=True).click()
@@ -57,7 +57,7 @@ def main():
         page.get_by_role('tab',name='نقشه',exact=True).click()
         expect(page.locator('.real-map')).to_be_visible()
         page.get_by_role('button',name='اطراف من',exact=True).click()
-        expect(page.locator('.map-visibility-control')).to_be_visible(timeout=20000)
+        expect(page.locator('.map-visibility-shortcut')).to_be_visible(timeout=20000)
         for width,height in [(320,568),(393,852),(1440,900)]:
             page.set_viewport_size({'width':width,'height':height})
             assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')

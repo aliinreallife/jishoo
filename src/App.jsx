@@ -17,8 +17,11 @@ import "./v3.css";
 import "./readability.css";
 import "./desktop-frame.css";
 import "./tab-layout.css";
+import "./components/MapVisibility.css";
+import { visibilityMode, visibilityLabel } from "./map-visibility";
 import { currentRelease, releaseStorageKey } from "./releases";
 import { ReleaseNotes } from "./components/ReleaseNotes";
+import DailyStreak from "./components/DailyStreak";
 import { blockUpdates } from "./updates";
 import {
   House,
@@ -74,6 +77,7 @@ const Stats = lazy(() => import("./components/Stats"));
 const Legal = lazy(() => import("./components/Legal"));
 const GroupJoin = lazy(() => import("./components/GroupJoin"));
 const PhotoEditor = lazy(() => import("./components/PhotoEditor"));
+const MapVisibility = lazy(() => import("./components/MapVisibility"));
 import InvitationQuota from "./components/InvitationQuota";
 import SharedMemories from "./components/SharedMemories";
 import SocialConnection, { SocialAccountFields } from "./components/SocialConnection";
@@ -793,6 +797,7 @@ export default function App() {
     [socials, setSocials] = useState({}),
     [audience, setAudience] = useState("friends"),
     [photoFile, setPhotoFile] = useState(null),
+    [mapStart, setMapStart] = useState(null),
     [pendingCheckin, setPendingCheckin] = useState(null),
     [groupHandle, setGroupHandle] = useState(""),
     [groupActionType, setGroupActionType] = useState("leave"),
@@ -825,6 +830,9 @@ export default function App() {
     usedAdminAccess = useRef(null),
     scroll = useRef(),
     profilePhotoInput = useRef(),
+    visibilityEditor = useRef(),
+    visibilityReturn = useRef(null),
+    visibilityPrompted = useRef(new Set()),
     lastRefresh = useRef(0),
     inviteFromUrl = useRef(
       new URLSearchParams(location.search).get("invite") ||
@@ -992,7 +1000,7 @@ export default function App() {
     if (!data.me.registered) setDialog("auth");
   }, [data?.me.id]);
   useEffect(() => {
-    if (!data || !entered || inviteLanding || page.screen === "settings" || releaseHandled.current || ["terms", "privacy", "support", "install"].includes(screen)) return;
+    if (!data || !entered || inviteLanding || page.screen === "settings" || releaseHandled.current || ["nearby", "terms", "privacy", "support", "install"].includes(screen)) return;
     const seen = localStorage.getItem(releaseStorageKey);
     if (seen === currentRelease.version) { releaseHandled.current = true; return; }
     if (!seen && !returningVisitor.current && !data.me.registered) {
@@ -1002,6 +1010,11 @@ export default function App() {
     }
     if (!dialog && !pendingCheckin) setDialog("whatsNew");
   }, [data?.me.id, entered, inviteLanding, dialog, pendingCheckin, screen]);
+  useEffect(() => {
+    if (screen !== "nearby" || !data || data.me.mapVisibilityReviewed !== false || dialog || pendingCheckin || visibilityPrompted.current.has(data.me.id)) return;
+    visibilityPrompted.current.add(data.me.id);
+    openMapVisibility();
+  }, [screen, data?.me.id, data?.me.mapVisibilityReviewed, dialog, pendingCheckin]);
   useEffect(() => {
     const params = new URLSearchParams(location.search),
       outcome = params.get("google");
@@ -1042,6 +1055,21 @@ export default function App() {
   }
   function openAuth() {
     setDialog("auth");
+  }
+  function openMapVisibility() {
+    visibilityReturn.current = page.screen === "settings" ? "settings" : null;
+    setDialogState("mapVisibility");
+  }
+  function finishMapVisibility(mode, point) {
+    setData(current => ({ ...current, me: { ...current.me, shareLocation: mode !== "hidden", discoverable: mode === "profile", mapVisibilityReviewed: true } }));
+    if (point) setMapStart(point);
+    setDialogState(visibilityReturn.current);
+  }
+  function keepMapVisibility() {
+    const mode = visibilityMode(data.me);
+    finishMapVisibility(mode);
+    // Dismissing explains the current preference; it never publishes location.
+    api("map-visibility", { mode, reviewOnly: true }).catch(() => {});
   }
   function dismissRelease() {
     localStorage.setItem(releaseStorageKey, currentRelease.version);
@@ -1361,6 +1389,7 @@ export default function App() {
     const result = await perform("logout", {});
     if (result) {
       setEntered(false);
+      setMapStart(null);
       setDialog(null);
       setInvitation(null);
       inviteFromUrl.current = "";
@@ -1739,6 +1768,7 @@ export default function App() {
                       <span>دوست‌هام این جیش رو هم ببینن</span>
                     </label>
                   )}
+                  <DailyStreak streak={data.stats.streak} />
                   <Suspense fallback={null}><HomeNotifications data={data} notify={notify} refresh={refresh} onSettings={() => navigate("notifications")} /></Suspense>
                   <section className="friends-section">
                     <div className="section-heading">
@@ -1858,16 +1888,9 @@ export default function App() {
                     onAuth={openAuth}
                     onPremium={() => setDialog("premium")}
                     onConnect={connectHandle}
-                    onSharingChanged={(value) =>
-                      setData((current) => ({
-                        ...current,
-                        me: {
-                          ...current.me,
-                          shareLocation: value,
-                          discoverable: value ? current.me.discoverable : false,
-                        },
-                      }))
-                    }
+                    startingPosition={mapStart}
+                    onVisibility={openMapVisibility}
+                    onInvite={() => me.registered ? navigate("invite") : openAuth()}
                     notify={notify}
                   />
                 </Suspense>
@@ -2022,6 +2045,12 @@ export default function App() {
                       <small>همه‌وقت</small>
                     </span>
                   </div>
+                  <button className="profile-community-link profile-map-visibility" onClick={openMapVisibility}>
+                    <MapPin size={26} weight="duotone" />
+                    <div><h2>نمایش من روی نقشه</h2><p>انتخاب دیده‌شدن، همیشه دست خودته</p></div>
+                    <span className="visibility-summary">{visibilityLabel(visibilityMode(me))}</span>
+                    <CaretLeft size={17} />
+                  </button>
                   <Suspense fallback={null}>
                     <InstallCard />
                   </Suspense>
@@ -2281,20 +2310,22 @@ export default function App() {
           <Modal
             hideClose={["success", "need", "socialSetup"].includes(dialog)}
             fullscreen={["success", "need", "auth", "friend", "settings", "socialAccounts", "photo", "profileShare", "groupInvite", "moment", "premium"].includes(dialog)}
-            labelledBy={dialog === "socialSetup" ? "social-setup-title" : dialog === "socialAccounts" ? "social-accounts-title" : undefined}
+            labelledBy={dialog === "mapVisibility" ? "visibility-title" : dialog === "socialSetup" ? "social-setup-title" : dialog === "socialAccounts" ? "social-accounts-title" : undefined}
             focusTarget={dialog === "socialSetup" ? ".social-setup-reminder button" : dialog === "socialAccounts" ? ".social-field input" : undefined}
-            onClose={() => dialog === "whatsNew" ? dismissRelease() : setDialog(null)}
+            onClose={() => dialog === "mapVisibility" ? visibilityEditor.current?.dismiss() : dialog === "whatsNew" ? dismissRelease() : setDialog(null)}
             className={
               ["success", "need"].includes(dialog)
                 ? "success-dialog checkin-dialog full"
                 : dialog === "moment"
                   ? "success-dialog page-dialog full"
                   : dialog === "whatsNew" ? "release-dialog"
+                  : dialog === "mapVisibility" ? "map-visibility-dialog"
                   : dialog === "friend" ? `page-dialog friend-page-dialog social-page-${selectedFriend?.linkConnection || "none"}`
                   : ["auth", "settings", "socialAccounts", "photo", "profileShare", "groupInvite", "premium"].includes(dialog) ? "page-dialog" : ""
             }
           >
             {dialog === "whatsNew" && <ReleaseNotes onClose={dismissRelease} />}
+            {dialog === "mapVisibility" && <Suspense fallback={<LoadingSection />}><MapVisibility ref={visibilityEditor} me={me} onSaved={finishMapVisibility} onDismiss={keepMapVisibility} onAuth={openAuth} /></Suspense>}
             {dialog === "auth" && (
               <AuthWizard
                 invitation={invitation}
@@ -2795,6 +2826,9 @@ export default function App() {
             {dialog === "settings" && (
               <>
                 <h2>پروفایل خودت</h2>
+                <button className="settings-map-visibility" onClick={openMapVisibility}>
+                  <MapPin size={23} /><span>نمایش من روی نقشه</span><small>{visibilityLabel(visibilityMode(me))}</small><CaretLeft size={17} />
+                </button>
                 <Suspense fallback={null}>
                   <AccountConnections
                     data={data}

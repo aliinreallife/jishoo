@@ -8,6 +8,7 @@ import {
 import { mapConfig } from "../lib/public-config.js";
 import { confirmAccountMerge, cancelAccountMerge } from "../lib/account-merge.js";
 import { periodTotals } from "../lib/calendar.js";
+import { dailyStreak } from "../lib/streaks.js";
 import { supportAction } from "../lib/support.js";
 import { listGroups, groupAction, groupInfo } from "../lib/groups.js";
 import { randomUUID } from "node:crypto";
@@ -157,6 +158,7 @@ function profile(user, own = false) {
       adminPasswordEnabled: Boolean(process.env.ADMIN_PASSWORD_HASH),
       socialLinks: user.social_links,
       shareLocation: user.share_location,
+      mapVisibilityReviewed: Boolean(user.map_visibility_reviewed),
       invitedBy: user.invited_by,
       joinedInviteCode: user.joined_invite_code,
     });
@@ -165,7 +167,7 @@ function profile(user, own = false) {
 async function stats(userId) {
   const [rows, history, latest] = await Promise.all([
     query(
-      `SELECT COUNT(*) FILTER(WHERE status='done')::int AS total,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date=(NOW() AT TIME ZONE 'Asia/Tehran')::date)::int AS today,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date>=(NOW() AT TIME ZONE 'Asia/Tehran')::date-6)::int AS week,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date>=(NOW() AT TIME ZONE 'Asia/Tehran')::date-29)::int AS month,COUNT(*) FILTER(WHERE status='need')::int AS need FROM checkins WHERE user_id=$1`,
+      `SELECT COUNT(*) FILTER(WHERE status='done')::int AS total,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date=(NOW() AT TIME ZONE 'Asia/Tehran')::date)::int AS today,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date>=(NOW() AT TIME ZONE 'Asia/Tehran')::date-6)::int AS week,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date>=(NOW() AT TIME ZONE 'Asia/Tehran')::date-29)::int AS month,COUNT(*) FILTER(WHERE status='need')::int AS need,COALESCE(array_agg(DISTINCT TO_CHAR(created_at AT TIME ZONE 'Asia/Tehran','YYYY-MM-DD')) FILTER(WHERE status='done'),ARRAY[]::text[]) AS streak_days FROM checkins WHERE user_id=$1`,
       [userId],
     ),
     query(
@@ -177,8 +179,10 @@ async function stats(userId) {
       [userId],
     ),
   ]);
+  const { streak_days: activeDays, ...totals } = rows[0];
   return {
-    ...rows[0],
+    ...totals,
+    streak: dailyStreak(activeDays || []),
     ...periodTotals(history.filter((d) => d.kind === "day")),
     daily: history.filter((d) => d.kind === "day"),
     monthly: history.filter((d) => d.kind === "month"),
@@ -872,10 +876,15 @@ export default async function handler(req, res) {
     }
     if (action === "map-visibility") {
       if (!["hidden", "news", "profile"].includes(body.mode)) fail(400, "نمایش معتبر نیست.");
+      const currentMode = user.share_location ? (user.discoverable ? "profile" : "news") : "hidden";
+      if (body.reviewOnly === true || (body.mode === currentMode && body.mode !== "hidden" && body.lat === undefined && body.lng === undefined)) {
+        await query("UPDATE users SET map_visibility_reviewed=TRUE WHERE id=$1", [user.id]);
+        return json(res, 200, { mode: currentMode });
+      }
       if (body.mode === "profile") requireAccount(user);
       if (body.mode === "hidden") {
         await transaction([
-          ["UPDATE users SET share_location=FALSE,discoverable=FALSE,location_lat=NULL,location_lng=NULL,location_updated_at=NULL WHERE id=$1", [user.id]],
+          ["UPDATE users SET share_location=FALSE,discoverable=FALSE,map_visibility_reviewed=TRUE,location_lat=NULL,location_lng=NULL,location_updated_at=NULL WHERE id=$1", [user.id]],
           ["UPDATE checkins SET location_lat=NULL,location_lng=NULL WHERE user_id=$1", [user.id]],
         ]);
         await invalidateWorldMap();
@@ -884,12 +893,18 @@ export default async function handler(req, res) {
         let point;
         try { point = approximateLocation(body.lat, body.lng); }
         catch (e) { fail(400, e.message); }
-        await query("UPDATE users SET share_location=TRUE,discoverable=$2,location_lat=$3,location_lng=$4,location_updated_at=NOW() WHERE id=$1", [user.id, body.mode === "profile", point.lat, point.lng]);
+        await query("UPDATE users SET share_location=TRUE,discoverable=$2,map_visibility_reviewed=TRUE,location_lat=$3,location_lng=$4,location_updated_at=NOW() WHERE id=$1", [user.id, body.mode === "profile", point.lat, point.lng]);
       }
       return json(res, 200, { mode: body.mode });
     }
     if (action === "location") {
       if (typeof body.enabled !== "boolean") fail(400, "انتخاب معتبر نیست.");
+      if (body.enabled && body.refreshOnly === true) {
+        let point;
+        try { point = approximateLocation(body.lat, body.lng); } catch (failure) { fail(400, failure.message); }
+        const updated = await query("UPDATE users SET location_lat=$2,location_lng=$3,location_updated_at=NOW() WHERE id=$1 AND share_location=TRUE RETURNING id", [user.id, point.lat, point.lng]);
+        return json(res, 200, { enabled: updated.length > 0 });
+      }
       if (!body.enabled) {
         await transaction([
           [
@@ -924,7 +939,7 @@ export default async function handler(req, res) {
         fail(400, error.message);
       }
       const rows = await query(
-        `SELECT e.*,u.name,u.avatar_seed,u.avatar_image,c.id AS connection_id FROM checkins e JOIN users u ON u.id=e.user_id LEFT JOIN connections c ON c.status='accepted' AND ((c.user_a=$1 AND c.user_b=u.id) OR (c.user_b=$1 AND c.user_a=u.id)) WHERE NOT u.banned AND u.share_location AND u.location_updated_at>NOW()-INTERVAL '1 hour' AND e.created_at>NOW()-INTERVAL '30 minutes' AND e.location_lat BETWEEN $2-.04 AND $2+.04 AND e.location_lng BETWEEN $3-.05 AND $3+.05 ORDER BY e.created_at DESC LIMIT 150`,
+        `SELECT DISTINCT ON(e.user_id) e.*,u.name,u.avatar_seed,u.avatar_image,c.id AS connection_id FROM checkins e JOIN users u ON u.id=e.user_id LEFT JOIN connections c ON c.status='accepted' AND ((c.user_a=$1 AND c.user_b=u.id) OR (c.user_b=$1 AND c.user_a=u.id)) WHERE NOT u.banned AND u.share_location AND u.location_updated_at>NOW()-INTERVAL '1 hour' AND e.created_at>NOW()-INTERVAL '30 minutes' AND e.location_lat BETWEEN $2-.04 AND $2+.04 AND e.location_lng BETWEEN $3-.05 AND $3+.05 ORDER BY e.user_id,e.created_at DESC`,
         [user.id, p.lat, p.lng],
       );
       const seen = new Set();

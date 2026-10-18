@@ -17,7 +17,13 @@ export default async function handler(req, res) {
     const owned = (await query('SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND u.id=$2 AND s.expires_at>NOW()', [b.sessionHash, b.userId]))[0];
     if (!owned) throw Error('owned_session_only');
     if (!(await query('INSERT INTO setup_nonces(nonce) VALUES($1) ON CONFLICT DO NOTHING RETURNING nonce', [b.nonce]))[0]) throw Error('replayed');
-    if (b.operation === 'merge-proof' || b.operation === 'expired-merge-proof') {
+    if (b.operation === 'streak-history') {
+      if (!owned.registered || owned.role !== 'member' || !owned.handle?.startsWith('qa_') || !owned.name.startsWith('آزمایش') || !Array.isArray(b.daysAgo) || b.daysAgo.length > 90 || b.daysAgo.some(day => !Number.isInteger(day) || day < 0 || day > 90)) throw Error('qa_history_only');
+      if (!(await query("SELECT 1 FROM auth_identities WHERE user_id=$1 AND provider='google' AND subject='qa-google-'||$1", [owned.id]))[0]) throw Error('qa_identity_only');
+      const history = [["DELETE FROM checkins WHERE user_id=$1", [owned.id]]];
+      for (const day of new Set(b.daysAgo)) history.push(["INSERT INTO checkins(id,user_id,status,visibility,client_nonce,created_at) VALUES(gen_random_uuid()::text,$1,'done','private',$2,LEAST(NOW(),((NOW() AT TIME ZONE 'Asia/Tehran')::date-$3::int+TIME '12:00') AT TIME ZONE 'Asia/Tehran'))", [owned.id, 'qa-streak:' + day, day]]);
+      await transaction(history);
+    } else if (b.operation === 'merge-proof' || b.operation === 'expired-merge-proof') {
       if (!owned.registered || !owned.handle?.startsWith('qa_') || owned.role !== 'member' || !owned.name.startsWith('آزمایش')) throw Error('qa_accounts_only');
       const target = (await query("SELECT u.*,a.subject FROM users u JOIN auth_identities a ON a.user_id=u.id AND a.provider='google' AND a.subject='qa-google-'||u.id WHERE u.id=$1 AND u.registered AND u.handle LIKE 'qa_%' AND u.role='member' AND u.name LIKE 'آزمایش%'", [b.targetId]))[0];
       if (!target || target.id === owned.id) throw Error('qa_target_only');

@@ -3,12 +3,42 @@
 Nearby continues to use a 3 km radius, approximate coordinates and the last
 30 minutes of map-visible activity. Its two tabs keep the map mounted while
 switching to a list of nearby profiles that opted into discovery. Only the
-visible tab's data is polled, every 8 seconds while the page is visible.
+visible tab's data is polled, every 8 seconds while visible and online. Focus and
+network return refresh local activity. Panning local maps does not query the
+database. The local query chooses the latest eligible event per person before
+deduplication, so repeated taps do not crowd out other people.
+
+## Map presentation and consent
+
+The map has no permanent bottom summary card. The viewport person count and an
+explicit refresh icon/status sit above the map, including fetch/offline states.
+The old world count is labelled as belonging to the previous view until the new
+viewport response arrives. Tapping a character opens a compact, dismissible
+selection sheet. Selected data disappears when the participant disappears.
+
+Screen-space collision grouping drives the presentation. Up to five people keep
+visible characters at any zoom. Larger crowded views use a weighted butter,
+peach and lilac canvas heatmap; zooming reveals characters. At the closest zoom,
+coincident positions retain a count and open a list rather than inventing exact
+locations. Widely spaced participants may remain characters even on a broad
+view. There is no fabricated activity in empty/sparse views. Canvas work is
+limited to map/data changes, DPR is capped at 1.5, and map controls retain 44 px
+targets. No extra density service or paid API is used.
+
+The first map visit explains Hidden, Anonymous and Profile options. A persisted
+review flag is separate from consent, and existing choices remain unchanged.
+Keeping the current choice only acknowledges this explanation. A new publishing
+choice requests geolocation explicitly; merely viewing nearby data never opts
+someone into sharing. The editor is available on Me, in profile settings and
+through a small map shortcut. Location refreshes cannot reactivate an account
+hidden from another tab. World activity stays anonymous in every visibility mode.
 
 The premium worldwide view requires a registered account and server-checked
 premium access. It never returns names, handles, photos, user IDs or social links.
-Zoom-dependent clusters are filtered to the viewport; at most 240 markers are
-returned, with a zoom-in hint if more clusters exist. People who hide map sharing,
+Zoom-dependent cells are filtered to the viewport; at most 240 weighted cells
+are returned. If needed, cells coarsen instead of discarding people. Their
+approximate centroids keep a lone participant near their actual city, including
+at low zoom. The viewport count is the number of people, not the cell count. People who hide map sharing,
 private registered check-ins, stale locations and suspended members are excluded.
 The initial world view works without granting the viewer location permission.
 Global availability does not expand nearby profile discovery beyond 3 km.

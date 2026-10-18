@@ -17,7 +17,7 @@ def fixture():
         'me': {'id': 'routing-member', 'name': 'آزمایش مسیر', 'handle': 'qa_routing',
                'avatarSeed': 'آزمایش مسیر', 'registered': True, 'premium': True,
                'socialLinks': {}, 'inviteCode': 'OWN-CODE', 'trialDaysSaved': 7,
-               'shareLocation': False, 'discoverable': False, 'notificationsEnabled': True},
+               'shareLocation': False, 'discoverable': False, 'mapVisibilityReviewed': True, 'notificationsEnabled': True},
         'auth': {'googleEnabled': True, 'phoneLoginEnabled': False},
         'map': {'url': 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
                 'maxZoom': 20, 'subdomains': 'abc', 'attribution': 'Synthetic routing fixture'},

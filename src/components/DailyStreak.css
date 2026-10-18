@@ -1,0 +1,26 @@
+.daily-streak { border:1px solid #efddbd; border-radius:23px; padding:15px 14px 12px; margin:17px 0; background:linear-gradient(125deg,#fff2cd,#fffaeb 65%,#f4ecfc); color:#72604d; }
+.daily-streak > header { display:flex; align-items:center; gap:9px; }
+.streak-flame { display:grid; place-items:center; flex-shrink:0; width:37px; height:43px; color:#e9a355; background:#ffe7ab; border-radius:16px; }
+.daily-streak header > div { flex:1; min-width:0; }
+.daily-streak h2 { margin:0; font-size:15px; line-height:1.6; color:#79614e; }
+.daily-streak header p { margin:3px 0 0; font-size:11px; line-height:1.8; color:#806b5f; }
+.streak-best { font-size:10px; color:#806b5f; white-space:nowrap; }
+.streak-week { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:7px; margin:14px 0 12px; }
+.streak-day { text-align:center; display:flex; flex-direction:column; align-items:center; gap:6px; }
+.streak-day > span { font-size:10px; color:#827064; }
+.streak-day > i { width:29px; height:29px; border:1px solid #eee2cd; background:#fff9ed; border-radius:11px; display:grid; place-items:center; font-style:normal; }
+.streak-day.is-active > i { background:#ffe59a; border-color:#f2d16d; color:#d89d46; }
+.streak-day.is-frozen > i { background:#e2efff; border-color:#c2d7f4; color:#86a9d3; }
+.streak-day.is-today > i { border:2px solid #c3a4dc; background:#f7edf9; }
+.streak-day.is-future { opacity:.55; }
+.streak-today-dot,.streak-day-dot { width:5px; height:5px; border-radius:50%; background:#cebed5; }
+.streak-day-dot { width:3px; height:3px; background:#dacdba; }
+.streak-freezes { display:flex; align-items:center; justify-content:space-between; gap:7px; border-top:1px solid #eadfca; padding-top:8px; }
+.streak-freezes > span { display:flex; gap:5px; align-items:center; font-size:11px; color:#5f728d; }
+.streak-freezes strong { padding:2px 6px; border-radius:8px; background:#e8f0fc; font-size:11px; font-weight:700; color:#577494; }
+.streak-freezes button { min-height:35px; padding:5px; font-size:11px; display:flex; align-items:center; gap:3px; color:#7d6189; }
+.streak-recharge { margin:5px 0 0; font-size:10px; color:#806b5f; line-height:1.8; }
+.streak-explanation { margin-top:8px; padding:9px 11px; border-radius:14px; background:#fffaf0; border:1px solid #eee1ca; }
+.streak-explanation p { margin:0; font-size:11px; line-height:1.95; color:#7e665e; }
+.streak-explanation p + p { margin-top:7px; }
+@media(max-width:350px) { .daily-streak { padding:13px 11px 10px; } .daily-streak h2 { font-size:14px; } .streak-best { font-size:9px; } .streak-week { gap:4px; } .streak-day > i { width:27px; height:27px; } .daily-streak header p { font-size:10px; } }
