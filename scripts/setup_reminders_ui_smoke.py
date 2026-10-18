@@ -86,11 +86,11 @@ def main():
         page.get_by_role('button',name='من تو شبکه‌های اجتماعی',exact=False).last.click()
         editor=page.get_by_role('dialog',name='من تو شبکه‌های اجتماعی',exact=True);expect(editor).to_be_visible()
         expect(page.locator('#social-accounts-title')).to_be_focused()
+        expect(editor.locator('input')).to_have_count(5,timeout=30000)
         for width,height in [(320,568),(393,852),(812,375),(1440,900)]:
             page.set_viewport_size({'width':width,'height':height})
             assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
-            box=editor.get_by_role('button',name='ذخیره حساب‌ها',exact=True).bounding_box()
-            assert box['y']>=0 and box['y']+box['height']<=height+1,(width,height,box)
+            page.wait_for_function('()=>{const button=document.querySelector(".social-editor-actions button");if(!button)return false;const box=button.getBoundingClientRect();return box.width>0&&box.y>=0&&box.bottom<=innerHeight+1}')
         page.set_viewport_size({'width':393,'height':852})
         ig=page.get_by_label('اینستاگرام',exact=True);tg=page.get_by_label('تلگرام',exact=True)
         ig.fill('https://x.com/ali');expect(ig).to_have_attribute('aria-invalid','true')
