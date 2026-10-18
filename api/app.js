@@ -1,3 +1,4 @@
+import { joinWaitlist } from "../lib/waitlist.js";
 import {
   authMethods,
   startGoogle,
@@ -5,6 +6,7 @@ import {
   removeGoogle,
   phoneAuthEnabled,
 } from "../lib/google-auth.js";
+import { mapProfile } from "../lib/map-profile.js";
 import { mapConfig } from "../lib/public-config.js";
 import { confirmAccountMerge, cancelAccountMerge } from "../lib/account-merge.js";
 import { periodTotals } from "../lib/calendar.js";
@@ -421,6 +423,10 @@ export default async function handler(req, res) {
       const merged = await confirmAccountMerge(user, auth.tokenHash, body.confirmed, fail);
       return json(res, 200, await bootstrap(merged, auth.tokenHash));
     }
+    if (action === "waitlist") {
+      if (req.method !== "POST") fail(405, "این کار به درخواست امن نیاز داره.");
+      return json(res, 200, await joinWaitlist(user, auth.tokenHash, body, fail));
+    }
     if (action === "google-start") {
       if (req.method !== "POST") fail(405, "درخواست معتبر نیست.");
       return json(res, 200, await startGoogle({ body, user, auth, fail }));
@@ -619,6 +625,7 @@ export default async function handler(req, res) {
       );
       if (!registered[0]) fail(400, "درخواست عضویت منقضی شده؛ دوباره وارد شو.");
       const fresh = registered[0];
+      await query("DELETE FROM invitation_waitlist WHERE google_subject IN(SELECT subject FROM auth_identities WHERE user_id=$1 AND provider='google')", [fresh.id]);
       if (body.linkGoogle === true && body.provider !== "google")
         await claimPendingGoogle(fresh.id, auth.tokenHash);
       if (fresh.role === "admin") fresh.session_admin_access = true;
@@ -939,7 +946,7 @@ export default async function handler(req, res) {
         fail(400, error.message);
       }
       const rows = await query(
-        `SELECT DISTINCT ON(e.user_id) e.*,u.name,u.avatar_seed,u.avatar_image,c.id AS connection_id FROM checkins e JOIN users u ON u.id=e.user_id LEFT JOIN connections c ON c.status='accepted' AND ((c.user_a=$1 AND c.user_b=u.id) OR (c.user_b=$1 AND c.user_a=u.id)) WHERE NOT u.banned AND u.share_location AND u.location_updated_at>NOW()-INTERVAL '1 hour' AND e.created_at>NOW()-INTERVAL '30 minutes' AND e.location_lat BETWEEN $2-.04 AND $2+.04 AND e.location_lng BETWEEN $3-.05 AND $3+.05 ORDER BY e.user_id,e.created_at DESC`,
+        `SELECT DISTINCT ON(e.user_id) e.*,u.name,u.avatar_seed,u.avatar_image,u.registered,u.handle,u.discoverable,c.id AS connection_id FROM checkins e JOIN users u ON u.id=e.user_id LEFT JOIN connections c ON c.status='accepted' AND ((c.user_a=$1 AND c.user_b=u.id) OR (c.user_b=$1 AND c.user_a=u.id)) WHERE NOT u.banned AND u.share_location AND (e.visibility='friends' OR NOT u.registered OR e.user_id=$1) AND u.location_updated_at>NOW()-INTERVAL '1 hour' AND e.created_at>NOW()-INTERVAL '30 minutes' AND e.location_lat BETWEEN $2-.04 AND $2+.04 AND e.location_lng BETWEEN $3-.05 AND $3+.05 ORDER BY e.user_id,e.created_at DESC`,
         [user.id, p.lat, p.lng],
       );
       const seen = new Set();
@@ -964,20 +971,7 @@ export default async function handler(req, res) {
           lng: r.location_lng,
           isFriend: Boolean(r.connection_id),
           isMe: r.user_id === user.id,
-          name:
-            r.user_id === user.id
-              ? "خودت"
-              : r.connection_id
-                ? r.name
-                : "یه همسایه",
-          avatarSeed:
-            r.connection_id || r.user_id === user.id
-              ? r.avatar_seed
-              : "neighbor:" + r.id,
-          avatarImage:
-            r.connection_id || r.user_id === user.id
-              ? r.avatar_image || null
-              : null,
+          ...mapProfile(r, user.id),
         }));
       return json(res, 200, { activity, approximate: true });
     }

@@ -1,0 +1,13 @@
+/* Keep RTL invitation copy centered as a block as well as within each line. */
+.app-shell .invite-page > h2 { width:100%; max-width:340px; margin:13px auto; text-wrap:balance; }
+.app-shell .invite-page .invite-page-description { margin-inline:auto; text-wrap:pretty; }
+.auth-entry-step, .auth-waiting-step { text-align:center; }
+.auth-guest-action { display:block; margin:16px auto 0; min-height:44px; }
+.auth-waiting-step > .button { margin-top:18px; }
+.auth-waiting-step form { margin-top:20px; text-align:right; }
+.auth-waiting-step .field-label { font-size:13px; line-height:1.9; }
+.auth-waiting-step form > .button { width:100%; }
+.waitlist-email { display:block; max-width:100%; margin:8px auto 14px; overflow-wrap:anywhere; color:#8a7c92; font-size:13px; }
+.invite-first-step > .text-link:last-child { min-height:44px; }
+.change-invitation { display:block; min-height:44px; margin:0 auto 8px; font-size:12px; }
+.pending-google-note > span { display:block; margin-top:4px; overflow-wrap:anywhere; }

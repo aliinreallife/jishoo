@@ -1,0 +1,7 @@
+.admin-waitlist { margin:20px 0; padding:16px; border:1px solid #e7dfd0; border-radius:20px; background:#fffcf5; }
+.admin-waitlist p { color:#786b81; font-size:12px; line-height:1.9; }
+.admin-waitlist ul { padding:0; list-style:none; }
+.admin-waitlist li { display:grid; gap:6px; padding:12px 0; border-bottom:1px solid #eee7d9; overflow-wrap:anywhere; font-size:13px; }
+.admin-waitlist small { color:#94849a; }
+.admin-waitlist-pages { display:flex; gap:12px; }
+.admin-waitlist-pages button { min-height:44px; padding:8px 16px; border:1px solid #ded5e9; border-radius:12px; background:#f5effb; color:#705784; font:inherit; cursor:pointer; }

@@ -1,0 +1,8 @@
+.jishoo-loading { box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:12px; width:100%; min-height:100dvh; padding:28px; background:#fff9e6; color:#51465f; text-align:center; font-family:Vazirmatn,sans-serif; }
+.jishoo-loading img { display:block; width:128px; height:128px; object-fit:contain; background:transparent; }
+.jishoo-loading > strong { font:40px/1.4 Lalezar,Vazirmatn,sans-serif; }
+.jishoo-loading > p { margin:0; font-size:14px; line-height:1.9; color:#776d7a; }
+.app-shell > .jishoo-loading { min-height:100%; height:100%; }
+.jishoo-loading.is-compact { min-height:230px; background:transparent; padding:24px; }
+.jishoo-loading.is-compact img { width:74px; height:74px; }
+.jishoo-loading.is-compact > strong { font-size:28px; }

@@ -326,3 +326,7 @@
 .app-shell .map-permission-action .map-permission-error { color:#9e6757; }
 @media(max-width:350px) { .nearby-status-strip { margin-inline:14px; gap:5px; } .nearby-refresh { font-size:9px; padding:6px; gap:4px; } .nearby-count strong { font-size:11.5px; } .nearby-count small { font-size:9px; } .map-calm-state { gap:6px; padding:9px; } .map-calm-state > img { width:32px; height:40px; } .map-calm-state strong { font-size:11px; } .map-calm-state p { font-size:9px; } .map-permission-action { gap:7px; padding:10px; } .map-permission-action > img { width:32px; height:40px; } .app-shell .map-permission-action small { font-size:10px; } }
 @media(prefers-reduced-motion:reduce) { .nearby-refresh.is-fetching svg { animation:none; } .jishoo-heatmap-layer { transition:none; } }
+.map-profile-action { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:44px; margin-top:8px; padding:8px 12px; border:1px solid #dcd0ec; border-radius:14px; background:#f1e9fa; color:#745a92; font:600 13px Vazirmatn,sans-serif; cursor:pointer; }
+.map-profile-action > svg:last-child { transform:rotate(90deg); }
+.map-profile-private { margin:8px 0 0; font-size:12px; line-height:1.8; color:#827689; }
+.map-group-people button { min-height:44px; padding:6px 12px; border:1px solid #dcd0ec; border-radius:12px; background:#f1e9fa; color:#745a92; font:600 12px Vazirmatn,sans-serif; cursor:pointer; }

@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useEffect } from "react";
+import LoadingScreen from "./components/LoadingScreen";
 import Landing from "./components/Landing";
 import { ReleasePage } from "./components/ReleaseNotes";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -22,5 +23,5 @@ export default function Entry() {
   }, [pathname]);
   if (pathname === "/") return <Landing />;
   if (pathname === "/changelog") return <ReleasePage />;
-  return <Suspense fallback={<div className="entry-loading"><img src="/assets/shy-drop.webp" alt="قطرهٔ خجالتی جیشو" /><p>داریم جیشو رو آماده می‌کنیم…</p></div>}><App /></Suspense>;
+  return <Suspense fallback={<LoadingScreen />}><App /></Suspense>;
 }

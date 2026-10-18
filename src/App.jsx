@@ -10,6 +10,7 @@ import React, {
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { readPage, screenPath, notificationPath } from "./routing";
+import { useDialogHistory } from "./use-dialog-history";
 import "./styles.css";
 import "./v2.css";
 import "./community.css";
@@ -17,6 +18,8 @@ import "./v3.css";
 import "./readability.css";
 import "./desktop-frame.css";
 import "./tab-layout.css";
+import "./flow-fixes.css";
+import LoadingScreen from "./components/LoadingScreen";
 import "./components/MapVisibility.css";
 import { visibilityMode, visibilityLabel } from "./map-visibility";
 import { currentRelease, releaseStorageKey } from "./releases";
@@ -106,14 +109,7 @@ const HomeNotifications = lazy(() => import("./components/HomeNotifications"));
 import { api, getInvite, fa, relativeTime, inviteUrl, copyText, inviteGiftLabel } from "./api";
 
 const assets = `${import.meta.env.BASE_URL}assets/`;
-function LoadingSection() {
-  return (
-    <div className="section-loading" role="status">
-      <Mascot size={74} mood="shy" />
-      <p>داریم این قسمت رو آماده می‌کنیم…</p>
-    </div>
-  );
-}
+function LoadingSection() { return <LoadingScreen compact message="داریم این قسمت رو آماده می‌کنیم…" />; }
 function Button({ children, secondary, lilac, className = "", ...props }) {
   return (
     <button
@@ -164,7 +160,8 @@ function Modal({
   labelledBy,
   focusTarget,
 }) {
-  const dialog = useRef();
+  const dialog = useRef(), close = useRef(onClose);
+  close.current = onClose;
   const [framed, setFramed] = useState(() => window.matchMedia("(min-width: 501px) and (min-height: 600px)").matches);
   useEffect(() => {
     const media = window.matchMedia("(min-width: 501px) and (min-height: 600px)");
@@ -184,7 +181,7 @@ function Modal({
     const previous = document.activeElement;
     (dialog.current?.querySelector(focusTarget || "button:not(:disabled),input:not(:disabled)"))?.focus();
     const escape = (e) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") close.current();
     };
     window.addEventListener("keydown", escape);
     return () => {
@@ -308,11 +305,11 @@ function StoryDialog({ children, onClose, label = "کارت اشتراک جیش�
     document.body,
   );
 }
-function AuthWizard({ invitation, onComplete, notify, authInfo, inviteOnly = true }) {
+function AuthWizard({ invitation, onComplete, onGuest, onWaiting, notify, authInfo, inviteOnly = true }) {
   const [stage, setStage] = useState(
-      inviteOnly ? "invite" : authInfo?.pendingGoogle ? "register" : "phone",
+      authInfo?.pendingGoogle ? (authInfo.waitlisted && !invitation?.code ? "waiting" : inviteOnly ? "invite" : "register") : "entry",
     ),
-    [phone, setPhone] = useState(""),
+    [phone, setPhone] = useState(authInfo?.waitlistPhone || ""),
     [challenge, setChallenge] = useState(null),
     [otp, setOtp] = useState(""),
     [ticket, setTicket] = useState(authInfo?.pendingGoogle ? "google" : ""),
@@ -465,19 +462,56 @@ function AuthWizard({ invitation, onComplete, notify, authInfo, inviteOnly = tru
   }
   return (
     <div className="auth-wizard">
-      {stage === "invite" ? (
+      {stage === "entry" ? (
+        <div className="auth-entry-step">
+          <PairArt size={170} />
+          <h2>بیا تو جیشو</h2>
+          <p className="dialog-description">با گوگل ادامه بده. اگر قبلاً عضو شدی، مستقیم وارد حسابت می‌شی؛ برای عضویت تازه، دعوت یه دوست لازمه.</p>
+          {invitation?.inviter && <div className="invite-auth-summary"><Avatar person={invitation.inviter} size={42} /><p>با دعوت {invitation.inviter.name}<strong>دعوتت رو بعد از گوگل بررسی می‌کنیم.</strong></p></div>}
+          <Suspense fallback={null}><GoogleBanner auth={authInfo} intent="signup" inviteCode={invitation?.code || code} notify={notify} /></Suspense>
+          <button className="text-link auth-guest-action" onClick={onGuest}>فعلاً مهمان باشم</button>
+          <p className="auth-demo-note">دعوت نداری؟ بعد از گوگل می‌تونی وارد فهرست انتظار بشی. مهمان هم می‌تونی جیش ثبت کنی و استوری بسازی.</p>
+        </div>
+      ) : stage === "waiting" ? (
+        <div className="auth-waiting-step">
+          <Mascot size={120} />
+          <h2>تو فهرست انتظاری</h2>
+          <p className="dialog-description">وقتی نوبت دعوتت برسه، به ایمیلت اطلاع می‌دیم. می‌تونی از دوستی که عضو جیشوئه هم کد دعوت بگیری و زودتر بیای تو جمع.</p>
+          <span className="waitlist-email" dir="ltr">{authInfo?.pendingGoogle}</span>
+          <form onSubmit={async event => {
+            event.preventDefault(); setBusy(true); setError("");
+            try { const saved = await api("waitlist", { consent: true, phone }); onWaiting(saved); notify("شمارهٔ تماس برای دعوتت ذخیره شد."); }
+            catch (error) { setError(error.message); }
+            finally { setBusy(false); }
+          }}>
+            <label className="field-label">شماره برای اطلاع‌رسانی دعوت (اختیاری)<input type="tel" dir="ltr" autoComplete="tel" value={phone} onChange={event => setPhone(event.target.value)} placeholder="0912 123 4567" /></label>
+            <p className="auth-demo-note">این شماره برای تماس دربارهٔ دعوتته؛ هنوز تایید نشده و راه ورود به حساب نیست.</p>
+            {error && <p className="form-error" role="alert">{error}</p>}
+            <Button secondary type="submit" disabled={busy || !phone.trim()}>{busy ? "داریم ذخیره می‌کنیم…" : "ذخیرهٔ شمارهٔ تماس"}</Button>
+          </form>
+          <Button lilac onClick={onGuest}>تا اون موقع، مهمان باشم</Button>
+          <button className="text-link auth-guest-action" onClick={() => { setStage("invite"); setError(""); }}>از دوستم کد دعوت گرفتم</button>
+        </div>
+      ) : stage === "invite" ? (
         <div className="invite-first-step">
-          <PairArt size={190} />
-          <span className="little-pill">قدم اول · دعوت به جمعمون</span>
-          <h2>دعوتت رو وارد کن</h2>
-          <p className="dialog-description">برای عضویت، کد یکی از دوستات رو وارد کن. بعد با گوگل ادامه می‌دی.</p>
+          <PairArt size={170} />
+          <span className="little-pill">گوگلت تایید شد</span>
+          <span className="waitlist-email" dir="ltr">{authInfo?.pendingGoogle}</span>
+          <h2>کد دعوت داری؟</h2>
+          <p className="dialog-description">برای عضویت، دعوت یکی از دوست‌هات لازمه. کدش رو اینجا بنویس؛ بعد فقط اسمت رو می‌پرسیم.</p>
           <form onSubmit={continueInvite}>
             <label className="field-label">کد دعوت<input aria-label="کد دعوت عضویت" autoCapitalize="characters" autoComplete="off" dir="ltr" maxLength={80} value={code} onChange={(e) => { setCode(e.target.value.toUpperCase()); setInvite(null); setError(""); }} placeholder="کد دوستت" required /></label>
             {error && <p className="form-error" role="alert">{error}</p>}
             <Button lilac type="submit" disabled={busy || !code.trim()}>{busy ? "داریم دعوتت رو بررسی می‌کنیم…" : "تایید دعوت و ادامه"}<Heart size={18} /></Button>
           </form>
-          <button className="text-link auth-back" onClick={() => { setStage("login"); setBusy(false); setError(""); }}>قبلاً عضو شدم؛ ورود به حسابم</button>
-          <p className="auth-demo-note">بدون دعوت هم مهمان مایی؛ ثبت جیش، آمار و استوری رایگانه.</p>
+          <button className="text-link auth-guest-action" disabled={busy} onClick={async () => {
+            setBusy(true); setError("");
+            try { const saved = await api("waitlist", { consent: true }); onWaiting(saved); setStage("waiting"); }
+            catch (error) { setError(error.message); }
+            finally { setBusy(false); }
+          }}>دعوت ندارم؛ به فهرست انتظار بپیوندم</button>
+          <p className="auth-demo-note">با پیوستن، ایمیل گوگلت رو برای اطلاع‌رسانی دعوت نگه می‌داریم. تا اون موقع می‌تونی مهمان باشی.</p>
+          <button className="text-link" onClick={onGuest}>فعلاً مهمان باشم</button>
         </div>
       ) : stage === "phone" || stage === "login" ? (
         <>
@@ -657,7 +691,7 @@ function AuthWizard({ invitation, onComplete, notify, authInfo, inviteOnly = tru
         <>
           {ticket === "google" && (
             <div className="pending-google-note">
-              گوگلت تایید شده. برای عضویت فقط اسمت و دعوت لازمه.
+              گوگل و دعوتت تایید شدن؛ اینجا فقط اسمت رو بنویس.
               <span dir="ltr">{authInfo?.pendingGoogle}</span>
             </div>
           )}
@@ -696,25 +730,6 @@ function AuthWizard({ invitation, onComplete, notify, authInfo, inviteOnly = tru
                 required
               />
             </label>
-            <label className="field-label">
-              {requiresInvite ? "کد دعوت" : "کد دعوت (اختیاری؛ ۷ روز هدیه)"}
-              <input
-                value={code}
-                onChange={(e) => {
-                  setCode(e.target.value.toUpperCase());
-                  setInvite(null);
-                }}
-                onBlur={checkInvite}
-                placeholder="کد دوستت"
-                dir="ltr"
-                required={requiresInvite}
-              />
-            </label>
-            {requiresInvite && !code.trim() && (
-              <p className="invite-required-help">
-                برای ساخت حساب، کد یا لینک دعوت یکی از دوست‌هات لازمه.
-              </p>
-            )}
             {invite && (
               <div className="invite-auth-summary">
                 {invite.inviter ? (
@@ -726,14 +741,13 @@ function AuthWizard({ invitation, onComplete, notify, authInfo, inviteOnly = tru
                   {invite.inviter
                     ? `با دعوت ${invite.inviter.name}`
                     : "دعوتِ شروع جیشو"}
-                  <strong>{inviteGiftLabel(invite)}</strong>
+                  <strong>دعوت تایید شده · {inviteGiftLabel(invite)}</strong>
                 </p>
               </div>
             )}
+            {invite && <button className="text-link change-invitation" type="button" onClick={() => { setStage("invite"); setError(""); }}>تغییر دعوت</button>}
             {error && (
-              <p className="form-error" role="alert">
-                {error}
-              </p>
+              <p className="form-error" role="alert">{error}</p>
             )}
             <Button
               lilac
@@ -781,7 +795,6 @@ export default function App() {
     // Entry owns the public landing; every app URL opens its requested screen.
     [entered, setEntered] = useState(true),
     [storyKind, setStoryKind] = useState(page.storyKind),
-    [dialog, setDialogState] = useState(null),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
     [invitation, setInvitation] = useState(null),
@@ -806,20 +819,22 @@ export default function App() {
       Boolean(new URLSearchParams(location.search).get("invite")),
     );
   const selectedCircle = page.circleId || dialogCircle;
+  const { dialog, setDialog: setDialogState, overlay, closeAll: closeDialogs } = useDialogHistory(routeLocation, routerNavigate,
+    page.screen === "settings" && data ? (data.me.registered ? "settings" : "guestSettings") : null, data?.me.id);
   const updateBlocked = !publicPage && ((!data && !loadError) || Boolean(dialog) || busy || Boolean(pendingCheckin) || inviteLanding || ["stories", "groupJoin"].includes(screen));
   useLayoutEffect(() => {
     if (updateBlocked) return blockUpdates();
   }, [updateBlocked]);
-  function closeSettings() {
-    setDialogState(null);
-    if (page.screen === "settings") {
-      if (routeLocation.state?.settingsFrom) routerNavigate(-1);
-      else routerNavigate("/profile", { replace: true });
-    }
+  const mapMemory = useRef({ userId: null, state: {} });
+  if (mapMemory.current.userId !== data?.me.id) mapMemory.current = { userId: data?.me.id, state: {} };
+  function goBack(fallback = "profile") {
+    if ((routeLocation.state?.appFrom || routeLocation.state?.settingsFrom) && window.history.state?.idx > 0) routerNavigate(-1);
+    else routerNavigate(screenPath(fallback), { replace: true });
   }
+  function closeSettings() { goBack("profile"); }
   function setDialog(value) {
     if (value === null && dialog === "photo") setPhotoFile(null);
-    if (value === null && page.screen === "settings") closeSettings();
+    if (value === null && page.screen === "settings" && !overlay) closeSettings();
     else setDialogState(value);
   }
   const pendingTimer = useRef(),
@@ -931,13 +946,10 @@ export default function App() {
   }, [data?.me.registered, invitation?.code]);
   useEffect(() => {
     if (screen === "stories") setStoryKind(page.storyKind);
-    if (page.screen !== "settings") {
-      setDialogState(current => ["settings", "guestSettings"].includes(current) ? null : current);
-    } else if (data) {
+    if (page.screen === "settings" && data) {
       setProfileName(data.me.name);
       setProfileHandle(data.me.handle || "");
       setSocials(data.me.socialLinks || {});
-      setDialogState(data.me.registered ? "settings" : "guestSettings");
     }
   }, [routeLocation.pathname, data?.me.id]);
   useEffect(() => {
@@ -1024,7 +1036,7 @@ export default function App() {
     routerNavigate(location.pathname + (params.size ? "?" + params : "") + location.hash, { replace: true, state: routeLocation.state });
     if (outcome === "continue") {
       setDialog("auth");
-      notify("گوگلت تایید شد؛ با یه دعوت، حسابت رو بساز.");
+      notify("گوگلت تایید شد؛ دعوت داری یا بریم فهرست انتظار؟");
     } else if (outcome === "invite_required") {
       setDialog("auth");
       notify("با این گوگل هنوز عضو نشدی؛ اول دعوتت رو وارد کن.");
@@ -1046,7 +1058,10 @@ export default function App() {
   }, [data?.me.id, data?.me.registered]);
   function navigate(next, id) {
     // Query state belongs to its flow, rather than leaking into every page.
-    routerNavigate(screenPath(next, id) + (next === "groupJoin" ? location.search : ""));
+    routerNavigate(screenPath(next, id) + (next === "groupJoin" ? location.search : ""), {
+      replace: Boolean(overlay),
+      state: { appFrom: routeLocation.pathname + routeLocation.search },
+    });
   }
   function finishInviteLanding() {
     setInviteLanding(false); setEntered(true); setInvitation(null);
@@ -1063,8 +1078,12 @@ export default function App() {
   }
   function finishMapVisibility(mode, point) {
     setData(current => ({ ...current, me: { ...current.me, shareLocation: mode !== "hidden", discoverable: mode === "profile", mapVisibilityReviewed: true } }));
-    if (point) setMapStart(point);
-    setDialogState(visibilityReturn.current);
+    if (point) {
+      setMapStart(point);
+      mapMemory.current.state.position = point;
+      if (mapMemory.current.state.cameras) delete mapMemory.current.state.cameras.local;
+    }
+    setDialogState(null);
   }
   function keepMapVisibility() {
     const mode = visibilityMode(data.me);
@@ -1091,7 +1110,6 @@ export default function App() {
   function completeAuth(result) {
     setData(result);
     setEntered(true);
-    setDialog(null);
     setInviteLanding(false);
     navigate(
       result.me.isAdmin
@@ -1119,7 +1137,7 @@ export default function App() {
     pendingRef.current = null;
     setPendingCheckin(null);
     setBusy(false);
-    setDialog(null);
+    closeDialogs();
     notify("ثبت لغو شد؛ چیزی برای دوستات فرستاده نشد.");
   }
   function checkin(status) {
@@ -1383,7 +1401,6 @@ export default function App() {
     });
     if (result) {
       setData((current) => ({ ...current, circles: result.circles }));
-      setDialog(null);
       setCircleName("");
       setCircleMembers([]);
       navigate("circle", result.id);
@@ -1398,7 +1415,6 @@ export default function App() {
     if (result) {
       setEntered(false);
       setMapStart(null);
-      setDialog(null);
       setInvitation(null);
       inviteFromUrl.current = "";
       sessionStorage.removeItem("jishoo:invite");
@@ -1492,12 +1508,9 @@ export default function App() {
         dir="rtl"
       >
         {!data ? (
-          <section className="loading-page">
-            <img src={assets + "shy-drop.webp"} alt="قطره‌ی خجالتی جیشو" />
-            <Brand small />
-            <p>{loadError || "داریم جمعمون رو آماده می‌کنیم…"}</p>
+          <LoadingScreen message={loadError || "داریم جمعمون رو آماده می‌کنیم…"}>
             {loadError && <Button onClick={refresh}>دوباره امتحان کن</Button>}
-          </section>
+          </LoadingScreen>
         ) : screen === "groupJoin" ? (
           <Suspense fallback={<LoadingSection />}>
             <GroupJoin
@@ -1897,6 +1910,12 @@ export default function App() {
                     onPremium={() => setDialog("premium")}
                     onConnect={connectHandle}
                     startingPosition={mapStart}
+                    memory={mapMemory.current.state}
+                    onProfile={(handle) => {
+                      const friend = accepted.find(person => person.handle === handle);
+                      if (friend) { setSelectedFriend(friend); setDialog("friend"); }
+                      else navigate(handle === me.handle ? "profile" : "publicProfile", handle);
+                    }}
                     onVisibility={openMapVisibility}
                     onInvite={() => me.registered ? navigate("invite") : openAuth()}
                     notify={notify}
@@ -1906,7 +1925,7 @@ export default function App() {
               {screen === "achievements" && (
                 <Achievements
                   data={data}
-                  onBack={() => navigate("profile")}
+                  onBack={() => goBack("profile")}
                   onShare={() => openStory("weekly")}
                   onShareStreak={shareStreak}
                 />
@@ -1916,9 +1935,9 @@ export default function App() {
                   data={data}
                   refresh={refresh}
                   notify={notify}
-                  onBack={() => navigate("home")}
+                  onBack={() => goBack("home")}
                   onNavigate={(route) => {
-                    routerNavigate(notificationPath(route, location.origin));
+                    routerNavigate(notificationPath(route, location.origin), { state: { appFrom: routeLocation.pathname + routeLocation.search } });
                   }}
                 />
               )}
@@ -1930,7 +1949,7 @@ export default function App() {
                   profile={publicPerson}
                   data={data}
                   busy={busy}
-                  onBack={() => navigate("home")}
+                  onBack={() => goBack("home")}
                   onConnect={async () => {
                     const value = await perform("connection-request", {
                       handle: publicPerson.handle,
@@ -1943,11 +1962,9 @@ export default function App() {
                   }}
                   onJoin={async () => {
                     try {
-                      setInvitation(await getInvite(publicPerson.inviteCode));
+                      setInvitation(publicPerson.inviteCode ? await getInvite(publicPerson.inviteCode) : null);
                       openAuth();
-                    } catch (error) {
-                      notify(error.message);
-                    }
+                    } catch (error) { notify(error.message); }
                   }}
                 />
               )}
@@ -1958,7 +1975,7 @@ export default function App() {
                     group={screen === "circle" ? circle : null}
                     missingGroup={screen === "circle" && !circle}
                     busy={busy}
-                    onBack={() => navigate("friends")}
+                    onBack={() => goBack("friends")}
                     onAdd={() => setDialog("addFriend")}
                     onCreate={() => setDialog("circle")}
                     onFriend={(friend) => {
@@ -2204,12 +2221,12 @@ export default function App() {
                   />
                 </section>
               )}
-              {screen === "streak" && <Suspense fallback={<LoadingSection />}><StreakPage data={data} onBack={() => navigate("profile")} onShare={shareStreak} /></Suspense>}
+              {screen === "streak" && <Suspense fallback={<LoadingSection />}><StreakPage data={data} onBack={() => goBack("profile")} onShare={shareStreak} /></Suspense>}
               {screen === "stats" && (
                 <Suspense fallback={<LoadingSection />}>
                   <Stats
                     data={data}
-                    onBack={() => navigate("profile")}
+                    onBack={() => goBack("profile")}
                     onShare={() => openStory("weekly")}
                   />
                 </Suspense>
@@ -2218,12 +2235,12 @@ export default function App() {
                 <section className="page invite-page">
                   <Header
                     title="یه دوست بیار تو جمع"
-                    back={() => navigate("profile")}
+                    back={() => goBack("profile")}
                   />
                   <div className="invite-character-pair">
                     <PairArt size={295} />
                   </div>
-                  <h2>با دعوتت، هر دوتون ۷ روز هدیه می‌گیرین.</h2>
+                  <h2>با دعوت تو، ۷ روز هدیه برای هر دوتون!</h2>
                   <p className="invite-page-description">
                     عضویت فعلاً با دعوت و گوگله. دوستت می‌تونه اول مهمان
                     باشه؛ اسم فقط موقع ساخت حساب لازمه.
@@ -2349,6 +2366,8 @@ export default function App() {
                 authInfo={data.auth}
                 inviteOnly={data.inviteOnly}
                 onComplete={completeAuth}
+                onWaiting={saved => setData(current => ({ ...current, auth: { ...current.auth, waitlisted: true, waitlistPhone: saved.phone } }))}
+                onGuest={() => { setEntered(true); setInviteLanding(false); navigate("home"); }}
                 notify={notify}
               />
             )}
@@ -2726,7 +2745,6 @@ export default function App() {
                       { id: circle.id },
                     );
                     if (r) {
-                      setDialog(null);
                       navigate("friends");
                       notify(
                         groupActionType === "delete"
@@ -2783,7 +2801,6 @@ export default function App() {
                   secondary
                   className="dialog-followup"
                   onClick={() => {
-                    setDialog(null);
                     navigate("invite");
                   }}
                 >
@@ -2973,7 +2990,6 @@ export default function App() {
                 <Button
                   lilac
                   onClick={() => {
-                    setDialog(null);
                     me.registered ? navigate("invite") : openAuth();
                   }}
                 >

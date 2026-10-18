@@ -4,17 +4,21 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { blobatar } from "blobatar/blob";
 import { happy, shy } from "blobatar/expression";
-import { MapPin, NavigationArrow, ShieldCheck, X, Plus, Minus, Drop, Eye, EyeSlash, GlobeHemisphereWest, UsersThree, CrownSimple, ArrowClockwise, WifiSlash, MagnifyingGlassPlus, CaretDown } from "@phosphor-icons/react";
+import { MapPin, NavigationArrow, ShieldCheck, X, Plus, Minus, Drop, Eye, EyeSlash, GlobeHemisphereWest, UsersThree, CrownSimple, ArrowClockwise, WifiSlash, MagnifyingGlassPlus, CaretDown, UserCircle as UserProfileIcon } from "@phosphor-icons/react";
 import { api, relativeTime, fa } from "../api";
 import { Avatar } from "./Character";
 import { mapPresentation, nearestLongitude } from "../map-presentation";
 import { CuteHeatLayer } from "../map-heat";
 import { visibilityMode, visibilityLabel } from "../map-visibility";
 
-export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, onPremium, onVisibility, onInvite, startingPosition, notify }) {
+export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, onProfile, onPremium, onVisibility, onInvite, startingPosition, memory = {}, notify }) {
   const container = useRef(), map = useRef(), layers = useRef(), selfLayer = useRef();
-  const cameras = useRef({}), previousScope = useRef("local"), selection = useRef();
-  const [position, setPosition] = useState(startingPosition || null), [view, setView] = useState("map"), [scope, setScope] = useState("local");
+  const restoredScope = memory.scope === "world" && me.registered && me.premium ? "world" : "local";
+  const cameras = useRef(memory.cameras || {}), previousScope = useRef(restoredScope), selection = useRef();
+  const [position, setPosition] = useState(memory.position || startingPosition || null), [view, setView] = useState(memory.view || "map"), [scope, setScope] = useState(restoredScope);
+  const livePosition = useRef(position), lastPosition = useRef(position);
+  livePosition.current = position;
+  useEffect(() => { Object.assign(memory, { position, view, scope, cameras: cameras.current }); }, [position, view, scope, memory]);
   const [viewport, setViewport] = useState(null), [activity, setActivity] = useState([]), [worldActivity, setWorldActivity] = useState([]), [people, setPeople] = useState([]);
   const [worldInfo, setWorldInfo] = useState(null), [localLoaded, setLocalLoaded] = useState(false), [worldLoaded, setWorldLoaded] = useState(false);
   const [localDataPosition, setLocalDataPosition] = useState(null);
@@ -34,12 +38,17 @@ export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, on
   selection.current = { presentation, scope };
 
   useEffect(() => {
-    const instance = L.map(container.current, { zoomControl: false, attributionControl: true }).setView([35.7, 51.4], 14);
+    const saved = cameras.current[scope];
+    const instance = L.map(container.current, { zoomControl: false, attributionControl: true });
+    if (saved) instance.setView(saved.center, saved.zoom);
+    else if (scope === "world") instance.fitWorld();
+    else instance.setView(position ? [position.lat, position.lng] : [35.7, 51.4], position ? 15 : 14);
     map.current = instance;
     L.tileLayer(data.map.url, { maxZoom: data.map.maxZoom, subdomains: data.map.subdomains, attribution: data.map.attribution }).addTo(instance);
     layers.current = L.layerGroup().addTo(instance); selfLayer.current = L.layerGroup().addTo(instance);
     const measure = () => {
       const bounds = instance.getBounds(), size = instance.getSize(), center = instance.getCenter();
+      cameras.current[previousScope.current] = { center: [center.lat, center.lng], zoom: instance.getZoom(), hasPosition: Boolean(livePosition.current) };
       const key = [bounds.toBBoxString(), instance.getZoom(), size.x, size.y].join(":");
       setViewport(current => current?.key === key ? current : { key, zoom: instance.getZoom(), bounds, size, center });
     };
@@ -69,15 +78,22 @@ export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, on
     window.addEventListener("online", changed); window.addEventListener("offline", changed);
     return () => { window.removeEventListener("online", changed); window.removeEventListener("offline", changed); };
   }, []);
-  useEffect(() => { if (startingPosition) setPosition(startingPosition); }, [startingPosition]);
+  const appliedStart = useRef(startingPosition);
   useEffect(() => {
+    if (startingPosition && startingPosition !== appliedStart.current) setPosition(startingPosition);
+    appliedStart.current = startingPosition;
+  }, [startingPosition]);
+  useEffect(() => {
+    if (lastPosition.current === position) return;
+    lastPosition.current = position;
     if (!position || !map.current || scope !== "local" || view !== "map") return;
     map.current.setView([position.lat, position.lng], 15, { animate: false });
   }, [position]);
   useEffect(() => {
     const instance = map.current;
     if (!instance || previousScope.current === scope) return;
-    cameras.current[previousScope.current] = { center: instance.getCenter(), zoom: instance.getZoom(), hasPosition: Boolean(position) };
+    const center = instance.getCenter();
+    cameras.current[previousScope.current] = { center: [center.lat, center.lng], zoom: instance.getZoom(), hasPosition: Boolean(position) };
     previousScope.current = scope;
     const saved = cameras.current[scope];
     if (saved && (scope === "world" || saved.hasPosition || !position)) instance.setView(saved.center, saved.zoom, { animate: false });
@@ -154,14 +170,14 @@ export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, on
       const figure = document.createElement("span");
       if (!multiple && first.avatarImage) {
         const photo = document.createElement("img"); photo.src = first.avatarImage; photo.alt = ""; photo.className = "map-profile-photo"; figure.append(photo);
-      } else if (!multiple && (first.isFriend || first.isMe)) {
+      } else if (!multiple && (first.profileHandle || first.isFriend || first.isMe)) {
         figure.innerHTML = blobatar(first.avatarSeed, { size: 38, tone: .23, expression: first.status === "need" ? shy : happy });
       } else {
         const mascot = document.createElement("img"); mascot.src = `/assets/${multiple || first.status === "need" ? "shy-drop.webp" : "happy-drop.webp"}`; mascot.alt = ""; figure.append(mascot);
       }
       element.append(figure);
       if (multiple) { const badge = document.createElement("span"); badge.className = "map-mascot-count"; badge.textContent = fa(item.count); element.append(badge); }
-      else if (first.isFriend || first.isMe) { const name = document.createElement("strong"); name.textContent = first.name; element.append(name); }
+      else if (first.profileHandle || first.isFriend || first.isMe) { const name = document.createElement("strong"); name.textContent = first.name; element.append(name); }
       const title = multiple ? `${fa(item.count)} نفر در این محدوده؛ برای جزئیات بزن` : `${first.name}؛ ${first.status === "need" ? "جیش داره" : "جیش کرده"}`;
       const at = instance.containerPointToLatLng([item.x, item.y]);
       L.marker(at, { title, alt: title, icon: L.divIcon({ html: element, className: "map-avatar-icon", iconSize: [48, 57], iconAnchor: [24, 29] }) })
@@ -228,8 +244,8 @@ export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, on
       {empty && <div className="map-calm-state"><img src="/assets/shy-drop.webp" width="38" height="44" alt="" /><div><strong>هنوز ثبت تازه‌ای اینجا نیست</strong><p>ثبت‌های ۳۰ دقیقهٔ اخیرِ این نما</p></div><button onClick={onInvite} aria-label="دوستام رو دعوت کنم" title="دوستام رو دعوت کنم"><UsersThree size={19} /><span>دعوت</span></button></div>}
       {presentation.mode === "heat" && !selected && !group && <button className="map-heat-hint" onClick={seeCharacters}><MagnifyingGlassPlus size={19} /><span>نزدیک‌تر ببین، شخصیت‌ها پیداشون می‌شه</span></button>}
       {(selected || group) && <section className="map-selection-sheet" aria-label="جزئیات محدودهٔ انتخاب‌شده"><button className="map-selection-close" aria-label="بستن جزئیات نقشه" onClick={() => { setSelected(null); setGroup(null); }}><X size={18} /></button>
-        {selected && <div className="selected-neighbor">{selected.isFriend || selected.isMe ? <Avatar person={selected} size={46} mood={selected.status === "need" ? "shy" : "happy"} /> : <img src={`/assets/${selected.status === "need" ? "shy-drop.webp" : "happy-drop.webp"}`} width="46" height="52" alt="" />}<div><strong>{selected.name}{selected.isFriend && <span>دوستت</span>}</strong><p>{selected.status === "need" ? "جیش داره" : "جیش کرده"} · {relativeTime(selected.createdAt)}</p></div></div>}
-        {group && <><h2>{fa(group.count)} نفر، همین حوالی</h2>{scope === "world" ? <p>ثبت‌های بی‌نام با مکان تقریبی؛ هیچ پروفایلی اینجا نمایش داده نمی‌شه.</p> : <div className="map-group-people">{group.points.map(item => <div key={item.id}><img src={`/assets/${item.status === "need" ? "shy-drop.webp" : "happy-drop.webp"}`} width="28" height="32" alt="" /><span>{item.name}</span><small>{item.status === "need" ? "جیش داره" : "جیش کرده"}</small></div>)}</div>}</>}
+        {selected && <><div className="selected-neighbor">{selected.profileHandle || selected.isFriend || selected.isMe ? <Avatar person={selected} size={46} mood={selected.status === "need" ? "shy" : "happy"} /> : <img src={`/assets/${selected.status === "need" ? "shy-drop.webp" : "happy-drop.webp"}`} width="46" height="52" alt="" />}<div><strong>{selected.name}{selected.isFriend && <span>دوستت</span>}</strong><p>{selected.status === "need" ? "جیش داره" : "جیش کرده"} · {relativeTime(selected.createdAt)}</p></div></div>{scope !== "world" && selected.profileHandle ? <button className="map-profile-action" onClick={() => onProfile(selected.profileHandle)}><UserProfileIcon /><span>{selected.isMe ? "پروفایل من" : "دیدن پروفایل"}</span><CaretDown size={15} /></button> : <p className="map-profile-private">{scope === "world" ? "در نمای همه‌جا، ثبت‌ها همیشه بی‌نامن." : selected.profileKind === "guest" ? "مهمان جیشوئه؛ پروفایل عمومی نداره." : "بی‌نام روی نقشه‌ست؛ پروفایلش نمایش داده نمی‌شه."}</p>}</>}
+        {group && <><h2>{fa(group.count)} نفر، همین حوالی</h2>{scope === "world" ? <p>ثبت‌های بی‌نام با مکان تقریبی؛ هیچ پروفایلی اینجا نمایش داده نمی‌شه.</p> : <div className="map-group-people">{group.points.map(item => <div key={item.id}><img src={`/assets/${item.status === "need" ? "shy-drop.webp" : "happy-drop.webp"}`} width="28" height="32" alt="" /><span>{item.name}</span>{item.profileHandle ? <button onClick={() => onProfile(item.profileHandle)}>پروفایل</button> : <small>{item.profileKind === "guest" ? "مهمان" : "بی‌نام"}</small>}</div>)}</div>}</>}
       </section>}
     </div>
     <div className="nearby-list-pane" id="nearby-list-pane" role="tabpanel" aria-labelledby="nearby-people-tab" hidden={view !== "people"}>

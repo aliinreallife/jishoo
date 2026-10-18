@@ -34,7 +34,7 @@ def main():
   page.evaluate("""()=>{const f=document.createElement('form');f.id='qa-plain-form';f.style.fontSize='12px';for(const type of ['text','search','email','password','tel','url','number']){const n=document.createElement('input');n.type=type;f.append(n)}f.append(document.createElement('textarea'));const s=document.createElement('select');s.append(new Option('گزینه','a'));f.append(s);const e=document.createElement('div');e.contentEditable='true';e.textContent='نوشتن';f.append(e);const large=document.createElement('input');large.id='qa-large';large.style.fontSize='22px';f.append(large);document.body.append(f)}""")
   rows=page.locator('#qa-plain-form').locator(FIELDS).evaluate_all('nodes=>nodes.map(n=>parseFloat(getComputedStyle(n).fontSize))');assert all(n>=16 for n in rows),rows
   assert page.locator('#qa-large').evaluate('n=>parseFloat(getComputedStyle(n).fontSize)')==22
-  data['me']['registered']=False;page.goto(BASE+'/home?login=1',wait_until='domcontentloaded');expect(page.get_by_role('dialog')).to_be_visible();expect(page.get_by_role('dialog').locator('input').first).to_be_visible();check('invitation-first login dialog')
+  data['me']['registered']=False;data['auth']['pendingGoogle']='qa-mobile@example.invalid';page.goto(BASE+'/home?login=1',wait_until='domcontentloaded');expect(page.get_by_role('dialog')).to_be_visible();expect(page.get_by_role('dialog').locator('input').first).to_be_visible();check('post-Google invitation dialog')
   assert not errors,errors
   (ARTIFACTS/'mobile-form-fonts.json').write_text(json.dumps(measurements,indent=2))
   browser.close()

@@ -9,6 +9,7 @@ import { observabilityPage, redactMetricEvent } from "../src/observability.js";
 import { canonicalPath, readPage, screenPath, notificationPath } from "../src/routing.js";
 import { nearbyMomentEligible, nearbyMomentKind, mutualPayload, queueMutualNotice, notifyMutualMoments } from "../lib/mutual-moments.js";
 import { clusterWorldActivity, worldViewport } from "../lib/world-map.js";
+import { mapProfile } from "../lib/map-profile.js";
 import { blobatar } from "blobatar/blob";
 import {
   normalizePhone,
@@ -26,6 +27,24 @@ import {
 
 process.env.APP_SECRET =
   "unit-tests-only-a-fixed-secret-of-at-least-32-characters";
+test("local map profile eligibility protects anonymous members and guests", () => {
+  const row = { id: "event", user_id: "other", registered: true, handle: "sara", name: "سارا", avatar_seed: "private-seed", avatar_image: "private-photo" };
+  const anonymous = mapProfile(row, "viewer");
+  assert.equal(anonymous.profileHandle, null);
+  assert.equal(anonymous.profileKind, "anonymous");
+  assert.equal(anonymous.name, "یه همسایه");
+  assert.equal(anonymous.avatarImage, null);
+  assert.notEqual(anonymous.avatarSeed, row.avatar_seed);
+  for (const permitted of [{ ...row, discoverable: true }, { ...row, connection_id: "accepted" }, { ...row, user_id: "viewer" }]) {
+    assert.equal(mapProfile(permitted, "viewer").profileHandle, "sara");
+    assert.equal(mapProfile(permitted, "viewer").avatarImage, row.avatar_image);
+  }
+  const guest = mapProfile({ ...row, registered: false, discoverable: true, connection_id: "ignored" }, "viewer");
+  assert.equal(guest.profileHandle, null);
+  assert.equal(guest.profileKind, "guest");
+  assert.equal(guest.avatarImage, null);
+  assert.equal(screenPath("publicProfile", "sara"), "/u/sara");
+});
 test("update versions use numeric ordering, including double-digit releases", () => {
   assert.equal(compareVersions("0.4.9", "0.4.10"), -1);
   assert.equal(compareVersions("1.0.0", "0.99.99"), 1);

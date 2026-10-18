@@ -1,3 +1,4 @@
+import AdminWaitlist from "./AdminWaitlist";
 import React, { useEffect, useState, useRef, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -409,6 +410,7 @@ export function Admin({ data, notify, refresh }) {
           <Suspense fallback={<p>داریم درخت دعوت‌ها رو آماده می‌کنیم…</p>}>
             <AdminInvitationTree />
           </Suspense>
+          <AdminWaitlist />
           <div className="admin-invite-box">
             <h2>دعوت خصوصی، فقط برای یک نفر</h2>
             <p>
@@ -580,7 +582,7 @@ export function PublicProfile({
   return (
     <section className="page public-profile-page">
       <button className="text-link" onClick={onBack}>
-        <ArrowRight size={19} /> برو به جیشو
+        <ArrowRight size={19} /> برگشت
       </button>
       <Avatar person={profile} size={140} />
       <h1>{profile.name}</h1>
@@ -605,11 +607,11 @@ export function PublicProfile({
         </Button>
       ) : (
         <>
-          <Button disabled={!profile.inviteCode} onClick={onJoin}>
-            با دعوت {profile.name} بیام تو جمع
+          <Button onClick={onJoin}>
+            {profile.inviteCode ? `با دعوت ${profile.name} بیام تو جمع` : "ورود یا عضویت با گوگل"}
           </Button>
           {!profile.inviteCode && (
-            <small>دعوت‌های دوستت پر شده؛ می‌تونی مهمان باشی.</small>
+            <small>برای عضویت تازه، کد دعوت یه دوست لازمه؛ مهمان هم می‌تونی باشی.</small>
           )}
         </>
       )}

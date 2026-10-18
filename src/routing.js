@@ -9,6 +9,7 @@ const aliases = { discover: "nearby", groupJoin: "group", publicProfile: "home" 
 const decode = value => { try { return decodeURIComponent(value); } catch { return value; } };
 
 export function screenPath(screen, detail) {
+  if (screen === "publicProfile" && detail) return "/u/" + encodeURIComponent(detail);
   const name = aliases[screen] || screen;
   if (name === "group") return "/group";
   if (!screens.has(name)) return "/home";
