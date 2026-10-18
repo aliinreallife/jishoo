@@ -109,7 +109,7 @@ def main():
         before=sum(a=='checkin' for a,_ in requests);page.locator('.reminder-private').click()
         expect(page.locator('.checkin-reminder')).to_have_count(0)
         # Actual commit waits through the existing three-second undo window.
-        page.wait_for_function('document.querySelector(".undo-checkin")!==null')
+        page.wait_for_function('()=>document.querySelector(".undo-checkin")!==null')
         assert sum(a=='checkin' for a,_ in requests)==before
         with page.expect_response(lambda r:'action=checkin' in r.url):page.wait_for_timeout(3400)
         assert [body for action,body in requests if action=='checkin'][-1]['visibility']=='private'
@@ -117,7 +117,7 @@ def main():
 
         for kind in ['checkin','need','weekly','invite','streak']:
             page.goto(BASE+'/stories/'+kind);preview=page.locator('.story-raster-preview');expect(preview).to_be_visible(timeout=20000)
-            page.wait_for_function('document.querySelector(".story-raster-preview")?.naturalHeight===1920')
+            page.wait_for_function('()=>document.querySelector(".story-raster-preview")?.naturalHeight===1920')
             assert page.evaluate('window.__storyText.some(t=>t.value==="jishoo.example"&&t.y<=1720&&t.y>=1600)')
             with page.expect_download() as output:page.get_by_role('button',name='ذخیره',exact=False).click()
             path=Path(output.value.path());raw=path.read_bytes()
@@ -128,7 +128,7 @@ def main():
             with Image.open(path) as image:
                 assert image.size==(1080,1920);image.save(ARTIFACTS/f'story-website-{kind}.png')
             page.get_by_role('button',name='پست ۱:۱',exact=True).click()
-            page.wait_for_function('document.querySelector(".story-raster-preview")?.naturalHeight===1080')
+            page.wait_for_function('()=>document.querySelector(".story-raster-preview")?.naturalHeight===1080')
             assert page.evaluate('()=>{const d=window.__storyText.filter(t=>t.value==="jishoo.example").at(-1),tag=window.__storyText.filter(t=>t.value==="یه لحظه از روزت، برای دوستات.").at(-1);return d.bottom<tag.top&&d.top>984}')
         manifest=page.evaluate('async()=>await(await fetch("/manifest.webmanifest")).json()')
         assert manifest['name']==manifest['short_name']=='jishoo'
