@@ -23,6 +23,7 @@ import { Avatar } from "./Character";
 import { PushPermission } from "./HomeNotifications";
 import { Mascot, PairArt } from "./Mascot";
 import { api, copyText, fa, relativeTime } from "../api";
+import StreakMilestones from "./StreakMilestones";
 import {
   enablePush,
   disablePush,
@@ -55,7 +56,7 @@ function useWork(notify) {
   };
   return [busy, run];
 }
-export function Achievements({ data, onBack, onShare }) {
+export function Achievements({ data, onBack, onShare, onShareStreak }) {
   const icons = { drop: Drop, sun: Sun, fire: Flame, heart: Heart, star: Star };
   return (
     <section className="page achievements-page">
@@ -78,7 +79,7 @@ export function Achievements({ data, onBack, onShare }) {
           سطحِ قشنگ
         </strong>
         <p>
-          هر لقب سه سطح داره. روزهای فعال و رفاقت واقعی، قفلشون رو باز می‌کنن.
+          روزهای فعال و رفاقت واقعی، لقب‌ها رو باز می‌کنن؛ قرارِ هر روز هم نشان‌های مخصوص خودش رو داره.
         </p>
       </div>
       <div className="achievement-list">
@@ -94,7 +95,7 @@ export function Achievements({ data, onBack, onShare }) {
               </span>
               <div>
                 <span className="achievement-level">
-                  {a.level ? `سطح ${fa(a.level)} از ۳` : "هنوز اول راه"}
+                  {a.level ? `سطح ${fa(a.level)} از ${fa(a.levels.length)}` : "هنوز اول راه"}
                 </span>
                 <h2>{a.level ? a.title : a.name}</h2>
                 <p>{a.description}</p>
@@ -108,13 +109,14 @@ export function Achievements({ data, onBack, onShare }) {
                 <small>
                   {a.next
                     ? `${fa(a.progress)} از ${fa(a.next)} تا سطح بعد`
-                    : "هر سه سطح رو گرفتی!"}
+                    : "همهٔ سطح‌ها رو گرفتی!"}
                 </small>
               </div>
             </article>
           );
         })}
       </div>
+      <StreakMilestones best={data.stats.streak?.best || 0} onShare={onShareStreak} />
       <p className="soft-note">
         تکرارِ پشت‌سرهمِ ثبت‌ها امتیاز اضافه نمی‌ده؛ «جیش دارم» هم راه میان‌بُرِ
         لقب‌ها نیست.

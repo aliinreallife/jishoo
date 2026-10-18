@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { compareVersions, validRelease, updateRequired } from "../src/update-rules.js";
 import { dailyStreak } from "../lib/streaks.js";
+import { streakMilestones, earnedStreakMilestones, shareableStreakMilestone } from "../lib/streak-milestones.js";
 import { mapPresentation, nearestLongitude } from "../src/map-presentation.js";
 import { invitationForest, invitationPath } from "../src/invitation-tree.js";
 import { observabilityPage, redactMetricEvent } from "../src/observability.js";
@@ -151,6 +152,32 @@ test("daily streaks use Tehran midnight and retain Saturday-to-Friday week order
   assert.equal(before.current,0);assert.equal(after.current,1);assert.equal(after.activeToday,true);
   assert.equal(after.week[0].label,"ش");assert.equal(after.week[6].label,"ج");
   const year=dailyStreak(streakDays("2026-12-31",3),streakAt("2027-01-02"));assert.equal(year.charges,1);
+});
+test("streak milestones use trusted historical best, distinct artwork and exact day thresholds", () => {
+  assert.deepEqual(streakMilestones.map(item=>item.days),[3,7,14,30,60,90,180,365]);
+  assert.equal(new Set(streakMilestones.map(item=>item.motif)).size,streakMilestones.length);
+  for (const item of streakMilestones) {
+    assert.ok(!earnedStreakMilestones(item.days-1).includes(item));
+    assert.ok(earnedStreakMilestones(item.days).includes(item));
+    assert.equal(shareableStreakMilestone(item.days,item.days),item);
+    assert.equal(shareableStreakMilestone(item.days,item.days-1),null);
+  }
+  assert.equal(shareableStreakMilestone("<script>",1000),null);
+  assert.equal(shareableStreakMilestone(366,1000),null);
+  const days=streakDays("2025-01-01",365);
+  const active=dailyStreak(days,streakAt(days.at(-1)));
+  const ended=dailyStreak(days,streakAt("2026-01-05"));
+  assert.equal(active.best,365);assert.equal(ended.current,0);
+  assert.equal(earnedStreakMilestones(ended.best).length,8);
+});
+test("streak page and story paths survive refresh and redact temporary milestone state in analytics", () => {
+  assert.equal(screenPath("streak"),"/streak");
+  assert.equal(screenPath("stories","streak"),"/stories/streak");
+  assert.equal(readPage("/streak").screen,"streak");
+  assert.equal(readPage("/stories/streak?milestone=60").storyKind,"streak");
+  assert.equal(canonicalPath("/#/streak"),"/streak");
+  assert.equal(observabilityPage("/stories/streak?milestone=60"),"/app/stories/streak");
+  assert.equal(observabilityPage("/streak"),"/app/streak");
 });
 test("clean routes retain legacy bookmarks, invitations, OAuth results and section anchors", () => {
   for (const [before, after] of [

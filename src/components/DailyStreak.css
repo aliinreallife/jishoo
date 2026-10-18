@@ -24,3 +24,10 @@
 .streak-explanation p { margin:0; font-size:11px; line-height:1.95; color:#7e665e; }
 .streak-explanation p + p { margin-top:7px; }
 @media(max-width:350px) { .daily-streak { padding:13px 11px 10px; } .daily-streak h2 { font-size:14px; } .streak-best { font-size:9px; } .streak-week { gap:4px; } .streak-day > i { width:27px; height:27px; } .daily-streak header p { font-size:10px; } }
+.streak-profile-card { display:flex; align-items:center; gap:11px; width:100%; text-align:right; cursor:pointer; }
+.streak-profile-copy { display:flex; flex-direction:column; flex:1; gap:4px; min-width:0; }
+.streak-profile-copy > strong { font-size:15px; line-height:1.7; color:#79614e; }
+.streak-profile-copy > small { font-size:11px; color:#806b5f; }
+.streak-profile-copy > span { display:flex; align-items:center; gap:4px; color:#647a92; font-size:10px; margin-top:3px; }
+.streak-profile-card > svg { color:#9b849f; flex-shrink:0; }
+.streak-profile-card:focus-visible { outline:3px solid #a78bc5; outline-offset:3px; }

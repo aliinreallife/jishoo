@@ -1,9 +1,12 @@
+import { earnedStreakMilestones, shareableStreakMilestone } from "../lib/streak-milestones";
+import { drawStreakBadge } from "./streak-badge-art";
 import regular from "@fontsource/vazirmatn/files/vazirmatn-arabic-400-normal.woff2?url";
 import bold from "@fontsource/vazirmatn/files/vazirmatn-arabic-700-normal.woff2?url";
 import heavy from "@fontsource/vazirmatn/files/vazirmatn-arabic-900-normal.woff2?url";
 import lalezar from "@fontsource/lalezar/files/lalezar-arabic-400-normal.woff2?url";
 
 export const headlines = {
+  streak: "قطره‌قطره، هر روز؛ این زنجیرهٔ منه!",
   need: "جیش دارم.\nالان برمی‌گردم!",
   checkin: "جیش کردم!\nیه کم سبک‌تر، یه کم خوشحال‌تر.",
   together: "ما حتی جیشمونم سینکه!",
@@ -54,9 +57,9 @@ function lines(ctx, value, size, maxWidth) {
     if (row) result.push(row); return result;
   });
 }
-function paragraph(ctx, value, y, size, budget, color = "#303044", maxWidth = 900) {
+function paragraph(ctx, value, y, size, budget, color = "#303044", maxWidth = 900, minimumSize = 30) {
   let rows = lines(ctx, value, size, maxWidth);
-  while (size > 30 && rows.length * size * 1.55 > budget) { size -= 2; rows = lines(ctx, value, size, maxWidth); }
+  while (size > minimumSize && rows.length * size * 1.55 > budget) { size -= 2; rows = lines(ctx, value, size, maxWidth); }
   for (const row of rows) { text(ctx, row, 540, y, size, color, 900); y += size * 1.55; }
   return y;
 }
@@ -80,7 +83,7 @@ function drop(ctx, x, y, size) {
 
 // Render once into a plain canvas. The preview, download and native share use
 // this SAME PNG, avoiding Safari's inconsistent SVG foreignObject/DOM snapshots.
-export async function renderStoryImage({ kind, format, theme, caption, data, moment, code, qr }) {
+export async function renderStoryImage({ kind, format, theme, caption, data, moment, code, qr, milestone }) {
   const square = format === "square", height = square ? 1080 : 1920;
   const safeTop = square ? 0 : STORY_SAFE_AREA.top;
   const safeBottom = square ? height : height - STORY_SAFE_AREA.bottom;
@@ -99,7 +102,28 @@ export async function renderStoryImage({ kind, format, theme, caption, data, mom
   text(ctx, "jishoo", square ? 131 : 145, square ? 83 : safeTop + 60, square ? 44 : 56, "#8c79a4", 700, "left");
   text(ctx, "جیشو", 985, square ? 83 : safeTop + 60, square ? 50 : 65, "#8c79a4", 400, "right", "JishooStoryWordmark");
   const me = data.me, count = kind === "weekly" ? data.stats.week : data.stats.today;
-  if (kind === "weekly") {
+  if (kind === "streak") {
+    const streak = data.stats.streak || { current: 0, best: 0 };
+    const award = shareableStreakMilestone(milestone, streak.best);
+    const badge = award || earnedStreakMilestones(streak.current).at(-1);
+    const number = award ? award.days : streak.current;
+    text(ctx, me.registered ? `${me.name}، قرارِ هر روز` : "قرارِ هر روز من", 540, square ? 155 : 290, square ? 31 : 43, "#796286", 700, "center", "JishooStory", 850);
+    if (badge) {
+      ctx.save(); ctx.translate(540, square ? 402 : 705); ctx.rotate(-.06);
+      ctx.fillStyle = badge.light + "88"; ctx.beginPath();ctx.ellipse(0,0,square?255:360,square?190:310,0,0,Math.PI*2);ctx.fill();
+      drawStreakBadge(ctx,badge,square?-200:-330,square?-200:-330,square?400:660);ctx.restore();
+      fitImage(ctx, happy, square ? 747 : 775, square ? 450 : 910, square ? 155 : 205, square ? 155 : 205);
+    } else fitImage(ctx, number ? happy : shy, square ? 295 : 195, square ? 180 : 360, square ? 490 : 690, square ? 435 : 680);
+    if (award) {
+      text(ctx, award.name, 540, square ? 681 : 1175, square ? 53 : 76, "#654d78", 900, "center", "JishooStory", 900);
+      text(ctx, `${number.toLocaleString("fa-IR")} روز توی یک زنجیره`, 540, square ? 750 : 1280, square ? 31 : 48, "#8b7286");
+    } else {
+      text(ctx, number.toLocaleString("fa-IR"), 540, square ? 710 : 1225, square ? 122 : 180, "#654d78", 900);
+      text(ctx, number ? "روز پشت‌سرهم" : "از امروز، یه قرار تازه", 540, square ? 775 : 1320, square ? 38 : 55, "#8b7286");
+    }
+    paragraph(ctx, caption || (award ? "یه قرار ساده؛ یه نشان که همیشه مال منه." : "از یه قطره شروع شد؛ هنوز ادامه داره."), square ? 856 : 1430, square ? 28 : 40, square ? 118 : 180, "#8c768a", 850, 18);
+    if (award) text(ctx, "این نشان رو با روزهای واقعی گرفتم.", 540, square ? 975 : 1600, square ? 20 : 29, "#9c8192", 400);
+  } else if (kind === "weekly") {
     ctx.save(); ctx.translate(540, square ? 555 : 955); ctx.rotate(-.055);
     const w = 880, h = square ? 800 : 1320;
     ctx.shadowColor = "#70608122"; ctx.shadowBlur = 40; ctx.shadowOffsetY = 18;

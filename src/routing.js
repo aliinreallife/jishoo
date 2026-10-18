@@ -1,10 +1,10 @@
 // One URL vocabulary for navigation, old bookmarks and stored notifications.
 export const screens = new Set([
-  "home", "nearby", "friends", "stories", "profile", "settings", "stats",
+  "home", "nearby", "friends", "stories", "profile", "settings", "stats", "streak",
   "invite", "circle", "achievements", "notifications", "admin", "privacy",
   "terms", "support", "install",
 ]);
-const storyKinds = new Set(["weekly", "checkin", "invite", "need"]);
+const storyKinds = new Set(["weekly", "checkin", "invite", "need", "streak"]);
 const aliases = { discover: "nearby", groupJoin: "group", publicProfile: "home" };
 const decode = value => { try { return decodeURIComponent(value); } catch { return value; } };
 

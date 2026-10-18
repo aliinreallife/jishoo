@@ -59,9 +59,15 @@ def main():
         assert state['stats']['streak']['current'] == 0
         state = guest.call('checkin', {'status': 'done', 'visibility': 'private', 'nonce': secrets.token_hex(12)})
         assert state['stats']['streak']['current'] == 1 and state['stats']['streak']['charges'] == 0
+        fixture(member, 'streak-history', daysAgo=list(range(60)))
+        state=member.bootstrap();award=next(item for item in state['achievements'] if item['slug']=='streak')
+        assert award['progress']==60 and award['level']==5 and award['next']==90
+        assert award['title']=='دو ماهِ آفتابی' and len(award['levels'])==8
+        print('PASS: Real achievements use the freeze-aware best streak and eight milestone thresholds through one year.',flush=True)
         print('PASS: Need/repeated same-day taps cannot inflate days or charges; private completed check-ins and free guest access still count.', flush=True)
     finally:
-        for account in reversed(owned): account.call('delete-account', {})
+        for account in reversed(owned):
+            if account.owned_id: account.call('delete-account', {})
         print('Removed owned QA accounts.', flush=True)
 
 

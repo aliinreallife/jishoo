@@ -1,0 +1,40 @@
+.streak-page { padding-bottom:30px; }
+.streak-page .community-heading h1 { font-size:21px; }
+.streak-page .community-heading p { font-size:11px; color:#8a7a90; margin-top:4px; }
+.streak-page .community-heading > button { min-width:44px; min-height:44px; display:grid; place-items:center; }
+.streak-page .community-heading > button:disabled { opacity:.35; }
+.streak-hero { --streak-hero-tint:#ffedb4; position:relative; text-align:center; padding:16px 16px 22px; border:1px solid #eee1c9; border-radius:29px; background:radial-gradient(ellipse at 50% 27%,var(--streak-hero-tint),#fffbef 68%); overflow:hidden; }
+.streak-hero-art { height:192px; position:relative; display:flex; align-items:center; justify-content:center; }
+.streak-hero-orbit { position:absolute; width:181px; height:125px; border:1px dashed #b49dc34d; border-radius:50%; transform:rotate(-18deg); }
+.streak-hero-art .milestone-art,.streak-hero-art .character { position:relative; }
+.streak-hero-kicker { display:flex; justify-content:center; align-items:center; gap:5px; color:#a27a50; font-size:12px; }
+.streak-hero h2 { margin:4px 0 6px; font-size:43px; line-height:1.45; color:#695078; }
+.streak-hero h2 > span { font-size:18px; font-weight:700; }
+.streak-hero > p { font-size:12px; line-height:1.95; color:#88727d; margin:0 auto; max-width:290px; }
+.streak-share-pill { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; margin:15px auto 0; padding:10px 15px; border-radius:15px; background:#ede3f6; color:#775489; font-size:12px; }
+.streak-next { padding:15px 4px 0; }
+.streak-next > div:first-child { display:flex; justify-content:space-between; gap:7px; align-items:center; font-size:11px; margin-bottom:8px; color:#907c95; }
+.streak-next strong { color:#79627f; font-size:11.5px; }
+.streak-next [role=progressbar] { height:7px; border-radius:9px; background:#eee7ef; overflow:hidden; }
+.streak-next [role=progressbar] > span { display:block; height:100%; background:linear-gradient(90deg,#d0b8e7,#e9ce8a); border-radius:9px; }
+.streak-finish-note { font-size:12px; line-height:1.9; color:#8b7044; background:#fff3d3; padding:14px; border-radius:17px; margin-top:15px; }
+.milestone-art { display:inline-block; flex-shrink:0; max-width:100%; }
+.milestone-art canvas { display:block; width:100%; height:100%; }
+.milestone-art.is-locked { filter:grayscale(.75); opacity:.5; }
+.streak-collection { margin:26px 0 4px; }
+.streak-collection > header { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:14px; }
+.streak-collection > header h2 { font-size:16px; color:#6b5279; margin:0; }
+.streak-collection > header p { color:#968298; font-size:11px; margin:4px 0 0; }
+.streak-collection > header > span { padding:5px 9px; background:#eee5f5; border-radius:10px; font-size:11px; color:#836493; white-space:nowrap; }
+.streak-milestone-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.streak-milestone { border:1px solid #e7dece; background:#fffcf5; border-radius:23px; padding:12px 9px 10px; text-align:center; min-width:0; display:flex; flex-direction:column; align-items:center; }
+.streak-milestone.is-earned { border-color:color-mix(in srgb,var(--milestone-color) 35%,#fff); background:linear-gradient(160deg,#fffdf7 25%,var(--milestone-light)); }
+.milestone-period { color:var(--milestone-color); background:#fffaf0c9; border-radius:8px; padding:2px 9px; font-size:10px; }
+.streak-milestone h3 { font-size:12px; line-height:1.8; color:#6b5674; margin:0; }
+.streak-milestone > p { color:#8f7a91; font-size:10px; margin:4px 0 8px; }
+.milestone-earned { width:100%; display:flex; align-items:center; justify-content:space-between; gap:3px; margin-top:auto; }
+.milestone-earned > span,.milestone-locked { display:flex; align-items:center; justify-content:center; gap:3px; font-size:10px; color:#7b6a83; }
+.milestone-earned > button { display:grid; place-items:center; width:39px; min-height:39px; border-radius:13px; background:#fffcf0dc; color:var(--milestone-color); border:1px solid #ffffffa8; }
+.milestone-locked { min-height:39px; margin-top:auto; }
+.streak-collection-note { font-size:11px; line-height:1.95; color:#8c7a91; margin-top:15px; }
+@media(max-width:350px) { .streak-hero { padding-inline:11px; }.streak-hero h2 {font-size:38px}.streak-hero h2 > span {font-size:16px}.streak-milestone {padding-inline:6px}.streak-milestone h3 {font-size:11px}.streak-next > div:first-child {align-items:start}.streak-next > div:first-child > span {white-space:nowrap} }

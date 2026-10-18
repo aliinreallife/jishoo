@@ -8,7 +8,6 @@ import {
   CalendarBlank,
 } from "@phosphor-icons/react";
 import { Mascot } from "./Mascot";
-import DailyStreak from "./DailyStreak";
 import { fa } from "../api";
 import { dayKey, weekDays, persianMonth, persianParts } from "../../lib/calendar.js";
 const key = dayKey;
@@ -74,7 +73,6 @@ export default function Stats({ data, onBack, onShare }) {
           <ShareNetwork size={23} />
         </button>
       </header>
-      <DailyStreak streak={s.streak} />
       <div className="stats-period" role="group" aria-label="بازهٔ آمار">
         {[
           ["week", "هفته"],

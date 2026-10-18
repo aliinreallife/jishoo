@@ -74,6 +74,7 @@ const InstallCard = lazy(() =>
 const Support = lazy(() => import("./components/Support"));
 const Friends = lazy(() => import("./components/Friends"));
 const Stats = lazy(() => import("./components/Stats"));
+const StreakPage = lazy(() => import("./components/StreakPage"));
 const Legal = lazy(() => import("./components/Legal"));
 const GroupJoin = lazy(() => import("./components/GroupJoin"));
 const PhotoEditor = lazy(() => import("./components/PhotoEditor"));
@@ -958,7 +959,7 @@ export default function App() {
   }, [data?.friends]);
   useEffect(() => {
     if (!entered || !data?.me.registered) return;
-    if (["friends", "circle", "notifications", "stats"].includes(screen)) refresh();
+    if (["friends", "circle", "notifications", "stats", "streak"].includes(screen)) refresh();
   }, [screen, selectedCircle, entered, data?.me.registered, refresh]);
   useEffect(() => {
     const resume = () => {
@@ -1075,6 +1076,13 @@ export default function App() {
     localStorage.setItem(releaseStorageKey, currentRelease.version);
     releaseHandled.current = true;
     setDialog(null);
+  }
+  function shareStreak(days) {
+    routerNavigate("/stories/streak" + (days ? "?milestone=" + days : ""), { state: { streakShareFrom: screen === "achievements" ? "/achievements" : "/streak" } });
+  }
+  function closeStreakStory() {
+    if (["/streak", "/achievements"].includes(routeLocation.state?.streakShareFrom)) routerNavigate(-1);
+    else routerNavigate("/streak", { replace: true });
   }
   function openStory(kind) {
     setStoryKind(kind);
@@ -1410,6 +1418,7 @@ export default function App() {
   ].reverse();
   const activeTab = [
     "stats",
+    "streak",
     "invite",
     "achievements",
     "notifications",
@@ -1768,7 +1777,6 @@ export default function App() {
                       <span>دوست‌هام این جیش رو هم ببینن</span>
                     </label>
                   )}
-                  <DailyStreak streak={data.stats.streak} />
                   <Suspense fallback={null}><HomeNotifications data={data} notify={notify} refresh={refresh} onSettings={() => navigate("notifications")} /></Suspense>
                   <section className="friends-section">
                     <div className="section-heading">
@@ -1900,6 +1908,7 @@ export default function App() {
                   data={data}
                   onBack={() => navigate("profile")}
                   onShare={() => openStory("weekly")}
+                  onShareStreak={shareStreak}
                 />
               )}
               {screen === "notifications" && (
@@ -1989,14 +1998,20 @@ export default function App() {
               )}
               {screen === "stories" && (
                 <Suspense fallback={<LoadingSection />}>
-                  <Stories
+                  {page.storyKind === "streak" ? <StoryDialog label="کارت زنجیرهٔ من" onClose={closeStreakStory}><Stories
+                    key={"streak-" + routeLocation.search}
+                    initialKind="streak"
+                    initialMilestone={new URLSearchParams(routeLocation.search).get("milestone")}
+                    data={data} pendingInvite={invitation} onAuth={openAuth} notify={notify}
+                    onClose={closeStreakStory}
+                  /></StoryDialog> : <Stories
                     key={storyKind || "selection"}
                     initialKind={storyKind}
                     data={data}
                     pendingInvite={invitation}
                     onAuth={openAuth}
                     notify={notify}
-                  />
+                  />}
                 </Suspense>
               )}
               {screen === "profile" && (
@@ -2045,6 +2060,7 @@ export default function App() {
                       <small>همه‌وقت</small>
                     </span>
                   </div>
+                  <DailyStreak streak={data.stats.streak} onOpen={() => navigate("streak")} />
                   <button className="profile-community-link profile-map-visibility" onClick={openMapVisibility}>
                     <MapPin size={26} weight="duotone" />
                     <div><h2>نمایش من روی نقشه</h2><p>انتخاب دیده‌شدن، همیشه دست خودته</p></div>
@@ -2188,6 +2204,7 @@ export default function App() {
                   />
                 </section>
               )}
+              {screen === "streak" && <Suspense fallback={<LoadingSection />}><StreakPage data={data} onBack={() => navigate("profile")} onShare={shareStreak} /></Suspense>}
               {screen === "stats" && (
                 <Suspense fallback={<LoadingSection />}>
                   <Stats

@@ -50,6 +50,7 @@ def main():
   expect(page.locator('.nearby-count')).to_contain_text('۱ نفر در این نما')
   assert not [body for action,body in requests if action in ['location','map-visibility'] and body.get('mode') in ['news','profile']]
   assert not page.locator('.around-panel').count()
+  assert page.locator('.live-map-marker > span').first.evaluate('node=>getComputedStyle(node).borderRadius')=='50%'
   page.screenshot(path=str(ARTIFACTS/'soft-map-one-person.png'))
   for _ in range(3):page.get_by_role('button',name='کوچک‌نمایی نقشه',exact=True).click();page.wait_for_timeout(200)
   expect(page.locator('.nearby-map-pane')).to_have_attribute('data-presentation','characters')
@@ -109,10 +110,12 @@ def main():
   page.keyboard.press('Escape')
   expect(page.locator('.profile-map-visibility')).to_contain_text('پنهان')
   print('PASS: Profile/map settings share one choice, explicit publishing includes location permission, settings drafts survive and hiding restores the private setting.',flush=True)
-  page.goto(BASE+'/home',wait_until='domcontentloaded');expect(page.locator('.daily-streak')).to_contain_text('۲۱ روز پشت‌سرهم')
+  page.goto(BASE+'/home',wait_until='domcontentloaded');expect(page.locator('.daily-streak')).to_have_count(0)
+  page.goto(BASE+'/profile',wait_until='domcontentloaded');page.locator('.streak-profile-card').click()
+  expect(page).to_have_url(BASE+'/streak');expect(page.locator('.daily-streak')).to_contain_text('۲۱ روز پشت‌سرهم')
   expect(page.locator('.streak-freezes')).to_contain_text('۲ از ۲')
   page.get_by_role('button',name='چطوریه؟',exact=True).click();expect(page.locator('.streak-explanation')).to_contain_text('همیشه رایگانن')
-  page.screenshot(path=str(ARTIFACTS/'soft-map-home-streak.png'))
+  page.screenshot(path=str(ARTIFACTS/'soft-map-detail-streak.png'))
   page.goto(BASE+'/nearby',wait_until='domcontentloaded');page.get_by_role('button',name='همه‌جا',exact=True).click()
   expect(page.locator('.nearby-count')).to_contain_text('۱ نفر در این نما',timeout=15000)
   assert not [r for r in requests if r[0]=='location' and not r[1].get('refreshOnly')]

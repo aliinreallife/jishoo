@@ -1,5 +1,5 @@
 import { canonicalPath } from "./routing.js";
-const appScreens = new Set(["home", "nearby", "friends", "profile", "settings", "stats", "notifications", "circle", "circles", "invite", "stories", "achievements"]);
+const appScreens = new Set(["home", "nearby", "friends", "profile", "settings", "stats", "streak", "notifications", "circle", "circles", "invite", "stories", "achievements"]);
 const publicScreens = new Set(["/", "/terms", "/privacy", "/support", "/install", "/changelog", "/group"]);
 
 // Page categories only: never use invite codes, account handles or group IDs.
@@ -13,9 +13,9 @@ export function observabilityPage(href) {
   if (url.pathname.startsWith("/app/")) {
     const [part, kind] = url.pathname.slice(5).split("/");
     if (part === "admin") return null;
-    return appScreens.has(part) ? `/app/${part}${part === "stories" && ["need", "checkin", "weekly", "invite"].includes(kind) ? "/" + kind : ""}` : "/app/home";
+    return appScreens.has(part) ? `/app/${part}${part === "stories" && ["need", "checkin", "weekly", "invite", "streak"].includes(kind) ? "/" + kind : ""}` : "/app/home";
   }
-  if (appScreens.has(screen)) return `/app/${screen}${screen === "stories" && ["need", "checkin", "weekly", "invite"].includes(detail) ? "/" + detail : ""}`;
+  if (appScreens.has(screen)) return `/app/${screen}${screen === "stories" && ["need", "checkin", "weekly", "invite", "streak"].includes(detail) ? "/" + detail : ""}`;
   return publicScreens.has(url.pathname) ? url.pathname : "/";
 }
 

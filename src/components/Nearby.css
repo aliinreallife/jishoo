@@ -303,6 +303,7 @@
 .map-group-people > div > span { flex:1; font-size:12px; color:#79617f; }
 .map-group-people small { font-size:10px; color:#a18ba3; }
 .live-map-marker { position:relative; }
+.live-map-marker > span:first-child { border-radius:50%; }
 .sparse-map-marker > span:first-child { box-shadow:0 0 0 6px #fff3ca5c,0 5px 16px #c8b2e44d; }
 .map-mascot-group > span:first-child { background:#e9ddfa; border-color:#fff8e5; }
 .map-mascot-count { position:absolute; left:-5px; top:-5px; min-width:24px; height:24px; display:flex; align-items:center; justify-content:center; border:2px solid #fff9eb; padding:0 5px; border-radius:10px; color:#715485; background:#f4dd86; box-shadow:0 2px 6px #88705b24; font-size:12px; font-weight:800; }

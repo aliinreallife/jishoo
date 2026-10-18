@@ -13,6 +13,7 @@ export default function Stories({
   notify,
   initialMoment = null,
   initialKind = null,
+  initialMilestone = null,
   onClose,
   undo = null,
 }) {
@@ -21,7 +22,7 @@ export default function Stories({
     ),
     [format, setFormat] = useState("story"),
     [theme, setTheme] = useState(
-      !initialMoment && (!initialKind || initialKind === "weekly")
+      !initialMoment && (!initialKind || ["weekly", "streak"].includes(initialKind))
         ? "lavender"
         : "lemon",
     ),
@@ -96,7 +97,7 @@ export default function Stories({
     setExportError("");
     let active = true;
     (async () => {
-      const blob = await renderStoryImage({ kind, format, theme, caption, data, moment, code, qr });
+      const blob = await renderStoryImage({ kind, format, theme, caption, data, moment, code, qr, milestone: initialMilestone });
       if (active && version === generation.current) {
         if (!blob) throw new Error("کارت آماده نشد.");
         setImage(blob);
@@ -121,6 +122,9 @@ export default function Stories({
     format,
     data.stats.week,
     data.stats.today,
+    data.stats.streak?.current,
+    data.stats.streak?.best,
+    initialMilestone,
     data.me.name,
     code,
     moment?.id,
@@ -190,6 +194,7 @@ export default function Stories({
         <div className="story-selection-list">
           {[
             ["weekly", "اینهفته‌ی من", "تعداد جیش‌های این هفته"],
+            ["streak", "قرارِ هر روز من", "زنجیرهٔ روزانه و نشان‌های مسیر"],
             ["checkin", "جیش کردم، سبک شدم!", "یه لحظه برای آدمای خودت"],
             [
               "need",
@@ -264,7 +269,7 @@ export default function Stories({
         >
           <X size={22} />
         </button>
-        <h1>کارت لحظهٔ من</h1>
+        <h1>{kind === "streak" ? "کارت زنجیرهٔ من" : "کارت لحظهٔ من"}</h1>
         {kind === "invite" ? (
           <button onClick={shareLink} aria-label="اشتراک لینک دعوت">
             <ShareNetwork size={20} />

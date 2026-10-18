@@ -19,11 +19,11 @@
       "destination": "/api/profile?handle=:handle"
     },
     {
-      "source": "/:screen(home|nearby|discover|friends|profile|settings|stats|invite|achievements|notifications|admin|join|group|stories|circle)",
+      "source": "/:screen(home|nearby|discover|friends|profile|settings|stats|streak|invite|achievements|notifications|admin|join|group|stories|circle)",
       "destination": "/index.html"
     },
     {
-      "source": "/stories/:kind(need|checkin|weekly|invite)",
+      "source": "/stories/:kind(need|checkin|weekly|invite|streak)",
       "destination": "/index.html"
     },
     {
@@ -99,7 +99,7 @@
       ]
     },
     {
-      "source": "/:screen(home|nearby|discover|friends|profile|settings|stats|invite|achievements|notifications|admin|join|group|stories|circle|app)/:path*",
+      "source": "/:screen(home|nearby|discover|friends|profile|settings|stats|streak|invite|achievements|notifications|admin|join|group|stories|circle|app)/:path*",
       "headers": [
         {
           "key": "X-Robots-Tag",
@@ -143,7 +143,7 @@
       ]
     },
     {
-      "source": "/:screen(home|nearby|discover|friends|profile|settings|stats|invite|achievements|notifications|admin|join|group|stories|circle|app|terms|privacy|support|install|changelog)/:path*",
+      "source": "/:screen(home|nearby|discover|friends|profile|settings|stats|streak|invite|achievements|notifications|admin|join|group|stories|circle|app|terms|privacy|support|install|changelog)/:path*",
       "headers": [
         {
           "key": "Cache-Control",
