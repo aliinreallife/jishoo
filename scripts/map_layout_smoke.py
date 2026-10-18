@@ -9,10 +9,11 @@ ROOT=Path(__file__).resolve().parents[1]
 CAPTURE=os.environ.get('JISHOO_LAYOUT_CAPTURE_ONLY')=='1'
 
 def main():
- data=fixture();data['me'].update(shareLocation=True,discoverable=True);errors=[];metrics=[]
+ data=fixture();data['me'].update(shareLocation=True,discoverable=True);errors=[];metrics=[];held=[];hold={'enabled':False}
  version=json.loads((ROOT/'package.json').read_text())['version']
  def mock(route):
   action=parse_qs(urlsplit(route.request.url).query).get('action',[''])[0]
+  if action=='nearby' and hold['enabled']:held.append(route);return
   result={'activity':[],'approximate':True} if action=='nearby' else {'activity':[],'inView':0,'total':0,'refreshSeconds':30} if action=='world-map' else {'enabled':True} if action=='location' else data
   route.fulfill(json=result)
  with sync_playwright() as p:
@@ -37,6 +38,10 @@ def main():
    assert result['map']['height']>=200,result
    assert result['map']['bottom']-result['card']['bottom']<=18,result
    assert result['card']['height']<=125,result
+   card=page.locator(selector)
+   for text in card.locator('strong,p,small').all():
+    bounds=text.bounding_box()
+    assert bounds['y']>=result['card']['y'] and bounds['y']+bounds['height']<=result['card']['bottom']+1,(result,bounds)
    assert not overlaps(result['card'],result['visibility']),result
    assert not overlaps(result['card'],result['scope']),result
    for control in result['controls']:
@@ -44,6 +49,11 @@ def main():
     assert not overlaps(result['card'],control),result
     assert not overlaps(result['visibility'],control),result
    assert result['map']['bottom']<=result['nav']['y']+1,result
+   if w>850:
+    footer=page.locator('.desktop-foot')
+    assert footer.evaluate('node=>parseFloat(getComputedStyle(node).fontSize)')>=12
+    assert footer.bounding_box()['y']+footer.bounding_box()['height']<=h
+    assert not page.locator('.stage-note').count(), 'Keep one readable desktop caption'
   for w,h in [(320,568),(360,640),(393,852),(500,900),(768,700),(1280,720),(1440,900)]:
    page.set_viewport_size({'width':w,'height':h});page.goto(BASE+'/nearby',wait_until='domcontentloaded')
    expect(page.locator('.map-permission-card')).to_be_visible(timeout=20000);inspect('permission',w,h)
@@ -52,11 +62,19 @@ def main():
     page.get_by_role('button',name='نمایش اطراف من',exact=True).click()
     expect(page.locator('.map-permission-error')).to_be_visible();inspect('denied',w,h)
     page.evaluate('()=>{navigator.geolocation.getCurrentPosition=window.qaGeo}')
+   hold['enabled']=True
    page.get_by_role('button',name='نمایش اطراف من',exact=True).click()
-   expect(page.locator('.map-calm-state')).to_be_visible(timeout=15000);inspect('empty',w,h)
+   expect(page.locator('.map-calm-state')).to_be_visible(timeout=15000)
+   expect(page.locator('.map-calm-state')).to_have_attribute('aria-busy','true')
+   expect(page.locator('.map-calm-state strong')).to_have_text('داریم دور و برت رو نیگا می‌کنیم…')
+   inspect('checking',w,h)
+   while held:held.pop().fulfill(json={'activity':[],'approximate':True})
+   hold['enabled']=False
+   expect(page.locator('.map-calm-state')).to_have_attribute('aria-busy','false')
+   inspect('empty',w,h)
   assert not errors,errors
   (ARTIFACTS/('map-layout-before.json' if CAPTURE else 'map-layout-after.json')).write_text(json.dumps(metrics,indent=2))
-  print(('Captured baseline: permission and empty' if CAPTURE else 'PASS: permission, denied and empty')+' states checked at seven phone/tablet/desktop sizes; notices, controls, map height and scrolling measured.',flush=True)
+  print(('Captured baseline: permission, checking and empty' if CAPTURE else 'PASS: permission, denied, checking and empty')+' states checked at seven phone/tablet/desktop sizes; notices, controls, map height and scrolling measured.',flush=True)
   browser.close()
 
 if __name__=='__main__':main()

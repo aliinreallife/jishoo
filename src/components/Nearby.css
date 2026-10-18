@@ -293,11 +293,11 @@
 .map-visibility-shortcut.is-profile { color:#628078; background:#f1f8ec; border-color:#cedfc9; }
 .map-visibility-shortcut:focus-visible, .map-heat-hint:focus-visible { outline:3px solid #ac8ed0; outline-offset:2px; }
 .map-heat-hint { position:absolute; z-index:4; bottom:12px; left:72px; right:12px; max-width:340px; margin:auto; display:flex; align-items:center; justify-content:center; gap:8px; min-height:43px; padding:9px 13px; border:1px solid #dcd0e8; border-radius:17px; color:#806394; background:#fff8f0ee; box-shadow:0 4px 20px #78618e12; font-size:11px; }
-.map-calm-state { position:absolute; z-index:3; bottom:12px; left:12px; right:12px; display:flex; align-items:center; gap:8px; margin:0; padding:10px; background:#fff9eff2; border:1px solid #efe3c9; border-radius:20px; box-shadow:0 4px 20px #a68c590c; }
+.map-calm-state { position:absolute; z-index:3; bottom:12px; left:12px; right:12px; height:76px; display:flex; align-items:center; gap:8px; margin:0; padding:8px 10px; background:#fff9eff2; border:1px solid #efe3c9; border-radius:20px; box-shadow:0 4px 20px #a68c590c; }
 .map-calm-state > img { object-fit:contain; flex-shrink:0; }
 .map-calm-state > div { flex:1; min-width:0; }
 .map-calm-state strong { display:block; font-size:12px; line-height:1.8; color:#71607a; }
-.map-calm-state p { font-size:10px; color:#8c7888; margin:2px 0 0; line-height:1.8; }
+.map-calm-state p { min-height:18px; font-size:10px; color:#8c7888; margin:2px 0 0; line-height:1.8; }
 .map-calm-state button { flex-shrink:0; min-width:44px; min-height:44px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:4px; background:#efe6f8; color:#84649a; border-radius:13px; font-size:9px; }
 .map-fetch-error { position:absolute; top:74px; right:12px; left:68px; z-index:4; margin:0; padding:9px; background:#fff1e0f2; color:#97715f; border-radius:13px; font-size:11px; }
 .map-selection-sheet { position:absolute; z-index:5; bottom:12px; left:72px; right:12px; padding:19px 16px 13px; background:#fffaf2f5; border:1px solid #e8d9ed; border-radius:22px; box-shadow:0 7px 22px #68507612; max-height:50%; overflow:auto; }

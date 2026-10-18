@@ -222,9 +222,16 @@ export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, on
   const count = worldwide ? worldInfo?.inView || 0 : presentation.count;
   const countLabel = view === "people" ? `${fa(people.length)} پروفایل نزدیک` : !loaded ? (worldwide || position ? "داریم نقشه رو آماده می‌کنیم…" : "اطرافت رو پیدا کنیم؟") : `${fa(count)} نفر ${oldView ? "در نمای قبلی" : "در این نما"}`;
   const refreshLabel = !online ? "اتصال قطع شده" : fetchError ? "تلاش دوباره برای دریافت" : fetching ? "در حال تازه‌شدن…" : "به‌روزرسانی خودکار";
-  // A refresh is not a new result. Keep confirmed emptiness visible until data
-  // changes, while avoiding an empty claim for a different, unconfirmed location.
-  const empty = view === "map" && loaded && !fetchError && !oldView && count === 0;
+  // Keep the last empty card mounted while checking a different viewport or
+  // refreshing it. A confirmed nonempty result can replace it with markers.
+  const empty = view === "map" && (position || worldwide) && !selected && !group && count === 0;
+  const checking = online && !fetchError && (!loaded || oldView || fetching);
+  const emptyTitle = !online ? "نقشه آفلاینه" : fetchError ? "نقشه تازه نشد" : checking
+    ? worldwide ? "داریم این گوشه رو نیگا می‌کنیم…" : "داریم دور و برت رو نیگا می‌کنیم…"
+    : "هنوز ثبت تازه‌ای اینجا نیست";
+  const emptyDescription = !online ? "با اتصال دوباره، همین نما تازه می‌شه." : fetchError
+    ? "برای دریافت دوباره تلاش می‌کنیم."
+    : checking ? "یه لحظه تا نقشه تازه بشه." : "ثبت‌های ۳۰ دقیقهٔ اخیرِ این نما";
   return <section className="real-nearby-page tab-page">
     <header className="nearby-heading"><div><h1>این نزدیکا</h1><p><ShieldCheck size={12} />{view === "people" ? "آدم‌های نزدیک، با انتخاب خودشون" : "مکان‌ها تقریبی‌ان"}</p></div><button className={`map-visibility-shortcut is-${mode}`} onClick={onVisibility} aria-label={`نمایش من روی نقشه: ${visibilityLabel(mode)}`} title="تغییر نمایش من روی نقشه"><VisibilityIcon size={17} /><span>{visibilityLabel(mode)}</span><CaretDown size={12} /></button></header>
     <div className="nearby-view-tabs" role="tablist" aria-label="بخش‌های این نزدیکا">
@@ -242,7 +249,11 @@ export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, on
       {(position || scope === "world") && <button className="map-locate-control" aria-label="مکان من" title="مکان من" onClick={() => position ? map.current?.setView([position.lat, position.lng], 15) : locate()}><NavigationArrow size={22} /></button>}
       {!position && scope === "local" && <div className="map-permission-card"><button className="map-permission-action" onClick={locate} disabled={locating} aria-label="نمایش اطراف من" aria-busy={locating}><img src="/assets/shy-drop.webp" width="40" height="46" alt="" /><span><strong>{locating ? "داریم مکانت رو پیدا می‌کنیم…" : "نمایش اطراف من"}</strong>{geoError ? <small className="map-permission-error" role="status">{geoError}</small> : <><small>فعلاً نمای تهران؛ با اجازهٔ مکان، اطرافت رو ببین.</small><small>این کار مکانت رو منتشر نمی‌کنه.</small></>}</span><i><NavigationArrow size={21} /></i></button></div>}
       {fetchError && <p className="map-fetch-error" role="status">{fetchError}</p>}
-      {empty && <div className="map-calm-state"><img src="/assets/shy-drop.webp" width="38" height="44" alt="" /><div><strong>هنوز ثبت تازه‌ای اینجا نیست</strong><p>ثبت‌های ۳۰ دقیقهٔ اخیرِ این نما</p></div><button onClick={onInvite} aria-label="دوستام رو دعوت کنم" title="دوستام رو دعوت کنم"><UsersThree size={19} /><span>دعوت</span></button></div>}
+      {empty && <div className="map-calm-state" aria-busy={checking}>
+        <img src="/assets/shy-drop.webp" width="38" height="44" alt="" />
+        <div><strong>{emptyTitle}</strong><p>{emptyDescription}</p></div>
+        <button onClick={onInvite} aria-label="دوستام رو دعوت کنم" title="دوستام رو دعوت کنم"><UsersThree size={19} /><span>دعوت</span></button>
+      </div>}
       {presentation.mode === "heat" && !selected && !group && <button className="map-heat-hint" onClick={seeCharacters}><MagnifyingGlassPlus size={19} /><span>نزدیک‌تر ببین، شخصیت‌ها پیداشون می‌شه</span></button>}
       {(selected || group) && <section className="map-selection-sheet" aria-label="جزئیات محدودهٔ انتخاب‌شده"><button className="map-selection-close" aria-label="بستن جزئیات نقشه" onClick={() => { setSelected(null); setGroup(null); }}><X size={18} /></button>
         {selected && <><div className="selected-neighbor">{selected.profileHandle || selected.isFriend || selected.isMe ? <Avatar person={selected} size={46} mood={selected.status === "need" ? "shy" : "happy"} /> : <img src={`/assets/${selected.status === "need" ? "shy-drop.webp" : "happy-drop.webp"}`} width="46" height="52" alt="" />}<div><strong>{selected.name}{selected.isFriend && <span>دوستت</span>}</strong><p>{selected.status === "need" ? "جیش داره" : "جیش کرده"} · {relativeTime(selected.createdAt)}</p></div></div>{scope !== "world" && selected.profileHandle ? <button className="map-profile-action" onClick={() => onProfile(selected.profileHandle)}><UserProfileIcon /><span>{selected.isMe ? "پروفایل من" : "دیدن پروفایل"}</span><CaretDown size={15} /></button> : <p className="map-profile-private">{scope === "world" ? "در نمای همه‌جا، ثبت‌ها همیشه بی‌نامن." : selected.profileKind === "guest" ? "مهمان جیشوئه؛ پروفایل عمومی نداره." : "بی‌نام روی نقشه‌ست؛ پروفایلش نمایش داده نمی‌شه."}</p>}</>}

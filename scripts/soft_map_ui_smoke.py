@@ -92,11 +92,22 @@ def main():
   expect(page.locator('.nearby-refresh')).to_contain_text('در حال تازه‌شدن')
   expect(page.locator('.map-calm-state')).to_be_visible()
   empty_node=page.locator('.map-calm-state').element_handle()
+  empty_size=empty_node.bounding_box()
+  expect(page.locator('.map-calm-state')).to_have_attribute('aria-busy','true')
+  expect(page.locator('.map-calm-state strong')).to_have_text('داریم دور و برت رو نیگا می‌کنیم…')
   page.wait_for_timeout(2100)
   assert empty_node.evaluate('node=>node.isConnected'), 'An empty-to-empty refresh must keep the same card mounted'
   held.pop().fulfill(json={'activity':[],'approximate':True});hold['enabled']=False
   expect(page.locator('.nearby-refresh')).to_contain_text('به‌روزرسانی خودکار')
   assert empty_node.evaluate('node=>node.isConnected')
+  expect(page.locator('.map-calm-state')).to_have_attribute('aria-busy','false')
+  expect(page.locator('.map-calm-state strong')).to_have_text('هنوز ثبت تازه‌ای اینجا نیست')
+  assert empty_node.bounding_box()['height']==empty_size['height']
+  ctx.set_offline(True)
+  expect(page.locator('.map-calm-state strong')).to_have_text('نقشه آفلاینه')
+  assert empty_node.evaluate('node=>node.isConnected')
+  assert empty_node.bounding_box()['height']==empty_size['height']
+  ctx.set_offline(False)
   print('PASS: A slow empty-to-empty local refresh preserves the same empty card while only the refresh indicator changes.',flush=True)
   print('PASS: Count remains during real fetching, automatic refresh preserves the camera, offline is explicit and an empty view has an honest friendly invitation state.',flush=True)
   phase['kind']='one';page.get_by_role('tab',name='آدم‌های نزدیک من',exact=True).click()
@@ -142,9 +153,27 @@ def main():
   hold['enabled']=True;page.evaluate('window.dispatchEvent(new Event("online"))')
   expect(page.locator('.nearby-refresh')).to_contain_text('در حال تازه‌شدن')
   world_empty=page.locator('.map-calm-state').element_handle()
+  expect(page.locator('.map-calm-state strong')).to_have_text('داریم این گوشه رو نیگا می‌کنیم…')
   page.wait_for_timeout(2100);assert world_empty.evaluate('node=>node.isConnected')
   held.pop().fulfill(json={'activity':[],'total':0,'inView':0,'refreshSeconds':30});hold['enabled']=False
   expect(page.locator('.nearby-refresh')).to_contain_text('به‌روزرسانی خودکار')
+  assert world_empty.evaluate('node=>node.isConnected')
+  # A different world viewport is unconfirmed until its response arrives. The
+  # existing card must stay in place and explain checking rather than vanish.
+  hold['enabled']=True
+  with page.expect_request(lambda request:parse_qs(urlsplit(request.url).query).get('action')==['world-map']):
+   page.get_by_role('button',name='کوچک‌نمایی نقشه',exact=True).click()
+  expect(page.locator('.map-calm-state')).to_have_attribute('aria-busy','true')
+  assert world_empty.evaluate('node=>node.isConnected'), 'An unconfirmed world viewport must keep the same card'
+  assert world_empty.bounding_box()['height']==empty_size['height']
+  expect(page.locator('.map-calm-state strong')).to_have_text('داریم این گوشه رو نیگا می‌کنیم…')
+  page.screenshot(path=str(ARTIFACTS/'soft-map-checking-world.png'))
+  expect(page.locator('.nearby-refresh')).to_contain_text('در حال تازه‌شدن')
+  assert held
+  while held:held.pop().fulfill(json={'activity':[],'total':0,'inView':0,'refreshSeconds':30})
+  hold['enabled']=False
+  expect(page.locator('.map-calm-state')).to_have_attribute('aria-busy','false')
+  expect(page.locator('.map-calm-state strong')).to_have_text('هنوز ثبت تازه‌ای اینجا نیست')
   assert world_empty.evaluate('node=>node.isConnected')
   phase['kind']='one';page.evaluate('window.dispatchEvent(new Event("online"))')
   expect(page.locator('.nearby-count')).to_contain_text('۱ نفر در این نما',timeout=15000)

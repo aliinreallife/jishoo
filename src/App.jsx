@@ -1009,9 +1009,8 @@ export default function App() {
           />
         </div>
         <div className="desktop-foot">
-          <ShieldCheck size={18} />
-          <span>مکان تقریبی. ارتباط با اجازه‌ی خودت.</span>
-          <span className="desktop-version">جیشو · بتا</span>
+          <ShieldCheck size={19} />
+          <span>مکانت تقریبیه؛ نمایش پروفایل با انتخاب خودته.</span>
         </div>
       </aside>
       <main
@@ -2583,10 +2582,6 @@ export default function App() {
           <span>{notice}</span>
         </div>
       </main>
-      <span className="stage-note">
-        زندگی همین لحظه‌های کوچیکه
-        <Heart size={13} weight="fill" />
-      </span>
     </div>
   );
 }

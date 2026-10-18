@@ -2,7 +2,8 @@
 @media (min-width: 501px) and (min-height: 600px) {
   .desktop-stage:not(.invite-fullscreen) { display:flex; align-items:center; justify-content:center; gap:100px; padding:48px 70px 58px; min-height:100dvh; }
   .desktop-stage:not(.invite-fullscreen) > .desktop-brand { display:flex; width:470px; height:min(860px,calc(100dvh - 106px)); align-self:center; }
-  .desktop-stage:not(.invite-fullscreen) > .stage-note { display:flex; bottom:18px; }
+  .desktop-stage:not(.invite-fullscreen) .desktop-foot { gap:9px; margin-top:24px; padding-top:16px; border-top:1px solid #e8dfcd; font-size:12px; line-height:1.9; color:#827969; }
+  .desktop-foot svg { flex-shrink:0; color:#9b8b69; }
   .app-shell:not(.invite-fullscreen-shell) { width:414px; max-width:414px; height:min(860px,calc(100dvh - 106px)); min-height:0; border:1px solid #e8e2d3; border-radius:33px; box-shadow:0 20px 65px #6551220b,0 3px 9px #6e5d3010; transform:translateZ(0); }
   .app-shell .bottom-nav { padding-inline:12px; }
   .app-shell .guest-welcome { min-height:100%; }
