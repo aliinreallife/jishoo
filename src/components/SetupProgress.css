@@ -1,0 +1,25 @@
+.setup-progress { margin:16px 0; border:1px solid #e5ddef; border-radius:23px; background:linear-gradient(120deg,#fff9de,#f5effb); text-align:right; }
+.setup-progress-heading { display:flex; align-items:center; gap:12px; width:100%; padding:15px 13px; text-align:right; color:#695379; border-radius:23px; }
+.setup-ring { position:relative; display:grid; place-items:center; width:60px; height:60px; flex-shrink:0; }
+.setup-ring > svg { width:60px; height:60px; transform:rotate(-90deg); }
+.setup-ring circle { fill:none; stroke:#e6dded; stroke-width:6; }
+.setup-ring circle + circle { stroke:#b29bd2; stroke-linecap:round; transition:stroke-dashoffset .3s ease; }
+.setup-ring b { position:absolute; font-size:15px; color:#79608c; }
+.setup-progress-heading > span:nth-child(2) { flex:1; min-width:0; }
+.setup-progress-heading strong { display:block; font-size:13px; line-height:1.85; }
+.setup-progress-heading small { display:block; margin-top:4px; font-size:11px; color:#88758f; line-height:1.8; }
+.setup-progress-heading > svg { flex-shrink:0; transition:transform .2s; }
+.setup-progress-heading > svg.is-open { transform:rotate(180deg); }
+.setup-steps { padding:0 12px 12px; }
+.setup-step { border-top:1px solid #e9e0ee; padding:7px 0; }
+.setup-step-action { display:flex; align-items:center; gap:8px; min-height:56px; width:100%; color:#786281; text-align:right; }
+.setup-step-icon { flex-shrink:0; display:grid; place-items:center; width:34px; height:34px; border-radius:12px; background:#ece2f6; }
+.setup-step.is-done .setup-step-icon { background:#e6efe3; color:#6d8c70; }
+.setup-step-action > span:nth-child(2) { flex:1; min-width:0; }
+.setup-step-action > svg { flex-shrink:0; }
+.setup-step-action strong { display:block; font-size:12px; line-height:1.8; }
+.setup-step-action small { display:block; font-size:10.5px; line-height:1.9; color:#8d7d94; }
+.setup-step-skip { display:block; min-height:44px; padding:8px 10px; margin-right:33px; font-size:11px; color:#8c7b94; text-decoration:underline; text-underline-offset:4px; }
+.setup-steps > p { margin:8px 0 0; padding:10px; border-radius:12px; background:#fffbef; font-size:10.5px; color:#8a7a87; line-height:1.9; }
+.setup-progress button:focus-visible { outline:3px solid #b19ad0; outline-offset:2px; }
+@media(prefers-reduced-motion:reduce) { .setup-ring circle + circle,.setup-progress-heading > svg { transition:none; } }

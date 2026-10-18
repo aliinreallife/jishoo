@@ -103,6 +103,7 @@ export async function enablePush(key) {
       applicationServerKey: applicationKey(key),
     });
   await api("push-subscribe", { subscription: subscription.toJSON() });
+  window.dispatchEvent(new Event("jishoo:push-changed"));
   return true;
 }
 export async function disablePush() {
@@ -114,6 +115,7 @@ export async function disablePush() {
       await api("push-unsubscribe", { endpoint: subscription.endpoint });
     } finally {
       await subscription.unsubscribe();
+      window.dispatchEvent(new Event("jishoo:push-changed"));
     }
   }
 }

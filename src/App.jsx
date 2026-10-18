@@ -22,6 +22,7 @@ import "./flow-fixes.css";
 import LoadingScreen from "./components/LoadingScreen";
 import "./components/MapVisibility.css";
 import { visibilityMode, visibilityLabel } from "./map-visibility";
+import { cleanSocialLinks, socialFieldError } from "../lib/social-links";
 import { currentRelease, releaseStorageKey } from "./current-release";
 import { ReleaseNotes } from "./components/ReleaseNotes";
 const DailyStreak = lazy(() => import("./components/DailyStreak"));
@@ -104,6 +105,8 @@ const Admin = communityView("Admin"),
 const Nearby = lazy(() => import("./components/Nearby"));
 const Stories = lazy(() => import("./components/Stories"));
 const HomeNotifications = lazy(() => import("./components/HomeNotifications"));
+const SetupProgress = lazy(() => import("./components/SetupProgress"));
+const CheckinReminder = lazy(() => import("./components/CheckinReminder"));
 import { api, apiRevision, getInvite, fa, relativeTime, inviteUrl, copyText, inviteGiftLabel } from "./api";
 
 const assets = `${import.meta.env.BASE_URL}assets/`;
@@ -651,13 +654,13 @@ export default function App() {
     closeDialogs();
     notify("ثبت لغو شد؛ چیزی برای دوستات فرستاده نشد.");
   }
-  function checkin(status) {
+  function checkin(status, visibility = audience) {
     if (busy || pendingRef.current) return;
     clearTimeout(timer.current);
     setNotice("");
     const queued = {
       status,
-      visibility: audience,
+      visibility,
       nonce: crypto.randomUUID(),
       deadline: Date.now() + 3000,
     };
@@ -794,7 +797,10 @@ export default function App() {
   }
   async function saveSocialAccounts(event) {
     event.preventDefault();
-    const result = await perform("profile", { socialLinks: socials });
+    let socialLinks;
+    try { socialLinks = cleanSocialLinks(socials); }
+    catch (error) { notify(error.message); event.currentTarget.querySelector('[aria-invalid="true"]')?.focus(); return; }
+    const result = await perform("profile", { socialLinks });
     if (!result) return;
     setData(result);
     const friend = result.friends.find(friend => friend.id === selectedFriend?.id);
@@ -838,6 +844,9 @@ export default function App() {
   async function notificationPreference(scope, id, enabled) {
     const value = await perform("notification-pref", { scope, id, enabled });
     if (value) await refresh();
+  }
+  function updateReminderPreferences(preferences, extra = {}) {
+    setData(current => ({ ...current, me: { ...current.me, ...extra, checkinReminders: preferences } }));
   }
   function uploadAvatar(event) {
     const file = event.target.files?.[0];
@@ -1300,6 +1309,7 @@ export default function App() {
                       <span>دوست‌هام این جیش رو هم ببینن</span>
                     </label>
                   )}
+                  {me.registered && <Suspense fallback={null}><CheckinReminder data={data} pending={Boolean(pendingCheckin)} onChanged={updateReminderPreferences} notify={notify} onPrivateCheckin={() => { setAudience("private"); checkin("done", "private"); }} /></Suspense>}
                   <Suspense fallback={null}><HomeNotifications data={data} notify={notify} refresh={refresh} onSettings={() => navigate("notifications")} /></Suspense>
                   <section className="friends-section">
                     <div className="section-heading">
@@ -1445,6 +1455,7 @@ export default function App() {
                   data={data}
                   refresh={refresh}
                   notify={notify}
+                  onReminderChange={updateReminderPreferences}
                   onBack={() => goBack("home")}
                   onNavigate={(route) => {
                     routerNavigate(notificationPath(route, location.origin), { state: { appFrom: routeLocation.pathname + routeLocation.search } });
@@ -1587,6 +1598,7 @@ export default function App() {
                       <small>همه‌وقت</small>
                     </span>
                   </div>
+                  {me.registered && <Suspense fallback={null}><SetupProgress key={me.id} data={data} notify={notify} refresh={refresh} onMap={openMapVisibility} onSocial={openMySocialAccounts} onInvite={() => navigate("invite")} /></Suspense>}
                   <Suspense fallback={null}><DailyStreak streak={data.stats.streak} onOpen={() => navigate("streak")} /></Suspense>
                   <button className="profile-community-link profile-map-visibility" onClick={openMapVisibility}>
                     <MapPin size={26} weight="duotone" />
@@ -1854,8 +1866,8 @@ export default function App() {
           <Modal
             hideClose={["success", "need", "socialSetup"].includes(dialog)}
             fullscreen={["success", "need", "auth", "friend", "settings", "socialAccounts", "photo", "profileShare", "groupInvite", "moment", "premium"].includes(dialog)}
-            labelledBy={dialog === "mapVisibility" ? "visibility-title" : dialog === "socialSetup" ? "social-setup-title" : dialog === "socialAccounts" ? "social-accounts-title" : undefined}
-            focusTarget={dialog === "socialSetup" ? ".social-setup-reminder button" : dialog === "socialAccounts" ? ".social-field input" : undefined}
+            labelledBy={dialog === "whatsNew" ? "release-title" : dialog === "mapVisibility" ? "visibility-title" : dialog === "socialSetup" ? "social-setup-title" : dialog === "socialAccounts" ? "social-accounts-title" : undefined}
+            focusTarget={dialog === "whatsNew" ? "#release-title" : dialog === "socialSetup" ? ".social-setup-reminder button" : dialog === "socialAccounts" ? ".social-field input" : undefined}
             onClose={() => dialog === "mapVisibility" ? visibilityEditor.current?.dismiss() : dialog === "whatsNew" ? dismissRelease() : setDialog(null)}
             className={
               ["success", "need"].includes(dialog)
@@ -2141,7 +2153,7 @@ export default function App() {
                 </p>
                 <form onSubmit={saveSocialAccounts}>
                   <Suspense fallback={<LoadingSection />}> <SocialAccountFields value={socials} onChange={setSocials} autoFocus /> </Suspense>
-                  <Button lilac type="submit" disabled={busy}>ذخیره حساب‌ها <Check size={19} /></Button>
+                  <Button lilac type="submit" disabled={busy || ["instagram", "telegram", "x", "website"].some(kind => socialFieldError(kind, socials[kind]))}>ذخیره حساب‌ها <Check size={19} /></Button>
                 </form>
                 <Button secondary disabled={busy} onClick={() => setDialog(selectedFriend ? "friend" : null)}>برگشت</Button>
               </div>

@@ -19,6 +19,9 @@
 .visibility-editor > .button { width:100%; }
 .visibility-keep { display:block; width:100%; min-height:44px; font-size:12px; color:#806a92; margin-top:6px; }
 .visibility-editor .form-error { margin:12px 0; }
+.visibility-permission > p { font-size:12px; line-height:2; color:#84728c; margin:15px 0; }
+.visibility-permission ul { text-align:right; padding:13px 30px 13px 13px; background:#f5effb; border-radius:16px; font-size:12px; line-height:2.1; color:#7b638c; margin:15px 0 20px; }
+.visibility-permission h2:focus { outline:none; }
 .profile-map-visibility .visibility-summary { flex:none; font-size:11px; padding:5px 8px; border-radius:10px; background:#efe7f5; color:#79608c; max-width:95px; }
 .settings-map-visibility { width:100%; display:flex; gap:10px; align-items:center; padding:15px 12px; border:1px solid #e3d8ec; border-radius:17px; background:#f7f0fb; color:#756080; margin:15px 0 20px; text-align:right; }
 .settings-map-visibility span { flex:1; font-size:13px; }

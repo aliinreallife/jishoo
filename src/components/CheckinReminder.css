@@ -1,0 +1,21 @@
+.checkin-reminder { position:relative; margin:15px 0; display:grid; grid-template-columns:46px 1fr; gap:8px 10px; padding:16px 13px 10px; border:1px solid #eadcbe; border-radius:23px; background:#fff7df; text-align:right; }
+.checkin-reminder > img { object-fit:contain; align-self:center; }
+.checkin-reminder strong { display:block; padding-left:24px; font-size:13px; line-height:1.9; color:#796241; }
+.checkin-reminder p { font-size:11.5px; line-height:1.9; color:#8b7962; margin:5px 0 7px; }
+.reminder-snooze { position:absolute; top:3px; left:3px; width:44px; height:44px; display:grid; place-items:center; border-radius:50%; color:#a38b6e; }
+.reminder-private { grid-column:1/-1; min-height:44px; padding:9px; border-radius:14px; background:#f5df91; color:#79623e; font-size:12px; font-weight:700; }
+.reminder-links { grid-column:1/-1; display:flex; align-items:center; flex-wrap:wrap; justify-content:space-between; gap:3px 8px; }
+.reminder-links button { display:flex; align-items:center; justify-content:center; gap:4px; min-height:44px; font-size:10.5px; color:#8b765d; }
+.reminder-settings { margin:18px 0; padding:17px 14px; border:1px solid #e6d9bd; border-radius:22px; background:#fff7e5; text-align:right; }
+.reminder-settings header { display:flex; align-items:center; gap:8px; color:#846e4b; }
+.reminder-settings h2 { font-size:14px; margin:0; }
+.reminder-settings > p { font-size:11.5px; line-height:1.95; color:#88785e; margin:10px 0; }
+.reminder-setting { width:100%; display:flex; align-items:center; gap:9px; padding:12px 0; border-top:1px solid #ede1c9; text-align:right; color:#8a7556; }
+.reminder-setting > svg { flex-shrink:0; }
+.reminder-setting > span { flex:1; min-width:0; }
+.reminder-setting strong { display:block; font-size:12px; line-height:1.8; }
+.reminder-setting small { display:block; font-size:10.5px; line-height:1.9; color:#92836b; }
+.reminder-setting b { flex-shrink:0; font-size:10px; font-weight:500; background:#f1e5cd; padding:5px 8px; border-radius:9px; }
+.reminder-setting[aria-checked="true"] b { background:#e4eddb; color:#6e8761; }
+.reminder-setting-link { display:block; width:100%; min-height:44px; color:#8a7658; font-size:11px; text-align:right; line-height:1.9; text-decoration:underline; text-underline-offset:4px; }
+.reminder-settings button:focus-visible,.checkin-reminder button:focus-visible { outline:3px solid #b19acb; outline-offset:2px; }

@@ -126,6 +126,8 @@ export default function Stories({
     data.stats.streak?.best,
     initialMilestone,
     data.me.name,
+    data.me.handle,
+    data.publicUrl,
     code,
     moment?.id,
   ]);

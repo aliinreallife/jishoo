@@ -7,6 +7,7 @@
 .release-notes li + li, .release-page li + li { margin-top: 10px; }
 .release-ack { display: block; width: 100%; box-sizing: border-box; min-height: 48px; padding: 13px 20px; border: 0; border-radius: 16px; background: #ffe371; color: #51411d; font: 700 14px Vazirmatn, sans-serif; text-decoration: none; cursor: pointer; text-align: center; }
 .release-notes > a { display: block; margin: 12px 0 0; font-size: 13px; color: #6a4f86; }
+.release-notes #release-title:focus { outline:none; }
 .release-page { box-sizing: border-box; height: 100dvh; overflow-y: auto; width: 100%; padding: 32px max(20px, calc((100vw - 700px) / 2)) 48px; background: #fffcf4; }
 .release-page h1 { font-size: 32px; margin: 30px 0 12px; }
 .release-page > p { color: #887a8e; font-size: 14px; }

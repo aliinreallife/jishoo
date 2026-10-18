@@ -125,7 +125,8 @@ export function Achievements({ data, onBack, onShare, onShareStreak }) {
     </section>
   );
 }
-export function Notifications({ data, refresh, notify, onBack, onNavigate }) {
+const ReminderSettings = lazy(() => import("./CheckinReminder").then(module => ({ default: module.ReminderSettings })));
+export function Notifications({ data, refresh, notify, onBack, onNavigate, onReminderChange }) {
   const [push, setPush] = useState(false),
     [explain, setExplain] = useState(false),
     [delivery, setDelivery] = useState("");
@@ -165,7 +166,7 @@ export function Notifications({ data, refresh, notify, onBack, onNavigate }) {
       <div className="notification-settings">
         <label>
           <span>
-            اعلان‌های دوستام<small>روشن یا خاموش برای داخل جیشو و روی گوشی</small>
+            اعلان‌های جیشو<small>دوست‌ها و یادآوری‌های شخصیِ انتخاب‌شده</small>
           </span>
           <input
             type="checkbox"
@@ -241,8 +242,9 @@ export function Notifications({ data, refresh, notify, onBack, onNavigate }) {
           )}
         </div>
       </div>
+      <Suspense fallback={null}><ReminderSettings data={data} notify={notify} onChanged={onReminderChange} /></Suspense>
       <p className="soft-note">
-        فقط دوست‌های متصلت، با اجازهٔ خودت. هر دوست یا جمع رو هم می‌تونی جدا
+        اعلان دوست‌های متصلت و یادآوری شخصی، با انتخاب خودت. هر دوست یا جمع رو هم می‌تونی جدا
         بی‌صدا کنی. برای نمایش روی صفحهٔ قفل، اعلان‌های جیشو رو در تنظیمات گوشی
         مجاز کن.
       </p>

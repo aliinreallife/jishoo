@@ -11,8 +11,14 @@
     },
     "api/auth/google.js": {
       "maxDuration": 30
+    },
+    "api/reminders.js": {
+      "maxDuration": 60
     }
   },
+  "crons": [
+    { "path": "/api/reminders", "schedule": "30 7 * * *" }
+  ],
   "rewrites": [
     {
       "source": "/u/:handle",

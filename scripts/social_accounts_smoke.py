@@ -66,8 +66,9 @@ def main():
             page.get_by_role('button',name='اول لینک‌های خودم رو اضافه کنم',exact=True).click()
             page.get_by_label('اینستاگرام',exact=True).fill('qa_social_account')
             page.get_by_label('وب‌سایت',exact=True).fill('javascript:alert(1)')
-            page.get_by_role('button',name='ذخیره حساب‌ها',exact=True).click()
-            expect(page.locator('.toast.visible')).to_be_visible()
+            expect(page.get_by_role('button',name='ذخیره حساب‌ها',exact=True)).to_be_disabled()
+            expect(page.get_by_label('وب‌سایت',exact=True)).to_have_attribute('aria-invalid','true')
+            expect(page.locator('.social-field-error')).to_be_visible()
             expect(editor).to_be_visible()
             assert recipient.bootstrap()['me']['socialLinks']=={}
             page.get_by_label('وب‌سایت',exact=True).fill('')

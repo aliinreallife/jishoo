@@ -1,5 +1,6 @@
 import { earnedStreakMilestones, shareableStreakMilestone } from "../lib/streak-milestones";
 import { drawStreakBadge } from "./streak-badge-art";
+import { storyWebsite } from "./story-branding";
 import regular from "@fontsource/vazirmatn/files/vazirmatn-arabic-400-normal.woff2?url";
 import bold from "@fontsource/vazirmatn/files/vazirmatn-arabic-700-normal.woff2?url";
 import heavy from "@fontsource/vazirmatn/files/vazirmatn-arabic-900-normal.woff2?url";
@@ -79,6 +80,21 @@ function drop(ctx, x, y, size) {
   ctx.save(); ctx.translate(x, y); ctx.scale(size / 50, size / 50);
   ctx.beginPath(); ctx.moveTo(0, -25); ctx.bezierCurveTo(-7,-11,-20,3,-20,13); ctx.bezierCurveTo(-20,39,20,39,20,13); ctx.bezierCurveTo(20,3,7,-11,0,-25);
   ctx.fillStyle="#b8dbfa"; ctx.fill(); ctx.strokeStyle="#7caade"; ctx.lineWidth=2.5; ctx.stroke(); ctx.restore();
+}
+
+function websiteBadge(ctx, domain, square, safeBottom) {
+  const w = square ? 410 : 460, h = square ? 46 : 72;
+  const x = 985 - w, y = safeBottom - (square ? 85 : 115), cy = y + h / 2;
+  ctx.save();
+  rounded(ctx, x, y, w, h, h / 2, "#fffdf5e6");
+  ctx.strokeStyle = "#bca2cd"; ctx.lineWidth = 2; ctx.stroke();
+  const radius = square ? 13 : 18, cx = x + (square ? 27 : 38);
+  ctx.strokeStyle = "#79588f"; ctx.lineWidth = square ? 2 : 2.5;
+  ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(cx, cy, radius * .43, radius, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx - radius, cy); ctx.lineTo(cx + radius, cy); ctx.stroke();
+  text(ctx, domain, x + w - (square ? 18 : 24), cy + (square ? 10 : 13), square ? 28 : 36, "#684580", 700, "right", "JishooStory", w - (square ? 64 : 90));
+  ctx.restore();
 }
 
 // Render once into a plain canvas. The preview, download and native share use
@@ -174,10 +190,10 @@ export async function renderStoryImage({ kind, format, theme, caption, data, mom
       text(ctx, code && me.registered ? "۷ روز پرمیوم برای هر دومون" : "یه لحظهٔ ساده، یه لبخند مشترک.", 650, y + (square ? 149 : 190), square ? 20 : 29, "#927a65", 400, "center", "JishooStory", 560);
     }
   }
-  text(ctx, me.handle ? `@${me.handle}` : "jishoo", 95, square ? height - 39 : safeBottom - 55, square ? 20 : 27, "#8a7995", 400, "left", "JishooStory", 420);
-  text(ctx, "jishoo.vercel.app", 985, square ? height - 39 : safeBottom - 55, square ? 20 : 27, "#8a7995", 400, "right", "JishooStory", 420);
+  text(ctx, me.handle ? `@${me.handle}` : "jishoo", 95, safeBottom - (square ? 52 : 66), square ? 20 : 27, "#8a7995", 400, "left", "JishooStory", 420);
+  websiteBadge(ctx, storyWebsite(data.publicUrl), square, safeBottom);
   heart(ctx, square ? 325 : 250, square ? height - 17 : safeBottom - 20, square ? 14 : 25, "#d9a8b7");
-  text(ctx, "یه لحظه از روزت، برای دوستات.", 540, square ? height - 12 : safeBottom - 12, square ? 17 : 28, "#9f8b9b", 400);
+  text(ctx, "یه لحظه از روزت، برای دوستات.", 540, safeBottom - (square ? 12 : 6), square ? 17 : 28, "#9f8b9b", 400);
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
   canvas.width = canvas.height = 0;
   if (!blob) throw new Error("تصویر کارت آماده نشد؛ دوباره امتحان کن.");

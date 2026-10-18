@@ -5,7 +5,8 @@ import { enablePush, pushEnvironment, pushStatus } from "../push";
 import { api } from "../api";
 import "./HomeNotifications.css";
 const Button = ({ children, ...props }) => <button className="button button-lilac" {...props}>{children}</button>;
-export function PushPermission({ data, notify, onClose, onEnabled }) {
+export function PushPermission({ data, notify, onClose, onEnabled, purpose = "friends" }) {
+  const reminder = purpose === "reminder";
   const permissionDialog = useRef();
   const [busy, setBusy] = useState(false);
   const environment = pushEnvironment();
@@ -23,16 +24,16 @@ export function PushPermission({ data, notify, onClose, onEnabled }) {
           onCancel={onClose}
         >
           <Mascot size={126} />
-          <h2 id="push-permission-title">اعلان دوستات، روی گوشیت 💧</h2>
+          <h2 id="push-permission-title">{reminder ? "یه یادآوری آروم، برای خودت" : "اعلان دوستات، روی گوشیت 💧"}</h2>
           <p>
-            وقتی دوستت جیشش رو ثبت کنه، اعلانش روی گوشی میاد؛ حتی اگه جیشو
-            بسته باشه.
+            {reminder ? "اگه دو روز اینجا جیشی ثبت نکرده باشی، روی گوشی یادت می‌ندازیم؛ حداکثر هفته‌ای یک‌بار، حتی وقتی جیشو بسته‌ست." : "وقتی دوستت جیشش رو ثبت کنه، اعلانش روی گوشی میاد؛ حتی اگه جیشو بسته باشه."}
           </p>
           <ul>
-            <li>فقط اعلان آدمایی که بهشون وصلی</li>
+            <li>{reminder ? "فقط برای خودته؛ چیزی برای دوستات فرستاده نمی‌شه" : "اعلان دوست‌ها و جمع‌های خودت؛ یادآوری شخصی فقط با انتخاب جداگانه"}</li>
             <li>بدون دسترسی به پیام‌ها یا برنامه‌های دیگه</li>
             <li>هر وقت بخوای، خاموش یا بی‌صداش کن</li>
           </ul>
+          {data.me.notificationsEnabled === false && <p className="push-install-guide">برای این انتخاب، اعلان‌های کلی جیشو هم روشن می‌شن؛ انتخاب دوست‌ها و گروه‌های بی‌صدا حفظ می‌شه.</p>}
           {environment === "install" ? (
             <div className="push-install-guide">
               <strong>روی آیفون این دو قدم لازمه</strong>
@@ -59,13 +60,13 @@ export function PushPermission({ data, notify, onClose, onEnabled }) {
                 run(async () => {
                   await enablePush(data.vapidPublicKey);
                   if (data.me.notificationsEnabled === false) await api("notification-pref", { scope: "all", enabled: true });
-                  onEnabled?.();
+                  await onEnabled?.();
                   onClose();
-                  notify("اعلان این دستگاه روشن شد. حالا یه اعلان تستی بفرست.");
+                  notify(reminder ? "یادآوری روی گوشی روشن شد؛ هر وقت خواستی خاموشش کن." : "اعلان این دستگاه روشن شد. حالا یه اعلان تستی بفرست.");
                 })
               }
             >
-              باشه، اعلان دوستام رو روشن کن
+              {reminder ? "باشه، یادآوری روی گوشی رو روشن کن" : "باشه، اعلان دوستام رو روشن کن"}
               <Bell size={19} />
             </Button>
           )}

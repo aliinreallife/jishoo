@@ -76,3 +76,8 @@
 .social-setup-reminder .social-setup-privacy { font-size:12px; line-height:1.9; color:#786a84; background:#f4edf9; border-radius:14px; padding:12px; margin:14px 0 18px; }
 .social-setup-reminder > .button + .button { margin-top:9px; }
 .social-account-editor > .button { margin-top:10px; }
+.social-field > small { display:block; font-size:11px; font-weight:400; line-height:1.85; margin-top:6px; }
+.social-field-help { color:#85758c; }
+.social-field-help span[dir="ltr"] { display:block; text-align:left; overflow-wrap:anywhere; }
+.social-field-error { color:#a34f51; }
+.social-field input[aria-invalid="true"] { border-color:#c88a83; background:#fff9f5; }

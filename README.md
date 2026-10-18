@@ -1,8 +1,11 @@
-# جیشو · Jishoo
+# جیشو · jishoo
 
 Persian RTL friendship web app with guest check-ins, deterministic [Blobatar](https://blobatar.dev/) characters, Google-first invitation-only signup, nearby activity and downloadable story cards.
 
 **Live website:** https://jishoo.vercel.app/
+
+Setup progress, social profile validation, and optional personal reminders:
+[implementation and verification](docs/setup-and-reminders.md).
 
 ## Product behavior
 

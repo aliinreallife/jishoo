@@ -1,4 +1,5 @@
 import { activitySummary } from "../lib/activity-summary.js";
+import { reminderPreferences } from "../lib/reminders.js";
 import { joinWaitlist } from "../lib/waitlist.js";
 import {
   authMethods,
@@ -162,6 +163,8 @@ function profile(user, own = false) {
       socialLinks: user.social_links,
       shareLocation: user.share_location,
       mapVisibilityReviewed: Boolean(user.map_visibility_reviewed),
+      createdAt: user.created_at,
+      checkinReminders: reminderPreferences(user),
       invitedBy: user.invited_by,
       joinedInviteCode: user.joined_invite_code,
     });
@@ -170,7 +173,7 @@ function profile(user, own = false) {
 async function stats(userId, activity) {
   const [rows, history, latest] = await Promise.all([
     query(
-      `SELECT COUNT(*) FILTER(WHERE status='done')::int AS total,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date=(NOW() AT TIME ZONE 'Asia/Tehran')::date)::int AS today,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date>=(NOW() AT TIME ZONE 'Asia/Tehran')::date-6)::int AS week,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date>=(NOW() AT TIME ZONE 'Asia/Tehran')::date-29)::int AS month,COUNT(*) FILTER(WHERE status='need')::int AS need${activity ? "" : ",COALESCE(array_agg(DISTINCT TO_CHAR(created_at AT TIME ZONE 'Asia/Tehran','YYYY-MM-DD')) FILTER(WHERE status='done'),ARRAY[]::text[]) AS streak_days"} FROM checkins WHERE user_id=$1`,
+      `SELECT COUNT(*) FILTER(WHERE status='done')::int AS total,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date=(NOW() AT TIME ZONE 'Asia/Tehran')::date)::int AS today,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date>=(NOW() AT TIME ZONE 'Asia/Tehran')::date-6)::int AS week,COUNT(*) FILTER(WHERE status='done' AND (created_at AT TIME ZONE 'Asia/Tehran')::date>=(NOW() AT TIME ZONE 'Asia/Tehran')::date-29)::int AS month,COUNT(*) FILTER(WHERE status='need')::int AS need,MAX(created_at) FILTER(WHERE status='done') AS "lastDoneAt"${activity ? "" : ",COALESCE(array_agg(DISTINCT TO_CHAR(created_at AT TIME ZONE 'Asia/Tehran','YYYY-MM-DD')) FILTER(WHERE status='done'),ARRAY[]::text[]) AS streak_days"} FROM checkins WHERE user_id=$1`,
       [userId],
     ),
     query(
@@ -729,7 +732,7 @@ export default async function handler(req, res) {
       requireAccount(user);
       let links;
       try {
-        links = cleanSocialLinks(body.socialLinks === undefined ? user.social_links : body.socialLinks);
+        links = body.socialLinks === undefined ? user.social_links : cleanSocialLinks(body.socialLinks);
       } catch (error) {
         fail(400, error.message);
       }

@@ -75,7 +75,7 @@ def main():
         page.get_by_label('اینستاگرام',exact=True).fill('@qa_social')
         page.get_by_role('button',name='ذخیره حساب‌ها',exact=True).click()
         expect(page.get_by_role('dialog')).to_have_count(0)
-        assert [r[1] for r in requests if r[0]=='profile'][-1]=={'socialLinks':{'instagram':'@qa_social'}}
+        assert [r[1] for r in requests if r[0]=='profile'][-1]=={'socialLinks':{'instagram':'https://www.instagram.com/qa_social'}}
         go('/settings');expect(page.get_by_label('اسمت',exact=True)).to_be_visible();assert not page.get_by_label('اینستاگرام',exact=True).count()
         page.keyboard.press('Escape');expect(page).to_have_url(BASE+'/profile')
         photo=ARTIFACTS/'world-profile-upload.png';Image.new('RGB',(480,360),(150,185,230)).save(photo)

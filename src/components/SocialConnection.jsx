@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useId } from "react";
+import { socialProfile, socialFieldError } from "../../lib/social-links";
 import { LinkSimple, Check, X, InstagramLogo, TelegramLogo, XLogo, ArrowSquareOut } from "@phosphor-icons/react";
 import "./SocialConnection.css";
 
@@ -10,23 +11,40 @@ const platforms = {
 };
 
 export function SocialAccountFields({ value, onChange, autoFocus = false }) {
+  const prefix = useId();
   return [
     ["instagram", "اینستاگرام", "@username"],
     ["telegram", "تلگرام", "@username"],
     ["x", "ایکس", "@username"],
     ["website", "وب‌سایت", "https://..."],
-  ].map(([key, label, placeholder], index) => (
+  ].map(([key, label, placeholder], index) => {
+    const input = value[key] || "", error = socialFieldError(key, input);
+    const url = !error && input.trim() ? socialProfile(key, input).url : "";
+    return (
     <label className="field-label social-field" key={key}>
       {label}
       <input
-        value={value[key] || ""}
+        value={input}
+        aria-label={label}
+        aria-invalid={Boolean(error)}
+        aria-describedby={`${prefix}-${key}-help`}
+        ref={node => node?.setCustomValidity(error)}
         onChange={event => onChange(current => ({ ...current, [key]: event.target.value }))}
+        onBlur={() => { if (url && url !== input) onChange(current => ({ ...current, [key]: url })); }}
         placeholder={placeholder}
         dir="ltr"
+        maxLength={300}
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        inputMode={key === "website" ? "url" : "text"}
         autoFocus={autoFocus && index === 0}
       />
+      <small id={`${prefix}-${key}-help`} className={error ? "social-field-error" : "social-field-help"}>
+        {error || (url ? <><span>لینک پروفایل:</span> <span dir="ltr">{url}</span></> : key === "website" ? "آدرس وب‌سایتت؛ با https یا بدون اون." : "شناسه با @ یا بدون اون، یا لینک پروفایلت.")}
+      </small>
     </label>
-  ));
+  ); });
 }
 
 export default function SocialConnection({ friend, premium, busy, onChange }) {
