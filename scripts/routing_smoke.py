@@ -139,7 +139,11 @@ def main():
         page.clock.install(time=clock_time)
         page.clock.pause_at(clock_time + timedelta(seconds=1))
         page.locator('.need-card').click()
+        # Wait for the modal's focus/keyboard setup before pressing Escape;
+        # otherwise a fast key press can precede the dialog mounting in CI.
+        expect(page.get_by_role('button', name='استوری این لحظه', exact=True)).to_be_focused()
         page.keyboard.press('Escape')
+        expect(page.get_by_role('dialog')).to_have_count(0)
         page.get_by_role('button', name='پروفایل من', exact=True).click()
         expect(page).to_have_url(BASE + '/profile')
         expect(page.locator('.undo-checkin')).to_be_visible()

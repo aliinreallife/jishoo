@@ -30,22 +30,48 @@ jobs:
         run: python scripts/check_workflows.py
       - run: npm ci --no-audit --no-fund
       - name: Unit, privacy and security regressions
+        id: unit
         run: npm test
       - name: Production build
+        id: build
         run: npm run build
       - name: Initial download budgets
+        id: budgets
         run: npm run check:bundle
       - name: Install browser test tools
         run: |
           python -m pip install -r scripts/requirements-browser.txt
           python -m playwright install --with-deps chromium
       - name: Navigation, signup, maps, forms and story exports
+        id: browser
         run: npm run test:browser
-      - name: Save synthetic screenshots and size report
-        if: always()
+      - name: Save optional failure screenshots and size report
+        id: diagnostics
+        if: failure()
+        # Diagnostics must not replace the actual test/build result when the
+        # account's artifact quota is full. Failed checks still fail this job.
+        continue-on-error: true
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: app-checks-${{ github.run_id }}
           path: artifacts/
           if-no-files-found: ignore
-          retention-days: 7
+          retention-days: 2
+      - name: Record check results without artifact storage
+        if: always()
+        env:
+          UNIT_RESULT: ${{ steps.unit.outcome || 'not run' }}
+          BUILD_RESULT: ${{ steps.build.outcome || 'not run' }}
+          BUDGET_RESULT: ${{ steps.budgets.outcome || 'not run' }}
+          BROWSER_RESULT: ${{ steps.browser.outcome || 'not run' }}
+          DIAGNOSTICS_RESULT: ${{ steps.diagnostics.outcome || 'not run' }}
+        run: |
+          {
+            printf '### App checks\n\n| Check | Result |\n| --- | --- |\n'
+            printf '| Unit, privacy and security regressions | %s |\n' "$UNIT_RESULT"
+            printf '| Production build | %s |\n' "$BUILD_RESULT"
+            printf '| Initial download budgets | %s |\n' "$BUDGET_RESULT"
+            printf '| Browser suites | %s |\n' "$BROWSER_RESULT"
+            printf '| Optional failure diagnostics | %s |\n' "$DIAGNOSTICS_RESULT"
+            printf '\nScreenshots are uploaded only after a failed check and kept for two days. Full check output remains in the step logs even if artifact storage is unavailable.\n'
+          } >> "$GITHUB_STEP_SUMMARY"

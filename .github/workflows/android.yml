@@ -26,6 +26,10 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        with:
+          # The action defaults to "tools platform-tools"; Google retired tools.
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
       - name: Install Android API 36
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
       - uses: gradle/actions/setup-gradle@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
@@ -65,7 +69,7 @@ jobs:
         with:
           name: jishoo-android-${{ github.run_number }}
           path: android-artifacts/
-          retention-days: 14
+          retention-days: 7
       - name: Remove signing material
         if: always()
         run: rm -f "$RUNNER_TEMP/jishoo-release.jks"

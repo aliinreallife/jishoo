@@ -31,7 +31,7 @@ The full dependency audit reported zero known advisories. Workflow syntax was ch
 
 ## Automation
 
-- **App checks:** PRs, pushes to main and manual runs; frozen npm install, workflow lint, unit checks, production build, initial-download budgets and eight browser suites. Synthetic screenshots and the bundle report are retained for seven days.
+- **App checks:** PRs, pushes to main and manual runs; frozen npm install, workflow lint, unit checks, production build, initial-download budgets and eight browser suites. Results remain in the run summary and logs; optional failure screenshots and the bundle report are retained for two days. Successful checks do not upload screenshots.
 - **Dependency security:** weekly/manual `npm audit`, failing on high/critical advisories.
 - **Production health:** successful production-deployment events, a daily schedule or manual run; checks the canonical site, route refreshes, database health, matching app/worker release metadata and cache headers. It creates no user sessions or accounts. It does not publish or redeploy anything.
 - **Dependabot:** weekly npm and pinned-action update PRs. Minor/patch npm updates are grouped; major updates remain reviewable separately. No automatic merge.
