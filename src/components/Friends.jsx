@@ -246,7 +246,7 @@ export default function Friends({
     );
   }
   return (
-    <section className="page friends-hub">
+    <section className="page friends-hub tab-page">
       <header className="community-heading">
         <div>
           <h1>رفقای من</h1>

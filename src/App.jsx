@@ -16,6 +16,7 @@ import "./community.css";
 import "./v3.css";
 import "./readability.css";
 import "./desktop-frame.css";
+import "./tab-layout.css";
 import { currentRelease, releaseStorageKey } from "./releases";
 import { ReleaseNotes } from "./components/ReleaseNotes";
 import { blockUpdates } from "./updates";
@@ -1616,7 +1617,7 @@ export default function App() {
               ref={scroll}
             >
               {screen === "home" && (
-                <section className="page home v2-home">
+                <section className="page home v2-home tab-page">
                   <header className="home-header">
                     <div>
                       <h1>
@@ -1976,7 +1977,7 @@ export default function App() {
                 </Suspense>
               )}
               {screen === "profile" && (
-                <section className="page profile-page v2-profile">
+                <section className="page profile-page v2-profile tab-page">
                   <div className="profile-top">
                     <IconButton
                       icon={GearSix}

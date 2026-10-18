@@ -1,0 +1,14 @@
+/* The first row of each primary tab starts at the same safe-area inset. */
+.app-shell { --tab-top-gap: 24px; }
+.app-shell .app-scroll > .tab-page {
+  padding-top: calc(var(--tab-top-gap) + env(safe-area-inset-top, 0px));
+}
+.app-shell .app-scroll > .tab-page > :is(.home-header, .nearby-heading) {
+  padding-top: 0;
+}
+.app-shell .app-scroll > .tab-page > :is(.community-heading, .profile-top) {
+  margin-top: 0;
+}
+@media (max-height: 650px) {
+  .app-shell { --tab-top-gap: 20px; }
+}

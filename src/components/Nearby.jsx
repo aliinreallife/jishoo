@@ -330,7 +330,7 @@ export default function Nearby({
     } finally { setSharingBusy(false); }
   }
   return (
-    <section className="real-nearby-page">
+    <section className="real-nearby-page tab-page">
       <header className="nearby-heading">
         <div>
           <h1>این نزدیکا</h1>
