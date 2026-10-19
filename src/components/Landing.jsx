@@ -26,9 +26,36 @@ export default function Landing() {
         </div>
       </section>
       <section className="landing-features" aria-label="توی جیشو چی داریم؟">
-        <article><span aria-hidden="true">💛</span><h2>آدمای خودت</h2><p>با شناسه هم رو پیدا کنین، دوستی رو قبول کنین و جمع خودتون رو بسازین.</p></article>
-        <article><span aria-hidden="true">🗺️</span><h2>این نزدیکا</h2><p>جیش‌های این نزدیکا رو ببین. خودت انتخاب کن پنهان بمونی یا با مکان تقریبی دیده بشی.</p></article>
-        <article><span aria-hidden="true">💧</span><h2>یه استوری مخصوص تو</h2><p>آمار و خاطره‌هات با شخصیت‌های جیشو، آمادهٔ فرستادن برای دوستات و استوری‌کردن.</p></article>
+        <article>
+          <div className="landing-feature-preview feature-friends" aria-hidden="true">
+            <span className="feature-message message-need">جیش دارم</span>
+            <img src="/assets/shy-drop.webp" width="108" height="108" alt="" loading="lazy" />
+            <span className="feature-message message-done">جیش کردم</span>
+          </div>
+          <h2>دوستات رو پیدا کن</h2>
+          <p>با آیدی هم رو پیدا کنین و گروه بسازین. لینک‌های اجتماعی هم فقط با قبول هر دوتون دیده می‌شن.</p>
+          <a className="landing-feature-link" href="/friends">پیدا کردن دوست‌ها <span aria-hidden="true">←</span></a>
+        </article>
+        <article>
+          <div className="landing-feature-preview feature-nearby" aria-hidden="true">
+            <svg viewBox="0 0 280 132" fill="none"><path className="feature-road" d="M-10 101 290 27M66-10 114 146M193-10 227 146" /><path className="feature-road-center" d="M-10 101 290 27M66-10 114 146M193-10 227 146" /><circle cx="140" cy="79" r="29" fill="#bbdcf4" fillOpacity=".45" stroke="#97c1df" /><circle cx="140" cy="79" r="6" fill="#68a8e8" stroke="#fff" strokeWidth="3" /></svg>
+            <img className="feature-map-drop" src="/assets/shy-drop.webp" width="48" height="48" alt="" loading="lazy" />
+            <span className="feature-map-label">این نزدیکا</span>
+          </div>
+          <h2>کی دور و برته؟</h2>
+          <p>ثبت‌های نزدیکت رو روی نقشه ببین. مکان‌ها تقریبی‌ان؛ دیده‌شدن یا پنهان‌موندن هم دست خودته.</p>
+          <a className="landing-feature-link" href="/nearby">یه نگاه به نقشه <span aria-hidden="true">←</span></a>
+        </article>
+        <article>
+          <div className="landing-feature-preview feature-story" aria-hidden="true">
+            <div className="feature-story-print"><span>jishoo</span><img src="/assets/happy-drop.webp" width="76" height="76" alt="" loading="lazy" /><strong>جیش کردم!</strong></div>
+            <span className="feature-story-note">این یکی می‌ره استوری</span>
+            <svg viewBox="0 0 70 42" fill="none"><path d="M65 5C38 1 21 12 15 32m-5-13 5 14 14-6" /></svg>
+          </div>
+          <h2>یه کارت از روزت بساز</h2>
+          <p>جیش امروز، آمار هفته یا زنجیرهٔ روزهات؛ هر کدوم یه کارت برای فرستادن به دوستات دارن.</p>
+          <a className="landing-feature-link" href="/stories/checkin">دیدن یه کارت <span aria-hidden="true">←</span></a>
+        </article>
       </section>
       <section className="landing-how" id="how">
         <div><span className="landing-eyebrow">پیچیده‌ش نکردیم</span><h2>با یه لحظهٔ ساده شروع می‌شه.</h2><p>جیشو یه بهونه‌ست که توی روزمرگی، از هم دور نشیم.</p></div>
