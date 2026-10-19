@@ -18,22 +18,24 @@ function TrendChart({ values, period }) {
   useEffect(() => setSelected(latest), [period, latest]);
   const index = Math.min(selected, values.length - 1), current = values[index];
   const max = Math.max(1, ...values.map((row) => row.count));
-  const points = values.map((row, i) => ({ x: 34 + i * 572 / Math.max(1, values.length - 1), y: 168 - row.count / max * 126 }));
+  const startX = 606, endX = 34;
+  const points = values.map((row, i) => ({ x: startX + i * (endX - startX) / Math.max(1, values.length - 1), y: 168 - row.count / max * 126 }));
   const recordedPoints = points.filter((_, i) => !values[i].future);
   const last = recordedPoints.at(-1);
   const path = recordedPoints.reduce((value, point, i) => i ? `${value} C${points[i-1].x + (point.x-points[i-1].x)/2},${points[i-1].y} ${points[i-1].x + (point.x-points[i-1].x)/2},${point.y} ${point.x},${point.y}` : `M${point.x},${point.y}`, "");
   const choose = (event) => {
     const box = event.currentTarget.getBoundingClientRect();
-    setSelected(Math.max(0, Math.min(values.length - 1, Math.round(((event.clientX-box.left)/box.width*640 - 34)/572 * (values.length-1)))));
+    const pointerX = (event.clientX - box.left) / box.width * 640;
+    setSelected(Math.max(0, Math.min(values.length - 1, Math.round((startX - pointerX) / (startX - endX) * (values.length - 1)))));
   };
   return <div className="stats-trend">
     <div className="trend-readout" aria-live="polite"><span>{current.detail || current.label}</span><strong>{current.future ? <small>این روز هنوز نرسیده</small> : <>{fa(current.count)} <small>بار سبک شدی</small></>}</strong></div>
     <svg viewBox="0 0 640 180" role="img" aria-label={`روند جیش کردم؛ ${current.detail || current.label}: ${current.future ? "هنوز نرسیده" : fa(current.count) + " بار"}`} onPointerMove={choose} onClick={choose}>
       <defs><linearGradient id="stats-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8cc5f9" stopOpacity=".48"/><stop offset="100%" stopColor="#cbe7ff" stopOpacity=".04"/></linearGradient></defs>
       {[42,105,168].map((y) => <line key={y} x1="34" x2="606" y1={y} y2={y} stroke="#eadfcd" strokeDasharray="5 8" />)}
-      <path d={`${path} L${last.x},168 L34,168 Z`} fill="url(#stats-area)" />
+      <path d={`${path} L${last.x},168 L${startX},168 Z`} fill="url(#stats-area)" />
       {recordedPoints.length === 1 && <rect x={last.x-12} y={last.y} width="24" height={Math.max(1,168-last.y)} rx="12" fill="url(#stats-area)" />}
-      <line x1={last.x} x2="606" y1="168" y2="168" stroke="#dfd9e5" strokeDasharray="4 7" />
+      <line x1={last.x} x2={endX} y1="168" y2="168" stroke="#dfd9e5" strokeDasharray="4 7" />
       <path d={path} fill="none" stroke="#80b7ef" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
       {points.map((point,i) => (period === "week" || i === index) && <circle key={values[i].key} cx={point.x} cy={values[i].future ? 168 : point.y} opacity={values[i].future ? .4 : 1} r={i===index ? 8 : 5} fill={i===index ? "#ffe16d" : "#fffdf6"} stroke={i===index ? "#d7b747" : "#80b7ef"} strokeWidth="3" />)}
       <line x1={points[index].x} x2={points[index].x} y1="30" y2="172" stroke="#c0b0cf" strokeDasharray="4 7" />

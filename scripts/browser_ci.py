@@ -4,7 +4,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
-SUITES = ["routing_smoke.py", "setup_reminders_ui_smoke.py", "navigation_signup_ui_smoke.py", "soft_map_ui_smoke.py",
+SUITES = ["routing_smoke.py", "stats_rtl_smoke.py", "setup_reminders_ui_smoke.py", "navigation_signup_ui_smoke.py", "soft_map_ui_smoke.py",
           "map_layout_smoke.py", "mobile_forms_ui_smoke.py", "streak_page_ui_smoke.py", "world_map_ui_smoke.py", "performance_ui_smoke.py"]
 
 def main():

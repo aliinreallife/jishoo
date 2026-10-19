@@ -108,7 +108,7 @@
 .app-shell :is(.stats-zero-note, .stats-mini-grid span, .drop-calendar p, .stats-privacy-note) { font-size: var(--ui-meta); line-height: 1.8; color: var(--ui-muted); }
 .app-shell .calendar-weekdays { font-size: 12px; line-height: 1.7; color: #6d6079; }
 .app-shell .drop-calendar-grid > div > b, .app-shell .drop-calendar-grid small { font-size: 12px; }
-.trend-axis-labels { position: relative; height: 25px; margin-top: 8px; direction: ltr; }
+.trend-axis-labels { position: relative; height: 25px; margin-top: 8px; direction: rtl; }
 .trend-axis-labels span { position: absolute; transform: translateX(-50%); white-space: nowrap; text-align: center; font-size: 12px; line-height: 1.7; color: #716575; }
 .trend-axis-labels.week span { font-size: 12px; }
 

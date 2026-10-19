@@ -241,12 +241,12 @@
 }
 .calendar-weekdays > span:last-child { color: #be8595; }
 .drop-calendar-grid > div > b { font-size: 11px; color: #87748f; }
-.stats-trend { padding-top: 14px; }
+.stats-trend { padding-top: 14px; direction: rtl; }
 .trend-readout { display:flex; justify-content:space-between; gap:12px; align-items:center; min-height:55px; background:#f5f8fc; border-radius:17px; padding:10px 14px; }
 .trend-readout > span { font-size:11px; color:#8d8190; }
 .trend-readout strong { font-size:24px; color:#608ab7; white-space:nowrap; }
 .trend-readout small { font-size:10px; font-weight:400; color:#8d8190; }
-.stats-trend svg { display:block; width:100%; margin-top:15px; overflow:visible; touch-action:pan-y; direction:ltr; }
+.stats-trend svg { display:block; width:100%; margin-top:15px; overflow:visible; touch-action:pan-y; direction:rtl; }
 .trend-navigation { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:10px; }
 .trend-navigation > span { font-size:9px; color:#a19493; text-align:center; }
 .trend-navigation button { width:40px; height:40px; border-radius:14px; border:1px solid #e7dfd4; color:#89729f; background:#fffaf0; flex-shrink:0; }
