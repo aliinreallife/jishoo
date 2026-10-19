@@ -55,11 +55,11 @@ After deployment, verify Search Console ownership and submit `/sitemap.xml` from
 the owner's Google account. Crawling and removal of previously indexed private
 URLs can take time. These changes do not constitute a Search Console submission.
 
-The owner's Google HTML verification file is retained at
-`public/googleba574647a5d629d8.html` and served unchanged at the site root. Keep it
+Google HTML verification files for both authorized Google accounts are retained
+at `public/googleba574647a5d629d8.html` and
+`public/google1b036ffdf2a849b8.html`, served unchanged at the site root. Keep both
 in future deployments, including after verification succeeds; Google can check
-ownership again. Uploading this file still requires the owner to click **Verify**
-in Search Console.
+ownership again. Each account still needs to click **Verify** in Search Console.
 
 ## Verification
 
