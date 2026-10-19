@@ -1,8 +1,7 @@
-import React, { useEffect } from "react";
+import React from "react";
 import "./Landing.css";
 
 export default function Landing() {
-  useEffect(() => { document.title = "جیشو — لحظه‌های کوچیک، رفاقت‌های قشنگ"; }, []);
   return <div className="landing-page" dir="rtl">
     <a className="landing-skip" href="#landing-main">رفتن به محتوای اصلی</a>
     <header className="landing-header">
@@ -14,22 +13,22 @@ export default function Landing() {
         <div className="landing-hero-copy">
           <span className="landing-eyebrow">یه جمع خودمونی، برای لحظه‌های معمولی</span>
           <h1>چیزای کوچیک،<br /><em>رفاقت‌های قشنگ.</em></h1>
-          <p>«جیش دارم» یا «جیش کردم»؛ همین یه لحظهٔ ساده، یه لبخند برای دوستات. با آدمای خودت در تماس بمون و خاطره‌های کوچیکتون رو نگه دار.</p>
+          <p>جیشو یه اپ اجتماعی برای ثبت «جیش دارم» و «جیش کردم» با دوست‌هاست. آمارت رو ببین، کارت استوری بساز و خاطره‌های روزمره‌تون رو نگه دار.</p>
           <a className="landing-primary" href="/home">بریم جیشو <span aria-hidden="true">←</span></a>
           <small>بدون حساب هم می‌تونی شروع کنی. برای عضویت، دعوت یه دوست لازمه.</small>
         </div>
         <div className="landing-illustration" aria-label="قطرهٔ خجالتی و دوست‌داشتنی جیشو">
           <div className="landing-mascot-halo" />
-          <img className="landing-shy" src="/assets/shy-drop.webp" width="420" height="420" alt="قطرهٔ آبی خجالتی جیشو" fetchPriority="high" />
+          <img className="landing-shy" src="/assets/landing-shy-v1-640.webp" srcSet="/assets/landing-shy-v1-320.webp 320w, /assets/landing-shy-v1-640.webp 640w, /assets/landing-shy-v1-960.webp 960w" sizes="(max-width: 760px) 300px, 390px" width="420" height="420" alt="قطرهٔ آبی خجالتی جیشو" fetchPriority="high" />
           <span className="landing-doodle doodle-one" aria-hidden="true">♡</span><span className="landing-doodle doodle-two" aria-hidden="true">✦</span>
-          <div className="landing-sample" aria-hidden="true"><img src="/assets/happy-drop.webp" width="48" height="48" alt="" /><span><small>یه لحظه از روزِ دوستت</small><strong>جیش کردم 💧</strong></span><b>یه لحظهٔ ساده، یه لبخند مشترک</b></div>
+          <div className="landing-sample" aria-hidden="true"><img src="/assets/landing-happy-v1-128.webp" width="48" height="48" alt="" /><span><small>یه لحظه از روزِ دوستت</small><strong>جیش کردم 💧</strong></span><b>یه لحظهٔ ساده، یه لبخند مشترک</b></div>
         </div>
       </section>
       <section className="landing-features" aria-label="توی جیشو چی داریم؟">
         <article>
           <div className="landing-feature-preview feature-friends" aria-hidden="true">
             <span className="feature-message message-need">جیش دارم</span>
-            <img src="/assets/shy-drop.webp" width="108" height="108" alt="" loading="lazy" />
+            <img src="/assets/landing-shy-v1-256.webp" width="108" height="108" alt="" loading="lazy" />
             <span className="feature-message message-done">جیش کردم</span>
           </div>
           <h2>دوستات رو پیدا کن</h2>
@@ -39,7 +38,7 @@ export default function Landing() {
         <article>
           <div className="landing-feature-preview feature-nearby" aria-hidden="true">
             <svg viewBox="0 0 280 132" fill="none"><path className="feature-road" d="M-10 101 290 27M66-10 114 146M193-10 227 146" /><path className="feature-road-center" d="M-10 101 290 27M66-10 114 146M193-10 227 146" /><circle cx="140" cy="79" r="29" fill="#bbdcf4" fillOpacity=".45" stroke="#97c1df" /><circle cx="140" cy="79" r="6" fill="#68a8e8" stroke="#fff" strokeWidth="3" /></svg>
-            <img className="feature-map-drop" src="/assets/shy-drop.webp" width="48" height="48" alt="" loading="lazy" />
+            <img className="feature-map-drop" src="/assets/landing-shy-v1-128.webp" width="48" height="48" alt="" loading="lazy" />
             <span className="feature-map-label">این نزدیکا</span>
           </div>
           <h2>کی دور و برته؟</h2>
@@ -48,7 +47,7 @@ export default function Landing() {
         </article>
         <article>
           <div className="landing-feature-preview feature-story" aria-hidden="true">
-            <div className="feature-story-print"><span>jishoo</span><img src="/assets/happy-drop.webp" width="76" height="76" alt="" loading="lazy" /><strong>جیش کردم!</strong></div>
+            <div className="feature-story-print"><span>jishoo</span><img src="/assets/landing-happy-v1-256.webp" width="76" height="76" alt="" loading="lazy" /><strong>جیش کردم!</strong></div>
             <span className="feature-story-note">این یکی می‌ره استوری</span>
             <svg viewBox="0 0 70 42" fill="none"><path d="M65 5C38 1 21 12 15 32m-5-13 5 14 14-6" /></svg>
           </div>
@@ -62,7 +61,7 @@ export default function Landing() {
         <ol><li><span>۱</span><div><h3>یه سر بزن</h3><p>مهمان شروع کن؛ جیشت رو ثبت کن و کارت خودت رو ببین.</p></div></li><li><span>۲</span><div><h3>با دعوت بیا تو جمع</h3><p>با گوگل و دعوت دوستت عضو شو. اسمت رو فقط موقع عضویت می‌پرسیم.</p></div></li><li><span>۳</span><div><h3>جمع خودت رو بساز</h3><p>دوستات رو پیدا کن، گروه بساز و لحظه‌های کوچیکتون رو شریک شو.</p></div></li></ol>
       </section>
       <section className="landing-privacy">
-        <img src="/assets/shy-drop.webp" width="110" height="110" alt="" loading="lazy" />
+        <img src="/assets/landing-shy-v1-256.webp" width="110" height="110" alt="" loading="lazy" />
         <div><h2>هر چیزی، با اجازهٔ خودت.</h2><p>دیدن نقشه، مکانت رو منتشر نمی‌کنه. حساب‌های اجتماعی هم فقط با درخواست و قبول هر دو نفر قابل دیدنن. شماره و ایمیلت عمومی نیستن.</p><a href="/privacy">حریم خصوصی جیشو ←</a></div>
       </section>
       <section className="landing-faq"><h2>شاید سوال تو هم باشه</h2>
@@ -73,6 +72,6 @@ export default function Landing() {
       </section>
       <section className="landing-last"><h2>یه لحظه از روزت، برای دوستات.</h2><a className="landing-primary" href="/home">بریم تو جیشو ←</a><p>اگه دوستت دعوتت کرده، از همون لینک وارد شو.</p></section>
     </main>
-    <footer className="landing-footer"><a className="landing-brand" href="/">جیشو 💧</a><nav aria-label="لینک‌های جیشو"><a href="/terms">شرایط استفاده</a><a href="/privacy">حریم خصوصی</a><a href="/support">پشتیبانی</a><a href="/install">نصب روی گوشی</a><a href="/changelog">تازه‌های جیشو</a></nav><small>یه لحظهٔ ساده، یه لبخند مشترک.</small></footer>
+    <footer className="landing-footer"><a className="landing-brand" href="/">جیشو 💧</a><nav aria-label="لینک‌های جیشو"><a href="/about">جیشو چیست؟</a><a href="/terms">شرایط استفاده</a><a href="/privacy">حریم خصوصی</a><a href="/support">پشتیبانی</a><a href="/install">نصب روی گوشی</a><a href="/changelog">تازه‌های جیشو</a></nav><small>یه لحظهٔ ساده، یه لبخند مشترک.</small></footer>
   </div>;
 }

@@ -2,12 +2,13 @@ import { observeUpdateWorker } from "./updates";
 
 let installPrompt = null;
 export const isStandalone = () =>
-  matchMedia("(display-mode: standalone)").matches ||
-  navigator.standalone === true;
+  typeof window !== "undefined" && (window.matchMedia("(display-mode: standalone)").matches ||
+  navigator.standalone === true);
 export const isAppleMobile = () =>
-  /iPhone|iPad|iPod/.test(navigator.userAgent) ||
-  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  typeof navigator !== "undefined" && (/iPhone|iPad|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
 const changed = () => window.dispatchEvent(new Event("jishoo-install-change"));
+if (typeof window !== "undefined") {
 window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();
   installPrompt = event;
@@ -17,6 +18,7 @@ window.addEventListener("appinstalled", () => {
   installPrompt = null;
   changed();
 });
+}
 export const canPromptInstall = () => Boolean(installPrompt) && !isStandalone();
 export async function promptInstall() {
   if (!installPrompt) return false;

@@ -17,7 +17,10 @@
     }
   },
   "crons": [
-    { "path": "/api/reminders", "schedule": "30 7 * * *" }
+    {
+      "path": "/api/reminders",
+      "schedule": "30 7 * * *"
+    }
   ],
   "rewrites": [
     {
@@ -25,40 +28,44 @@
       "destination": "/api/profile?handle=:handle"
     },
     {
+      "source": "/about",
+      "destination": "/about.html"
+    },
+    {
       "source": "/:screen(home|nearby|discover|friends|profile|settings|stats|streak|invite|achievements|notifications|admin|join|group|stories|circle)",
-      "destination": "/index.html"
+      "destination": "/app-shell.html"
     },
     {
       "source": "/stories/:kind(need|checkin|weekly|invite|streak)",
-      "destination": "/index.html"
+      "destination": "/app-shell.html"
     },
     {
       "source": "/circle/:id",
-      "destination": "/index.html"
+      "destination": "/app-shell.html"
     },
     {
       "source": "/app/:path*",
-      "destination": "/index.html"
+      "destination": "/app-shell.html"
     },
     {
       "source": "/changelog",
-      "destination": "/index.html"
+      "destination": "/changelog.html"
     },
     {
       "source": "/privacy",
-      "destination": "/index.html"
+      "destination": "/privacy.html"
     },
     {
       "source": "/terms",
-      "destination": "/index.html"
+      "destination": "/terms.html"
     },
     {
       "source": "/support",
-      "destination": "/index.html"
+      "destination": "/support.html"
     },
     {
       "source": "/install",
-      "destination": "/index.html"
+      "destination": "/install.html"
     },
     {
       "source": "/.well-known/assetlinks.json",
@@ -165,6 +172,143 @@
           "value": "public, max-age=31536000, immutable"
         }
       ]
+    },
+    {
+      "source": "/u/:handle",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/api/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/app-shell.html",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/about",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/about.md",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/markdown; charset=utf-8"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "query",
+          "key": "invite"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "query",
+          "key": "group"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "query",
+          "key": "adminAccess"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "query",
+          "key": "login"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "query",
+          "key": "google"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    }
+  ],
+  "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/index.html",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/:page(about|privacy|terms|support|install|changelog).html",
+      "destination": "/:page",
+      "permanent": true
     }
   ]
 }

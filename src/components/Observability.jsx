@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from "react";
+import React, { lazy, Suspense, useEffect, useState } from "react";
 import { observabilityPage } from "../observability";
 import { useLocation } from "react-router-dom";
 
@@ -7,8 +7,10 @@ const speed = import.meta.env.PROD && import.meta.env.VITE_VERCEL_SPEED_INSIGHTS
 const VercelMetrics = lazy(() => import("./VercelMetrics"));
 
 export default function Observability() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const current = useLocation();
   const page = observabilityPage(current.pathname + current.search + current.hash);
-  if ((!analytics && !speed) || page === null) return null;
+  if (!mounted || (!analytics && !speed) || page === null) return null;
   return <Suspense fallback={null}><VercelMetrics analytics={analytics} speed={speed} page={page} /></Suspense>;
 }

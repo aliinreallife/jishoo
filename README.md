@@ -4,6 +4,9 @@ Persian RTL friendship web app with guest check-ins, deterministic [Blobatar](ht
 
 **Live website:** https://jishoo.vercel.app/
 
+Public HTML, search metadata and factual documentation for AI readers:
+[implementation and verification](docs/seo-and-discovery.md).
+
 Setup progress, social profile validation, and optional personal reminders:
 [implementation and verification](docs/setup-and-reminders.md).
 

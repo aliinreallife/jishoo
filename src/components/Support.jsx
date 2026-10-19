@@ -1,7 +1,7 @@
 import React, { useState } from "react";
+import "./PublicBase.css";
 import { ArrowRight, PaperPlaneTilt, CheckCircle } from "@phosphor-icons/react";
 import { Mascot } from "./Mascot";
-import { api } from "../api";
 import "./Support.css";
 export default function Support() {
   const [message, setMessage] = useState(""),
@@ -37,6 +37,7 @@ export default function Support() {
             setBusy(true);
             setError("");
             try {
+              const { api } = await import("../api");
               const r = await api("support-send", { message, contact });
               setReference(r.reference);
             } catch (e) {

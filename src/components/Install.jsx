@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import "./PublicBase.css";
 import {
   DownloadSimple,
   ShareNetwork,
@@ -56,15 +57,17 @@ export function InstallCard() {
   );
 }
 export default function Install() {
-  const [prompt, setPrompt] = useState(canPromptInstall()),
-    [installed, setInstalled] = useState(isStandalone()),
+  const [prompt, setPrompt] = useState(false),
+    [installed, setInstalled] = useState(false),
+    [ios, setIos] = useState(false),
     [busy, setBusy] = useState(false);
-  const ios = isAppleMobile();
   useEffect(() => {
     const change = () => {
       setPrompt(canPromptInstall());
       setInstalled(isStandalone());
+      setIos(isAppleMobile());
     };
+    change();
     window.addEventListener("jishoo-install-change", change);
     return () => window.removeEventListener("jishoo-install-change", change);
   }, []);
@@ -150,6 +153,10 @@ export default function Install() {
               </>
             )}
           </div>
+          <details className="install-steps">
+            <summary>{ios ? "راهنمای اندروید هم اینجاست" : "راهنمای آیفون و آیپد هم اینجاست"}</summary>
+            <p>{ios ? "در Chrome اندروید، منوی سه‌نقطه رو باز کن؛ Install app یا Add to Home screen رو بزن و نصب رو تایید کن." : "در Safari آیفون یا آیپد، دکمهٔ اشتراک‌گذاری رو بزن؛ Add to Home Screen رو انتخاب کن و بعد Add رو بزن."}</p>
+          </details>
         </>
       )}
       <div className="install-note">

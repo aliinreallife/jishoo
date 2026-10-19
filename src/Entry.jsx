@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useEffect } from "react";
 import LoadingScreen from "./components/LoadingScreen";
 import Landing from "./components/Landing";
-const ReleasePage = lazy(() => import("./components/ReleasePage"));
+import PublicPage, { isPublicPage } from "./public-pages";
 import { useLocation, useNavigate } from "react-router-dom";
 import { canonicalPath } from "./routing";
 
@@ -14,14 +14,22 @@ export default function Entry() {
     if (path !== current.pathname + current.search + current.hash) navigate(path, { replace: true, state: current.state });
   }, [path, current, navigate]);
   useEffect(() => {
-    if (["/", "/changelog", "/privacy", "/terms", "/support", "/install"].includes(pathname) || pathname.startsWith("/u/")) return;
-    const robots = document.createElement("meta");
-    robots.name = "robots";
-    robots.content = "noindex, nofollow";
-    document.head.append(robots);
-    return () => robots.remove();
+    let active = true;
+    if (isPublicPage(pathname)) {
+      const canonical = document.querySelector('link[rel="canonical"]');
+      if (!canonical || new URL(canonical.href).pathname !== pathname) import("./page-head").then(module => { if (active) module.updatePageHead(pathname); }).catch(() => {});
+    } else {
+      let robots = document.head.querySelector('meta[name="robots"]');
+      if (!robots) { robots = document.createElement("meta"); robots.name = "robots"; document.head.append(robots); }
+      robots.content = "noindex, nofollow";
+      if (!pathname.startsWith("/u/") || document.querySelector('meta[property="og:type"]')?.content !== "profile") {
+        document.title = "jishoo | جیشو";
+        document.head.querySelectorAll('link[rel="canonical"], script[type="application/ld+json"], meta[property="og:url"]').forEach(node => node.remove());
+      }
+    }
+    return () => { active = false; };
   }, [pathname]);
   if (pathname === "/") return <Landing />;
-  if (pathname === "/changelog") return <Suspense fallback={<LoadingScreen />}><ReleasePage /></Suspense>;
+  if (isPublicPage(pathname)) return <PublicPage pathname={pathname} />;
   return <Suspense fallback={<LoadingScreen />}><App /></Suspense>;
 }

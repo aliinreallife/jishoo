@@ -5,7 +5,8 @@ const listeners = new Set(), blockers = new Set(), dirtyInputs = new Map();
 const snoozeKey = "jishoo:update-later";
 let latest = null, registration = null, started = false, applying = false;
 let error = "", lastCheck = 0, checking = null, deferred = null, domBlocked = false;
-let snapshot = { available: false, blocked: true, online: navigator.onLine, applying: false };
+const initialSnapshot = { available: false, blocked: true, online: typeof navigator !== "undefined" && navigator.onLine !== false, applying: false };
+let snapshot = initialSnapshot;
 const inputValue = (input) => input.isContentEditable ? input.textContent : ["checkbox", "radio"].includes(input.type) ? input.checked : input.value;
 
 function publish() {
@@ -20,6 +21,7 @@ function publish() {
 }
 export const subscribeUpdates = (listener) => { listeners.add(listener); return () => listeners.delete(listener); };
 export const getUpdateState = () => snapshot;
+export const getServerUpdateState = () => initialSnapshot;
 
 // Also used by API mutations, so updates cannot interrupt saves outside App.
 export function blockUpdates() {

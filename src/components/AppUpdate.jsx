@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { ArrowClockwise } from "@phosphor-icons/react";
-import { applyUpdate, deferUpdate, getUpdateState, subscribeUpdates } from "../updates";
+import { applyUpdate, deferUpdate, getUpdateState, getServerUpdateState, subscribeUpdates } from "../updates";
 import "./AppUpdate.css";
 
 export default function AppUpdate() {
-  const state = useSyncExternalStore(subscribeUpdates, getUpdateState);
+  const state = useSyncExternalStore(subscribeUpdates, getUpdateState, getServerUpdateState);
   const dialog = useRef();
   const visible = state.available && !state.blocked && (state.mandatory || !state.deferred);
   useEffect(() => {

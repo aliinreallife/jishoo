@@ -1,4 +1,5 @@
 import React from "react";
+import "./PublicBase.css";
 import { releases } from "../releases";
 import "./ReleaseNotes.css";
 
