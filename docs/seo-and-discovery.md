@@ -76,6 +76,15 @@ stores the identifier and encrypted email, not Google access/refresh/ID tokens.
 No Gmail, contacts, Drive or Calendar scopes are requested. Keep the policy
 accurate if this changes; passing branding review is Google's decision.
 
+The privacy page keeps its full Persian disclosures visible and breaks them
+into shorter paragraphs, with direct section links. The additional English
+summary uses a native `details` control. Its complete content is still present
+in the public HTML and can be expanded without JavaScript. Direct links to
+`/privacy#google-data` reveal that section; a client-side fallback also opens it
+after hydration. This presentation change does not remove disclosures or change
+the privacy-policy version. Styling is scoped to Privacy so Terms and About
+retain their existing presentation.
+
 In Google Auth Platform, use app name `jishoo`, homepage
 `https://jishoo.vercel.app/`, privacy policy
 `https://jishoo.vercel.app/privacy`, and terms

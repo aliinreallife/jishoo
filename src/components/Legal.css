@@ -58,3 +58,55 @@
   font-size: 13px;
   color: #857aa2;
 }
+
+/* Privacy is a reading page; keep these styles separate from Terms and About. */
+.privacy-document { min-height: 100dvh; background: #fffcf4; }
+.privacy-page { max-width: 800px; padding: 24px 40px 48px; background: transparent; }
+.privacy-page > header { gap: 12px; margin-bottom: 36px; }
+.privacy-page > header > a { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #e8dfd2; border-radius: 14px; background: #fffef9; color: #62576d; }
+.privacy-page > header > span { font-size: 18px; color: #5b5067; }
+.privacy-page > header > svg { width: 42px; height: 42px; padding: 9px; color: #7c688f; background: #f0e8f7; border-radius: 50%; }
+.privacy-heading { margin-bottom: 24px; }
+.privacy-kicker { font-size: 12px; font-weight: 600; color: #826943; }
+.privacy-page h1 { margin: 8px 0 12px; font-size: 32px; line-height: 1.6; }
+.privacy-page .legal-intro { margin: 0 0 12px; font-size: 15px; color: #61566b; line-height: 2; }
+.privacy-page .legal-version { margin: 0; color: #756b7b; font-size: 12px; line-height: 1.9; }
+.privacy-at-a-glance { padding: 16px 20px; border-inline-start: 3px solid #c7aedc; border-radius: 0 12px 12px 0; background: #f4eff8; color: #5c4a70; }
+.privacy-at-a-glance > strong { font-size: 13px; }
+.privacy-at-a-glance ul { margin: 8px 0 0; padding-inline-start: 18px; font-size: 13px; line-height: 2.1; }
+.privacy-at-a-glance li::marker { color: #a58abb; }
+.privacy-shortcuts { display: flex; flex-wrap: wrap; column-gap: 22px; padding: 14px 0; margin: 0 0 10px; }
+.privacy-shortcuts > a { display: inline-flex; align-items: center; min-height: 44px; font-size: 12px; font-weight: 600; color: #74548d; text-decoration-color: #d1bfde; }
+.privacy-english { margin: 0 0 20px; border: 1px solid #e7dfd3; border-radius: 14px; background: #fffef9; }
+.privacy-english > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; min-height: 56px; padding: 13px 17px; cursor: pointer; list-style: none; color: #5d506b; font-size: 12px; }
+.privacy-english > summary::-webkit-details-marker { display: none; }
+.privacy-english > summary > strong { font-size: 13px; font-weight: 700; }
+.privacy-english > summary > span { color: #786580; }
+.privacy-english > summary::after { content: ""; width: 7px; height: 7px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); margin-left: auto; align-self: center; }
+.privacy-english[open] > summary::after { transform: rotate(225deg); }
+.privacy-english[open] > summary { border-bottom: 1px solid #ece5db; }
+.privacy-english > section { margin: 0; padding: 20px; }
+.privacy-english h2 { font-size: 17px; line-height: 1.7; margin: 0 0 14px; }
+.privacy-english h3 { margin: 24px 0 10px; }
+.privacy-english p + p { margin-top: 14px; }
+.privacy-reading > section { margin: 0; padding: 25px 0; border-top: 1px solid #e8e0d4; }
+.privacy-reading h2 { display: flex; align-items: baseline; gap: 12px; font-size: 17px; line-height: 1.9; margin: 0 0 13px; }
+.privacy-section-number { flex-shrink: 0; font-size: 12px; font-weight: 500; color: #7f6d8c; }
+.privacy-reading p { font-size: 14px; line-height: 2.1; color: #675c70; }
+.privacy-reading p + p { margin-top: 12px; }
+.privacy-page > footer { margin-top: 12px; padding-top: 16px; gap: 10px 24px; }
+.privacy-page > footer > a { display: inline-flex; align-items: center; min-height: 44px; color: #74548d; font-size: 12px; }
+@media (max-width: 600px) {
+  .privacy-page { padding: 18px 22px 30px; }
+  .privacy-page > header { margin-bottom: 26px; }
+  .privacy-page h1 { font-size: 29px; }
+  .privacy-page .legal-intro { font-size: 14px; }
+  .privacy-at-a-glance { padding: 14px 16px; }
+  .privacy-at-a-glance ul { font-size: 12px; }
+  .privacy-shortcuts { display: grid; grid-template-columns: 1fr 1fr; padding: 10px 0; gap: 0 12px; }
+  .privacy-english > summary { column-gap: 10px; }
+  .privacy-english > summary > span { font-size: 11px; }
+  .privacy-english > section { padding: 16px; }
+  .privacy-reading > section { padding: 22px 0; }
+  .privacy-reading h2 { font-size: 16px; gap: 10px; }
+}

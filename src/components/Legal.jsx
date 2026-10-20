@@ -1,6 +1,6 @@
 import "./PublicBase.css";
 import "./Legal.css";
-import React from "react";
+import React, { useEffect } from "react";
 import { ArrowRight, ShieldCheck, Scroll } from "@phosphor-icons/react";
 const metricsActive = import.meta.env.PROD && (import.meta.env.VITE_VERCEL_ANALYTICS_ENABLED === "true" || import.meta.env.VITE_VERCEL_SPEED_INSIGHTS_ENABLED === "true");
 const privacy = [
@@ -95,35 +95,23 @@ const terms = [
     "روش نگهداری، اشتراک و حذف داده‌ها در حریم خصوصی توضیح داده شده است. می‌توانی استفاده را متوقف و حساب را از تنظیمات حذف کنی. تغییرات مهم شرایط در همین صفحه با تاریخ نسخه منتشر می‌شوند. برای درخواست پشتیبانی از پیوند زیر استفاده کن و اطلاعات خصوصی را عمومی نفرست.",
   ],
 ];
-export default function Legal({ kind }) {
-  const privatePage = kind === "privacy";
-  return (
-    <main className="legal-page" dir="rtl">
-      <header>
-        <a href="/" aria-label="برگشت به جیشو">
-          <ArrowRight size={23} />
-        </a>
-        <span><bdi lang="en">jishoo</bdi> · جیشو</span>
-        {privatePage ? <ShieldCheck size={27} /> : <Scroll size={27} />}
-      </header>
-      <span className="little-pill">شفاف، به زبون خودمونی</span>
-      <h1>{privatePage ? "حریم خصوصی" : "شرایط استفاده"}</h1>
-      <p className="legal-version">نسخهٔ {privatePage ? "۶" : "۲"} · {privatePage ? "۲۷ مهر ۱۴۰۵ (۱۹ اکتبر ۲۰۲۶)" : "۲۵ مهر ۱۴۰۵ (۱۷ اکتبر ۲۰۲۶)"}</p>
-      <p className="legal-intro">
-        {privatePage
-          ? "بدونی چی ذخیره می‌شه، کی می‌بینتش و چطور کنترلش کنی."
-          : "برای اینکه جمعمون امن، روشن و خودمونی بمونه."}
-      </p>
-      {privatePage && <a href="#google-data" lang="en" dir="ltr">Google sign-in &amp; your data — English summary</a>}
-      {(privatePage ? privacy : terms).map(([title, body], i) => (
-        <section key={title}>
-          <h2>
-            {i + 1}. {title}
-          </h2>
-          <p>{body}</p>
-        </section>
-      ))}
-      {privatePage && <section id="google-data" lang="en" dir="ltr">
+const privacyIds = ["data", "waitlist", "google", "google-use", "google-delete", "location", "sharing", "groups", "notifications", "services", "metrics", "retention", "testing", "support"];
+function readingParagraphs(text) {
+  const paragraphs = [];
+  let current = "";
+  for (const sentence of text.replace(/([.!؟])\s+/gu, "$1\n").split("\n")) {
+    if (current && current.length + sentence.length > 280) {
+      paragraphs.push(current);
+      current = sentence;
+    } else current += (current ? " " : "") + sentence;
+  }
+  if (current) paragraphs.push(current);
+  return paragraphs;
+}
+function EnglishPrivacy() {
+  return <details className="privacy-english" id="privacy-english" lang="en" dir="ltr">
+    <summary><strong>English summary</strong><span>Google sign-in &amp; your data</span></summary>
+    <section id="google-data" lang="en" dir="ltr">
         <h2>jishoo privacy policy: Google sign-in &amp; your data</h2>
         <p>jishoo (جیشو) is a Persian social web app for optional, manually entered bathroom check-ins with friends, personal statistics and shareable story cards. Its public information pages and guest mode do not require Google sign-in. Google sign-in identifies a returning member or a person choosing invitation-only signup or the waiting list.</p>
         <h3>Data accessed and purpose</h3>
@@ -134,16 +122,57 @@ export default function Legal({ kind }) {
         <h3>Retention, deletion and revoking access</h3>
         <p>We retain the Google identifier and encrypted email while your account or waiting-list entry remains, for the purposes above. Temporary sign-in proofs are valid for ten minutes and are rejected after expiry. Deleting your account through Me → Settings → Delete account removes its Google identity connection and associated waiting-list record from the active database. Infrastructure logs and backups may remain under the providers’ retention policies; we do not promise immediate erasure of every backup. If you cannot access your account, use our <a href="/support">public support form</a> for access or deletion help; proof of account ownership may be needed.</p>
         <p>You can also remove jishoo’s permission in <a href="https://myaccount.google.com/connections">your Google Account connections</a>. Revoking Google permission does not automatically delete your jishoo account or check-ins. The Persian sections above cover other app data: optional profile photos and social links, friendships and groups, check-ins, approximate location, push subscriptions, technical metrics, session cookies and support messages. This policy is maintained by the jishoo app operator; privacy questions and requests can be sent through <a href="/support">jishoo support</a>.</p>
-      </section>}
-      <footer>
-        <a href={privatePage ? "/terms" : "/privacy"}>
-          {privatePage ? "شرایط استفاده" : "حریم خصوصی"}
-        </a>
-        <a href="/support" target="_blank" rel="noreferrer">
-          پشتیبانی
-        </a>
-        <a href="/">برگشت به جیشو</a>
-      </footer>
-    </main>
-  );
+      </section>
+  </details>;
+}
+export default function Legal({ kind }) {
+  const privatePage = kind === "privacy";
+  useEffect(() => {
+    if (!privatePage) return;
+    const revealEnglish = () => {
+      if (window.location.hash !== "#google-data") return;
+      const target = document.getElementById("google-data");
+      const disclosure = target?.closest("details");
+      if (disclosure) { disclosure.open = true; target.scrollIntoView({ block: "start" }); }
+    };
+    revealEnglish();
+    window.addEventListener("hashchange", revealEnglish);
+    return () => window.removeEventListener("hashchange", revealEnglish);
+  }, [privatePage]);
+  const page = <main className={`legal-page${privatePage ? " privacy-page" : ""}`} dir="rtl">
+    <header>
+      <a href="/" aria-label="برگشت به جیشو"><ArrowRight size={23} /></a>
+      <span><bdi lang="en">jishoo</bdi> · جیشو</span>
+      {privatePage ? <ShieldCheck size={27} /> : <Scroll size={27} />}
+    </header>
+    <div className={privatePage ? "privacy-heading" : undefined}>
+      <span className={privatePage ? "privacy-kicker" : "little-pill"}>{privatePage ? "جیشو و اطلاعات تو" : "شفاف، به زبون خودمونی"}</span>
+      <h1>{privatePage ? "حریم خصوصی" : "شرایط استفاده"}</h1>
+      {!privatePage && <p className="legal-version">نسخهٔ ۲ · ۲۵ مهر ۱۴۰۵ (۱۷ اکتبر ۲۰۲۶)</p>}
+      <p className="legal-intro">{privatePage ? "چه اطلاعاتی نگه می‌داریم، کی می‌بینتش و چطور می‌تونی کنترلش کنی." : "برای اینکه جمعمون امن، روشن و خودمونی بمونه."}</p>
+      {privatePage && <p className="legal-version">نسخهٔ ۶ · ۲۷ مهر ۱۴۰۵ (۱۹ اکتبر ۲۰۲۶)</p>}
+    </div>
+    {privatePage && <>
+      <aside className="privacy-at-a-glance" aria-label="خلاصهٔ حریم خصوصی">
+        <strong>در یک نگاه</strong>
+        <ul><li>ایمیل گوگل و شماره‌ات عمومی نیستن.</li><li>نمایش مکان و لینک‌های اجتماعی با انتخاب خودته.</li><li>از تنظیمات می‌تونی حساب و اطلاعاتش رو حذف کنی.</li></ul>
+      </aside>
+      <nav className="privacy-shortcuts" aria-label="رفتن به بخش‌های حریم خصوصی">
+        <a href="#privacy-google">ورود گوگل</a><a href="#privacy-location">مکان و نقشه</a><a href="#privacy-retention">نگهداری و حذف</a><a href="#privacy-support">پرسش و پشتیبانی</a>
+      </nav>
+      <EnglishPrivacy />
+    </>}
+    <div className={privatePage ? "privacy-reading" : undefined}>
+      {(privatePage ? privacy : terms).map(([title, body], i) => <section key={title} id={privatePage ? "privacy-" + (privacyIds[i] || i) : undefined}>
+        <h2>{privatePage ? <><span className="privacy-section-number" aria-hidden="true">{(i + 1).toLocaleString("fa-IR", { minimumIntegerDigits: 2 })}</span><span>{title}</span></> : <>{i + 1}. {title}</>}</h2>
+        {(privatePage ? readingParagraphs(body) : [body]).map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+      </section>)}
+    </div>
+    <footer>
+      <a href={privatePage ? "/terms" : "/privacy"}>{privatePage ? "شرایط استفاده" : "حریم خصوصی"}</a>
+      <a href="/support" target={privatePage ? undefined : "_blank"} rel={privatePage ? undefined : "noreferrer"}>پشتیبانی</a>
+      <a href="/">برگشت به جیشو</a>
+    </footer>
+  </main>;
+  return privatePage ? <div className="privacy-document">{page}</div> : page;
 }
