@@ -13,6 +13,18 @@ const privacy = [
     "اگر بعد از تایید گوگل، پیوستن به فهرست انتظار را انتخاب کنی، ایمیل رمز‌شده و شناسهٔ گوگل برای اطلاع‌رسانی دعوت نگه داشته می‌شوند. می‌توانی یک شمارهٔ تماس اختیاری هم بدهی؛ این شماره تاییدشده نیست و به‌عنوان راه ورود به حساب متصل نمی‌شود. اطلاعات تماس عمومی نیستند و فقط مدیر مجاز برای ادارهٔ دعوت‌ها آن‌ها را می‌بیند. با عضویت از فهرست انتظار خارج می‌شوی؛ حذف حساب مهمان هم رکورد متعلق به آن را پاک می‌کند.",
   ],
   [
+    "ورود با Google: چه می‌گیریم و چرا؟",
+    "jishoo (جیشو) فقط دسترسی‌های openid و email را درخواست می‌کند. پس از تایید هویت در سرور، شناسهٔ یکتای حساب گوگل و ایمیل تاییدشده را برای ورود، یافتن حساب قبلی یا اتصال حساب با انتخاب خودت استفاده می‌کنیم. نام و عکس پروفایل جیشو را خودت جداگانه انتخاب می‌کنی. اگر فهرست انتظار را انتخاب کنی، ایمیل برای مدیریت دعوت و تماس دربارهٔ پیوستن نگه داشته می‌شود. به رمز گوگل، پیام‌های Gmail، مخاطب‌ها، فایل‌های Drive یا تقویمت دسترسی نمی‌خواهیم. توکن‌های ورود گوگل فقط برای بررسی همان ورود پردازش می‌شوند؛ access token، refresh token و ID token گوگل را برای استفادهٔ بعدی در پایگاه داده نگه نمی‌داریم.",
+  ],
+  [
+    "استفاده و اشتراک داده‌های Google",
+    "شناسه و ایمیل گوگل در پروفایل عمومی، نقشه، استوری یا برای دوست‌ها نمایش داده نمی‌شوند. این داده‌ها را نمی‌فروشیم، برای تبلیغات یا آموزش مدل‌های هوش مصنوعی استفاده نمی‌کنیم و به سرویس هوش مصنوعی نمی‌فرستیم. پردازش لازم برای ورود و نگهداری حساب روی سرورهای Vercel و پایگاه دادهٔ Neon انجام می‌شود. دسترسی انسانی به نیازهای پشتیبانی، مدیریت فهرست انتظارِ انتخابی، امنیت و تعهدات قانونی محدود می‌شود. استفاده و انتقال داده‌های دریافت‌شده از Google مطابق Google API Services User Data Policy، از جمله الزامات Limited Use، انجام می‌شود.",
+  ],
+  [
+    "نگهداری و حذف اطلاعات Google",
+    "ایمیل رمز‌شده و شناسهٔ گوگل تا زمانی که حساب یا درخواست فهرست انتظارت باقی است، برای همان هدف نگه داشته می‌شوند. تاییدهای موقت ورود ده دقیقه اعتبار دارند و پس از انقضا پذیرفته نمی‌شوند. با حذف حساب از من ← تنظیمات ← حذف حساب، اتصال گوگل و اطلاعات هویت مربوط به آن هم از پایگاه دادهٔ فعال حذف می‌شوند؛ رکورد فهرست انتظارِ متصل به حساب هم پاک می‌شود. اگر به حساب دسترسی نداری، از فرم عمومی پشتیبانی درخواست راهنمایی برای دسترسی یا حذف بده؛ ممکن است برای جلوگیری از حذف حساب فرد دیگر، اثبات مالکیت لازم باشد. می‌توانی اجازهٔ جیشو را در بخش اتصال‌های حساب Google هم برداری؛ این کار به‌تنهایی حساب و ثبت‌های جیشو را حذف نمی‌کند. گزارش‌های عملیاتی و پشتیبان‌های زیرساخت ممکن است طبق سیاست ارائه‌دهنده باقی بمانند و پاک‌شدن فوری همهٔ نسخه‌های پشتیبان را وعده نمی‌دهیم.",
+  ],
+  [
     "موقعیت مکانی چطور کار می‌کند؟",
     "اجازهٔ مرورگر برای دیدن اطراف، به‌تنهایی مکانت را برای دیگران منتشر نمی‌کند. نمایش مکان و حضور در فهرست «این نزدیکا» انتخاب‌های جداگانه‌اند. فقط هنگام درخواست مکان یا روشن‌کردن نمایش، موقعیت به شبکه‌ای تقریبی با فاصلهٔ حدود ۲۰۰ متر تبدیل می‌شود؛ ردیابی دائمی در پس‌زمینه نداریم. نشانگرهای یک محدوده ممکن است برای خوانایی از هم باز شوند و نقطهٔ دقیق افراد نیستند. با خاموش‌کردن نمایش مکان، مختصات ذخیره‌شدهٔ فعلی و ثبت‌های قبلی پاک می‌شوند. ثبت‌های ۳۰ دقیقهٔ اخیر و مکان‌های تازه‌تر از یک ساعت روی نقشه دیده می‌شوند.",
   ],
@@ -91,17 +103,18 @@ export default function Legal({ kind }) {
         <a href="/" aria-label="برگشت به جیشو">
           <ArrowRight size={23} />
         </a>
-        <span>جیشو</span>
+        <span><bdi lang="en">jishoo</bdi> · جیشو</span>
         {privatePage ? <ShieldCheck size={27} /> : <Scroll size={27} />}
       </header>
       <span className="little-pill">شفاف، به زبون خودمونی</span>
       <h1>{privatePage ? "حریم خصوصی" : "شرایط استفاده"}</h1>
-      <p className="legal-version">نسخهٔ {privatePage ? "۵" : "۲"} · {privatePage ? "۲۷ مهر ۱۴۰۵ (۱۹ اکتبر ۲۰۲۶)" : "۲۵ مهر ۱۴۰۵ (۱۷ اکتبر ۲۰۲۶)"}</p>
+      <p className="legal-version">نسخهٔ {privatePage ? "۶" : "۲"} · {privatePage ? "۲۷ مهر ۱۴۰۵ (۱۹ اکتبر ۲۰۲۶)" : "۲۵ مهر ۱۴۰۵ (۱۷ اکتبر ۲۰۲۶)"}</p>
       <p className="legal-intro">
         {privatePage
           ? "بدونی چی ذخیره می‌شه، کی می‌بینتش و چطور کنترلش کنی."
           : "برای اینکه جمعمون امن، روشن و خودمونی بمونه."}
       </p>
+      {privatePage && <a href="#google-data" lang="en" dir="ltr">Google sign-in &amp; your data — English summary</a>}
       {(privatePage ? privacy : terms).map(([title, body], i) => (
         <section key={title}>
           <h2>
@@ -110,6 +123,18 @@ export default function Legal({ kind }) {
           <p>{body}</p>
         </section>
       ))}
+      {privatePage && <section id="google-data" lang="en" dir="ltr">
+        <h2>jishoo privacy policy: Google sign-in &amp; your data</h2>
+        <p>jishoo (جیشو) is a Persian social web app for optional, manually entered bathroom check-ins with friends, personal statistics and shareable story cards. Its public information pages and guest mode do not require Google sign-in. Google sign-in identifies a returning member or a person choosing invitation-only signup or the waiting list.</p>
+        <h3>Data accessed and purpose</h3>
+        <p>We request only the <code>openid</code> and <code>email</code> scopes. After server-side verification, we use and store your Google account identifier and verified email address to authenticate you, find or link your jishoo account, and, only if you choose the waiting list, manage your invitation request and contact you about joining. You choose your jishoo name and profile photo separately. We do not request your Google password, Gmail messages, contacts, Drive files or calendar. Google access, refresh and ID tokens are not persisted for later use.</p>
+        <h3>Storage, sharing and limited use</h3>
+        <p>Your email is encrypted in the database, identity checks run on the server, and Google sign-in uses HTTPS. Vercel hosts the app and Neon hosts the database; they process the information needed to operate these features. Your Google identifier and email are not displayed to friends or included in public profiles, map markers or story cards. Human access is limited to necessary support, your opted-in waiting-list administration, security and legal obligations. We do not sell Google user data, use it for advertising or AI model training, or send it to AI services.</p>
+        <p>jishoo’s use and transfer of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
+        <h3>Retention, deletion and revoking access</h3>
+        <p>We retain the Google identifier and encrypted email while your account or waiting-list entry remains, for the purposes above. Temporary sign-in proofs are valid for ten minutes and are rejected after expiry. Deleting your account through Me → Settings → Delete account removes its Google identity connection and associated waiting-list record from the active database. Infrastructure logs and backups may remain under the providers’ retention policies; we do not promise immediate erasure of every backup. If you cannot access your account, use our <a href="/support">public support form</a> for access or deletion help; proof of account ownership may be needed.</p>
+        <p>You can also remove jishoo’s permission in <a href="https://myaccount.google.com/connections">your Google Account connections</a>. Revoking Google permission does not automatically delete your jishoo account or check-ins. The Persian sections above cover other app data: optional profile photos and social links, friendships and groups, check-ins, approximate location, push subscriptions, technical metrics, session cookies and support messages. This policy is maintained by the jishoo app operator; privacy questions and requests can be sent through <a href="/support">jishoo support</a>.</p>
+      </section>}
       <footer>
         <a href={privatePage ? "/terms" : "/privacy"}>
           {privatePage ? "شرایط استفاده" : "حریم خصوصی"}

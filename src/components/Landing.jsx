@@ -5,15 +5,15 @@ export default function Landing() {
   return <div className="landing-page" dir="rtl">
     <a className="landing-skip" href="#landing-main">رفتن به محتوای اصلی</a>
     <header className="landing-header">
-      <a href="/" className="landing-brand"><img src="/assets/favicon-v2-64.png" width="40" height="40" alt="" />جیشو</a>
+      <a href="/" className="landing-brand" aria-label="jishoo · جیشو"><img src="/assets/favicon-v2-64.png" width="40" height="40" alt="" /><span lang="en" dir="ltr">jishoo</span></a>
       <nav aria-label="معرفی جیشو"><a href="#how">چطوریه؟</a><a href="/changelog">تازه‌ها</a><a className="landing-login" href="/home?login=1">ورود با گوگل</a></nav>
     </header>
     <main id="landing-main">
       <section className="landing-hero">
         <div className="landing-hero-copy">
           <span className="landing-eyebrow">یه جمع خودمونی، برای لحظه‌های معمولی</span>
-          <h1>چیزای کوچیک،<br /><em>رفاقت‌های قشنگ.</em></h1>
-          <p>جیشو یه اپ اجتماعی برای ثبت «جیش دارم» و «جیش کردم» با دوست‌هاست. آمارت رو ببین، کارت استوری بساز و خاطره‌های روزمره‌تون رو نگه دار.</p>
+          <h1>جیش‌های روزمره،<br /><em>رفاقت‌های قشنگ.</em></h1>
+          <p>جیشو یه اپ اجتماعی برای ثبت دستی و اختیاری «جیش دارم» و «جیش کردم» با دوست‌هاست. آمارت رو ببین، کارت استوری بساز و خاطره‌های روزمره‌تون رو نگه دار.</p>
           <a className="landing-primary" href="/home">بریم جیشو <span aria-hidden="true">←</span></a>
           <small>بدون حساب هم می‌تونی شروع کنی. برای عضویت، دعوت یه دوست لازمه.</small>
         </div>
@@ -72,6 +72,6 @@ export default function Landing() {
       </section>
       <section className="landing-last"><h2>یه لحظه از روزت، برای دوستات.</h2><a className="landing-primary" href="/home">بریم تو جیشو ←</a><p>اگه دوستت دعوتت کرده، از همون لینک وارد شو.</p></section>
     </main>
-    <footer className="landing-footer"><a className="landing-brand" href="/">جیشو 💧</a><nav aria-label="لینک‌های جیشو"><a href="/about">جیشو چیست؟</a><a href="/terms">شرایط استفاده</a><a href="/privacy">حریم خصوصی</a><a href="/support">پشتیبانی</a><a href="/install">نصب روی گوشی</a><a href="/changelog">تازه‌های جیشو</a></nav><small>یه لحظهٔ ساده، یه لبخند مشترک.</small></footer>
+    <footer className="landing-footer"><a className="landing-brand" href="/"><span lang="en" dir="ltr">jishoo</span> 💧</a><nav aria-label="لینک‌های جیشو"><a href="/about">جیشو چیست؟</a><a href="/terms">شرایط استفاده</a><a href="/privacy">حریم خصوصی</a><a href="/support">پشتیبانی</a><a href="/install">نصب روی گوشی</a><a href="/changelog">تازه‌های جیشو</a></nav><small>یه لحظهٔ ساده، یه لبخند مشترک.</small></footer>
   </div>;
 }

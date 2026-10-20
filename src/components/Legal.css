@@ -40,6 +40,9 @@
   line-height: 2;
   margin-bottom: 10px;
 }
+.legal-page h3 { font-size: 15px; line-height: 1.8; margin: 20px 0 8px; }
+.legal-page section { scroll-margin-top: 24px; }
+.legal-page code { font-size: .95em; overflow-wrap: anywhere; }
 .legal-page section p {
   font-size: 14px;
   line-height: 2.1;

@@ -61,6 +61,34 @@ at `public/googleba574647a5d629d8.html` and
 in future deployments, including after verification succeeds; Google can check
 ownership again. Each account still needs to click **Verify** in Search Console.
 
+### Google OAuth branding review
+
+The visible homepage wordmark is **jishoo**, matching the OAuth app name exactly;
+the Persian product name is جیشو. The homepage explicitly describes optional,
+manual check-ins, statistics and story cards. Both the homepage and privacy
+policy are complete public HTML, without sign-in or account API reads.
+
+The privacy page documents Google identity/email access, purpose, storage,
+sharing, limited use, retention, deletion, revocation and public support in
+Persian and an English summary. These disclosures follow the implementation:
+`lib/google-protocol.js` requests only `openid email`; `lib/google-auth.js`
+stores the identifier and encrypted email, not Google access/refresh/ID tokens.
+No Gmail, contacts, Drive or Calendar scopes are requested. Keep the policy
+accurate if this changes; passing branding review is Google's decision.
+
+In Google Auth Platform, use app name `jishoo`, homepage
+`https://jishoo.vercel.app/`, privacy policy
+`https://jishoo.vercel.app/privacy`, and terms
+`https://jishoo.vercel.app/terms`. The verified Search Console owner must be
+associated with the same Google Cloud project. Google asks for 24 hours after
+ownership verification before retrying this issue. Website deployment does not
+submit the branding review or change Google Console settings. Once ready, choose
+**I have fixed the issues** and request re-verification, then publish approved
+draft branding when prompted.
+
+References: [Google's brand verification requirements](https://developers.google.com/identity/protocols/oauth2/production-readiness/brand-verification)
+and [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy).
+
 ## Verification
 
 Run `npm test`, `npm run build`, and `npm run check:bundle`. The SEO unit tests
