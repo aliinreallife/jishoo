@@ -14,7 +14,10 @@ export function updatePageHead(pathname) {
   document.title = page.title;
   for (const [key, value] of Object.entries({ description: page.description, robots: page.robots, "twitter:card": "summary_large_image", "twitter:title": page.title, "twitter:description": page.description, "twitter:image": page.image, "twitter:image:alt": page.imageAlt })) setMeta("name", key, value);
   for (const [key, value] of Object.entries({ "og:type": page.type, "og:title": page.title, "og:description": page.description, "og:url": page.canonical, "og:site_name": "jishoo", "og:locale": "fa_IR", "og:image": page.image, "og:image:alt": page.imageAlt, "og:image:width": "1200", "og:image:height": "630" })) setMeta("property", key, value);
-  document.head.querySelectorAll('link[rel="canonical"], script[type="application/ld+json"]').forEach(node => node.remove());
+  document.head.querySelectorAll('link[rel="canonical"], link[data-public-reader], script[type="application/ld+json"]').forEach(node => node.remove());
+  if (page.reader) {
+    const link = document.createElement("link"); link.rel = "alternate"; link.type = "text/markdown"; link.href = page.reader; link.dataset.publicReader = ""; document.head.append(link);
+  }
   if (page.canonical) {
     const link = document.createElement("link"); link.rel = "canonical"; link.href = page.canonical; document.head.append(link);
     const script = document.createElement("script"); script.type = "application/ld+json"; script.textContent = JSON.stringify(structuredData(pathname, origin)); document.head.append(script);

@@ -1,0 +1,8 @@
+.about-topics { display:flex; flex-wrap:wrap; gap:8px 20px; padding:0 0 20px; border-bottom:1px solid #e8e0d4; }
+.about-topics a { display:inline-flex; align-items:center; min-height:44px; color:#70518d; font-size:13px; }
+.about-english { margin-top:32px; border-block:1px solid #e8e0d4; }
+.about-english > summary { padding:18px 0; color:#70518d; font-size:14px; font-weight:600; cursor:pointer; }
+.about-english > div { padding-bottom:22px; }
+.about-english section { scroll-margin-top:24px; }
+.about-english p { font-size:14px; line-height:1.9; overflow-wrap:anywhere; }
+.about-english a { color:#70518d; text-underline-offset:4px; }

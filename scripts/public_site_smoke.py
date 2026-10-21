@@ -61,7 +61,7 @@ def main():
     assert '\nDisallow: /\n' not in robots
     guide, _ = read('/llms.txt'); facts, _ = read('/about.md')
     assert origin + '/about' in guide and origin + '/privacy' in guide
-    assert 'not a medical' in guide and 'Phone login' in guide and 'not an automatic listening integration' in guide
+    assert 'not a medical' in guide and 'Phone login' in guide and 'not automatic now-playing' in guide
     assert 'mutual acceptance' in facts and 'roughly 200-metre' in facts
     for path in ['/home', '/profile', '/admin', '/join', '/stories/checkin', '/app-shell.html']:
         html, headers = read(path); doc = Document(); doc.feed(html)
@@ -100,7 +100,19 @@ def main():
         assert page.locator('body').inner_text().find('Chrome') >= 0
         page.goto(BASE + '/privacy#google-data')
         expect(page.locator('#google-data')).to_be_visible()
-        page.goto(BASE + '/about'); page.screenshot(path=str(ARTIFACTS/'seo-about-no-js.png'))
+        page.goto(BASE + '/about')
+        expect(page.locator('.about-topics a')).to_have_count(7)
+        page.get_by_role('link', name='روی نقشه چطور دیده می‌شم؟', exact=True).click()
+        assert page.url.endswith('/about#location')
+        expect(page.locator('#location h2')).to_be_visible()
+        page.locator('details.about-english > summary').click()
+        expect(page.locator('#en-purpose')).to_be_visible()
+        expect(page.locator('#en-friends')).to_contain_text('not automatic now-playing')
+        expect(page.get_by_role('link', name='Read the Markdown version', exact=True)).to_have_attribute('href', '/about.md')
+        assert page.locator('link[data-public-reader]').get_attribute('href') == origin + '/about.md'
+        page.screenshot(path=str(ARTIFACTS/'seo-about-no-js.png'))
+        page.goto(BASE + '/about#en-signup')
+        expect(page.locator('#en-signup')).to_be_visible()
         ctx.close()
         print('PASS: All seven public pages remain readable without JavaScript, including the Android and iOS installation instructions.', flush=True)
 
@@ -140,6 +152,13 @@ def main():
         page.goto(BASE + '/privacy#google-data', wait_until='networkidle')
         expect(page.locator('#google-data')).to_be_visible()
         page.screenshot(path=str(ARTIFACTS/'google-branding-privacy-english.png'))
+        page.goto(BASE + '/about', wait_until='networkidle')
+        page.locator('details.about-english > summary').click()
+        expect(page.locator('#en-signup')).to_contain_text('invitation and Google authentication')
+        assert page.evaluate('()=>document.documentElement.scrollWidth<=innerWidth+1')
+        page.screenshot(path=str(ARTIFACTS/'seo-about-english.png'))
+        page.goto(BASE + '/about#en-location', wait_until='networkidle')
+        expect(page.locator('#en-location')).to_be_visible()
         ctx.close()
 
         ctx = browser.new_context(viewport={'width':390,'height':844}, service_workers='block', user_agent='Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1')

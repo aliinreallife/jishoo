@@ -24,7 +24,7 @@ export default function Entry() {
       robots.content = "noindex, nofollow";
       if (!pathname.startsWith("/u/") || document.querySelector('meta[property="og:type"]')?.content !== "profile") {
         document.title = "jishoo | جیشو";
-        document.head.querySelectorAll('link[rel="canonical"], script[type="application/ld+json"], meta[property="og:url"]').forEach(node => node.remove());
+        document.head.querySelectorAll('link[rel="canonical"], link[data-public-reader], script[type="application/ld+json"], meta[property="og:url"]').forEach(node => node.remove());
       }
     }
     return () => { active = false; };

@@ -24,6 +24,22 @@ recommend it. `llms.txt` is an emerging convention, not a search ranking signal
 or a guarantee that an assistant will read or recommend the app. Complete HTML,
 accurate content and ordinary links remain the main discovery mechanisms.
 
+About includes a topic index with stable section links and a native expandable
+English summary. Both languages are in the public HTML, including without
+JavaScript; reader-document citations point to those visible sections. The
+English summary also links to the Markdown version and documentation index.
+Its HTML head declares the Markdown alternate. `lib/discovery.js` generates the
+reader files from these same facts, including the current access, pricing and
+integration limitations, rather than keeping a second set of claims in the
+build script. Changing `PUBLIC_APP_URL` updates all generated source links.
+
+Each public page identifies the same website and web application in JSON-LD.
+Secondary pages have breadcrumbs back to the homepage. No ratings, offers or
+recommendation instructions are fabricated. Google confirms that AI Overviews
+and AI Mode use ordinary search eligibility and do not require special AI files
+or schema: https://developers.google.com/search/docs/appearance/ai-features.
+Search indexing and assistant recommendations remain third-party decisions.
+
 `robots.txt` permits ordinary public crawling, excludes `/api/`, and links the
 sitemap. There is no separate allowlist required for individual search/AI bots.
 Only the seven public information pages appear in the sitemap.
