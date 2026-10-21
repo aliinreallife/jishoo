@@ -84,6 +84,11 @@ def main():
    page.get_by_role('button',name='استوری این لحظه',exact=True).click();expect(page.locator('.full-story-overlay')).to_be_visible();expect(page.locator('.story-undo-slot')).to_have_count(0);state['hold_save']=False;saves.pop().fulfill(json={'stats':{**data['stats'],'today':1,'week':1},'matches':[]});expect(page.get_by_role('button',name='ذخیره PNG',exact=True)).to_be_enabled(timeout=30000)
   state['error_save']=True;page.goto(BASE+'/home',wait_until='networkidle');page.locator('.need-card').click();expect(page.locator('.toast')).to_contain_text('ثبت انجام نشد');expect(page.locator('.checkin-dialog')).to_have_count(0)
   print('PASS: Immediate need/done requests, honest in-flight status, early story sharing without undo and visible save failures.',flush=True)
-  state['profile_error']=True;page.goto(BASE+'/u/missing',wait_until='networkidle');expect(page.get_by_role('status').filter(has_text='این پروفایل پیدا نشد.')).to_be_visible();expect(page.get_by_role('button',name='برگشت',exact=True)).to_be_enabled()
+  state['profile_error']=True;page.evaluate('history.pushState({},"","/u/missing");dispatchEvent(new PopStateEvent("popstate"))');expect(page.get_by_role('status').filter(has_text='این پروفایل پیدا نشد.')).to_be_visible();expect(page.get_by_role('button',name='برگشت',exact=True)).to_be_enabled()
+  if BASE.startswith('https://'):
+   response=page.goto(BASE+'/u/qa_missing_profile_7c589f6',wait_until='networkidle');assert response.status==404
+   assert 'noindex' in response.headers.get('x-robots-tag','')
+   expect(page.get_by_role('heading',name='این پروفایل پیدا نشد.',exact=True)).to_be_visible();expect(page.get_by_role('link',name='برگشت به جیشو',exact=True)).to_have_attribute('href','/home')
+   page.screenshot(path=str(out/'09-profile-missing.png'))
   assert not errors,errors;browser.close()
 if __name__=='__main__':main()
