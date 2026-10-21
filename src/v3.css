@@ -67,48 +67,6 @@
 .success-dialog .reaction-toolbar + .need-reaction-art {
   margin: 8px auto 18px;
 }
-.undo-checkin {
-  position: fixed;
-  z-index: 250;
-  bottom: max(20px, env(safe-area-inset-bottom));
-  inset-inline: 16px;
-  max-width: 398px;
-  margin-inline: auto;
-  padding: 13px 16px;
-  background: #303749;
-  color: #fffaf0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  border-radius: 19px;
-  box-shadow: 0 8px 35px #24263325;
-}
-.undo-checkin > svg {
-  color: #b4d9fb;
-  flex-shrink: 0;
-}
-.undo-checkin > div {
-  display: grid;
-  gap: 4px;
-  flex: 1;
-  text-align: right;
-}
-.undo-checkin strong {
-  font-size: 13px;
-}
-.undo-checkin span {
-  font-size: 11px;
-  color: #e0e3ec;
-}
-.undo-checkin button {
-  color: #ffdf75;
-  font-size: 13px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  min-height: 44px;
-}
 .preference-action {
   display: flex;
   align-items: center;
@@ -212,13 +170,6 @@
   box-shadow: 0 2px 6px #4f43540b;
   font-weight: 700;
 }
-@media (min-width: 1000px) {
-  .undo-checkin {
-    left: auto;
-    right: max(16px, calc((100vw - 1120px) / 2));
-    width: 380px;
-  }
-}
 .v2-nav {
   grid-template-columns: repeat(4, 1fr);
 }
@@ -262,7 +213,7 @@
     height: min(42dvh, 280px) !important;
   }
 }
-/* Visible action affordances and in-flow reaction undo. */
+/* Visible action affordances. */
 button.preference-action {
   border-color: #d8d0e3;
   box-shadow: 0 3px 0 #ded6e7;
@@ -289,22 +240,9 @@ button.preference-action:focus-visible,
   border: 1px solid #d6ccdf;
   background: #ede6f5;
 }
-.undo-checkin.undo-inline {
-  position: relative;
-  inset: auto;
-  width: 100%;
-  max-width: none;
-  margin: 18px 0 8px;
-  z-index: auto;
-  box-shadow: none;
-  flex-shrink: 0;
-}
 .success-dialog .success-buttons {
   margin-top: 18px;
   flex-shrink: 0;
-}
-.success-dialog:has(.undo-inline) {
-  padding-bottom: 30px;
 }
 .reaction-toolbar {
   min-height: 44px;
@@ -468,57 +406,6 @@ button.preference-action:focus-visible,
   flex-shrink: 0;
   padding-top: 10px;
 }
-.checkin-status-slot {
-  display: grid;
-  align-items: center;
-  min-height: 80px;
-  margin-bottom: 12px;
-}
-.checkin-footer .undo-inline {
-  min-height: 80px;
-  margin: 0;
-  padding: 12px;
-  gap: 10px;
-}
-.undo-checkin .undo-countdown {
-  display: grid;
-  place-items: center;
-  width: 33px;
-  height: 33px;
-  flex-shrink: 0;
-  border: 1px solid #ffffff4a;
-  border-radius: 50%;
-  color: #fff1af;
-  font-size: 17px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-.undo-checkin button {
-  justify-content: center;
-  min-width: 89px;
-  padding: 0 9px;
-  border: 1px solid #ffffff35;
-  border-radius: 12px;
-  background: #ffffff0d;
-  flex-shrink: 0;
-}
-.undo-checkin button:focus-visible {
-  outline: 2px solid #ffe18c;
-  outline-offset: 3px;
-}
-.checkin-save-status {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: #7c735f;
-  font-size: 12px;
-  line-height: 1.9;
-}
-.checkin-save-status > svg {
-  color: #8c9866;
-  flex-shrink: 0;
-}
 .checkin-footer .success-buttons {
   margin: 0;
   padding: 0;
@@ -530,10 +417,6 @@ button.preference-action:focus-visible,
 @media (max-width: 360px) {
   .success-dialog.checkin-dialog {
     padding-inline: 16px;
-  }
-  .checkin-footer .undo-inline {
-    gap: 8px;
-    padding-inline: 10px;
   }
   .checkin-dialog .reaction-toolbar > span {
     font-size: 11px;
@@ -653,29 +536,6 @@ button.preference-action:focus-visible,
   background: linear-gradient(145deg, #e6f2ff, #cce3ff);
   border: 1px solid #b9d5f7;
   color: #355c88;
-}
-.undo-checkin {
-  background: #fffaf0;
-  border: 1px solid #e8dcc0;
-  color: #393947;
-  box-shadow: 0 6px 24px #71604912;
-  border-radius: 18px;
-}
-.undo-checkin span {
-  color: #8a7b65;
-}
-.undo-checkin .undo-countdown {
-  color: #8d7235;
-  background: #fff0ba;
-  border-color: #f3dda1;
-}
-.undo-checkin button {
-  color: #6d5b8b;
-  background: #eee7f8;
-  border-color: #dcd1ed;
-}
-.undo-checkin button:focus-visible {
-  outline-color: #a294bf;
 }
 .admin-gift-picker {
   display: grid;

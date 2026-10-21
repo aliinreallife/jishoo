@@ -412,6 +412,7 @@ export default async function handler(req, res) {
       );
     const auth = await session(req, res);
     const user = auth.user;
+
     if (action === "world-map") {
       requireAccount(user);
       requirePremium(user);
@@ -692,7 +693,11 @@ export default async function handler(req, res) {
           share ? user.location_lng : null,
         ],
       );
-      const matched = await detectMoments(user, rows[0]);
+      const [matched, personalStats] = await Promise.all([
+        detectMoments(user, rows[0]),
+        stats(user.id),
+        share ? invalidateWorldMap() : Promise.resolve(),
+      ]);
       // Keep real provider delivery alive after the response without making
       // recording a check-in wait for every friend's push service.
       waitUntil(
@@ -710,7 +715,7 @@ export default async function handler(req, res) {
           createdAt: rows[0].created_at,
         },
         matches: matched,
-        stats: await stats(user.id),
+        stats: personalStats,
       });
     }
     if (action === "avatar") {

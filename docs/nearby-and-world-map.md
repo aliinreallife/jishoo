@@ -3,7 +3,7 @@
 Nearby continues to use a 3 km radius, approximate coordinates and the last
 30 minutes of map-visible activity. Its two tabs keep the map mounted while
 switching to a list of nearby profiles that opted into discovery. Only the
-visible tab's data is polled, every 8 seconds while visible and online. Focus and
+visible tab's data is polled, every 5 seconds while visible and online. Focus and
 network return refresh local activity. Panning local maps does not query the
 database. The local query chooses the latest eligible event per person before
 deduplication, so repeated taps do not crowd out other people.
@@ -118,3 +118,25 @@ map height and bottom spacing; screenshots and geometry live in ignored
 `artifacts/`. `JISHOO_LAYOUT_CAPTURE_ONLY=1` records a comparison baseline without
 claiming those geometry checks passed. Basemap imagery in synthetic UI tests is
 an explicitly neutral fixture; these checks measure actual application layout.
+
+## Immediate check-ins and profile entry
+
+Check-ins send immediately, without a countdown or an undo overlay. An in-flight
+guard prevents repeated taps; failures show an error rather than a saved state.
+Sharing remains available while the request runs. Completed responses invalidate
+map data in open same-origin tabs through a signal containing no identity,
+status or coordinates. Polling remains paused when hidden/offline. If an older
+read is in progress when that signal arrives, its result is discarded and a
+new read follows it. Local polling is five seconds; world polling stays thirty
+seconds. Shared check-ins invalidate the world snapshot instead of waiting for
+its old TTL to expire. These are refresh intervals, not guaranteed delivery times.
+
+Selection follows the viewer-scoped participant key, not a changing event ID.
+Fresh status and revoked profile permission update the open sheet; expired or
+hidden participants remove it. Accepted friends can open each other's local-map
+profiles even in anonymous mode, provided location sharing is enabled. Strangers
+can open profiles only with profile opt-in. Hidden, anonymous non-friends, guest
+and worldwide identities are not made public. Nearby list identities now open
+profiles too, including friends; public profiles show outgoing, incoming and
+accepted friendship states without repeatedly sending requests. Social-link
+consent remains separate and mutual.

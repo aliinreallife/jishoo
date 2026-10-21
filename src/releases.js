@@ -2,6 +2,15 @@ import { currentRelease } from "./current-release";
 export { currentRelease, releaseStorageKey } from "./current-release";
 // This is the public changelog. Keep infrastructure and admin-only notes in docs.
 export const releases = [currentRelease, {
+  version: "0.7.4",
+  label: "۰.۷.۴",
+  title: "پروفایلت، به سبک خودت",
+  items: [
+    "حساب‌های اجتماعیت رو توی یه صفحهٔ جمع‌وجور بچین؛ اسم حساب‌ها کوتاه‌تر دیده می‌شه و دکمهٔ ذخیره دم دسته.",
+    "اسپاتیفای هم اضافه شد؛ لینک پروفایل حساب یا هنرمندت رو بذار. دیدن لینک‌ها همچنان با قبول هر دوتونه.",
+    "روی استوری‌ها، آدرس برنامه با یه فلش دست‌کشیده و برچسب آفتابی مشخص شده.",
+  ],
+}, {
   version: "0.7.3",
   label: "۰.۷.۳",
   title: "جیشو، به سلیقهٔ تو!",

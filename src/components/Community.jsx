@@ -569,6 +569,7 @@ export function Admin({ data, notify, refresh }) {
 }
 export function PublicProfile({
   profile,
+  error,
   data,
   onConnect,
   onJoin,
@@ -578,9 +579,13 @@ export function PublicProfile({
   if (!profile)
     return (
       <section className="page">
-        <p>داریم دوستت رو پیدا می‌کنیم…</p>
+        <p role="status">{error || "داریم دوستت رو پیدا می‌کنیم…"}</p>
+        <Button secondary onClick={onBack}>برگشت</Button>
       </section>
     );
+  const connection = data.friends.find(friend => friend.id === profile.id);
+  const pending = connection?.status === "pending";
+  const accepted = connection?.status === "accepted";
   return (
     <section className="page public-profile-page">
       <button className="text-link" onClick={onBack}>
@@ -593,7 +598,7 @@ export function PublicProfile({
       </span>
       <p>یه لحظه از روزت، برای دوستات.</p>
       <div className="public-achievements">
-        {profile.achievements.map((a) => (
+        {(profile.achievements || []).map((a) => (
           <span key={a.slug}>
             <Medal size={17} weight="duotone" />
             {a.title} · سطح {fa(a.level)}
@@ -602,10 +607,10 @@ export function PublicProfile({
       </div>
       {data.me.registered ? (
         <Button
-          disabled={busy || profile.id === data.me.id}
+          disabled={busy || profile.id === data.me.id || (pending && !connection.incoming)}
           onClick={onConnect}
         >
-          <UsersThree size={18} /> به هم وصل شیم
+          <UsersThree size={18} /> {profile.id === data.me.id ? "این پروفایل خودته" : accepted ? "دیدن پروفایل دوستت" : pending ? connection.incoming ? "قبول درخواست دوستی" : "درخواست دوستی فرستاده شد" : "درخواست دوستی"}
         </Button>
       ) : (
         <>

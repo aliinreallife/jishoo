@@ -124,12 +124,10 @@ def main():
         page.goto(BASE+'/home');expect(page.locator('.checkin-reminder')).to_be_visible()
         before=sum(a=='checkin' for a,_ in requests);page.locator('.reminder-private').click()
         expect(page.locator('.checkin-reminder')).to_have_count(0)
-        # Actual commit waits through the existing three-second undo window.
-        page.wait_for_function('()=>document.querySelector(".undo-checkin")!==null')
-        assert sum(a=='checkin' for a,_ in requests)==before
-        with page.expect_response(lambda r:'action=checkin' in r.url):page.wait_for_timeout(3400)
+        expect(page.locator('.undo-checkin')).to_have_count(0)
+        assert sum(a=='checkin' for a,_ in requests)==before+1
         assert [body for action,body in requests if action=='checkin'][-1]['visibility']=='private'
-        print('PASS: Reminder check-in uses private visibility and retains the existing undo grace period.',flush=True)
+        print('PASS: Reminder check-in saves immediately with private visibility and no undo countdown.',flush=True)
 
         for kind in ['checkin','need','weekly','invite','streak']:
             page.goto(BASE+'/stories/'+kind);preview=page.locator('.story-raster-preview');expect(preview).to_be_visible(timeout=20000)

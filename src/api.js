@@ -1,5 +1,6 @@
 import { blockUpdates } from "./updates";
 import { createRequestCoordinator } from "./request-coordinator";
+import { announceMapChange } from "./map-updates";
 const requests = createRequestCoordinator();
 const readActions = new Set(["nearby", "discover"]);
 export const apiRevision = requests.revision;
@@ -29,6 +30,7 @@ export async function api(action, body, query = {}) {
         error.code = data.error;
         throw error;
       }
+      if (body !== undefined && !readActions.has(action)) announceMapChange(action);
       return data;
     });
   } finally { unblock?.(); }

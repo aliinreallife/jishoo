@@ -227,27 +227,6 @@ function Modal({
   );
   return fullscreen ? createPortal(content, framed ? document.querySelector(".app-shell:not(.invite-fullscreen-shell)") || document.body : document.body) : content;
 }
-function CheckinUndo({ pending, onUndo, inline = false }) {
-  return (
-    <div
-      className={`undo-checkin ${inline ? "undo-inline" : ""}`}
-      role="status"
-      aria-live="polite"
-    >
-      <span className="undo-countdown" aria-label={`${fa(pending.seconds)} ثانیه فرصت لغو`}>
-        {fa(pending.seconds)}
-      </span>
-      <div>
-        <strong>{pending.status === "done" ? "جیش کردم" : "جیش دارم"}</strong>
-        <span>هنوز ثبت نشده</span>
-      </div>
-      <button onClick={onUndo}>
-        <ArrowCounterClockwise size={18} />
-        لغو ثبت
-      </button>
-    </div>
-  );
-}
 function StoryDialog({ children, onClose, label = "کارت اشتراک جیشو" }) {
   const dialog = useRef();
   useEffect(() => {
@@ -320,6 +299,7 @@ export default function App() {
     [profileName, setProfileName] = useState(""),
     [profileHandle, setProfileHandle] = useState(""),
     [publicPerson, setPublicPerson] = useState(null),
+    [publicError, setPublicError] = useState(""),
     [socials, setSocials] = useState({}),
     [audience, setAudience] = useState("friends"),
     [photoFile, setPhotoFile] = useState(null),
@@ -349,11 +329,9 @@ export default function App() {
     if (value === null && page.screen === "settings" && !overlay) closeSettings();
     else setDialogState(value);
   }
-  const pendingTimer = useRef(),
-    returningVisitor = useRef(localStorage.getItem("jishoo:v2-entered") === "true"),
+  const returningVisitor = useRef(localStorage.getItem("jishoo:v2-entered") === "true"),
     releaseHandled = useRef(false),
     pendingRef = useRef(null),
-    countdownTimer = useRef(),
     timer = useRef(),
     usedAdminAccess = useRef(null),
     scroll = useRef(),
@@ -402,27 +380,22 @@ export default function App() {
   useEffect(() => {
     return () => {
       clearTimeout(timer.current);
-      clearTimeout(pendingTimer.current);
-      clearInterval(countdownTimer.current);
     };
   }, []);
   useEffect(() => {
     const handle = page.handle;
     let active = true;
-    setPublicPerson(null);
-    if (handle)
-      fetch(
-        `/api/app?action=profile-public&handle=${encodeURIComponent(handle)}`,
-        { credentials: "include" },
-      )
-        .then(async (r) => {
-          const value = await r.json();
-          if (!r.ok) throw new Error(value.message);
-          if (active) setPublicPerson(value.profile);
-        })
-        .catch((e) => active && notify(e.message));
+    setPublicPerson(null); setPublicError("");
+    if (handle) Promise.all([
+      fetch(`/api/app?action=profile-public&handle=${encodeURIComponent(handle)}`, { credentials: "include" }).then(async response => {
+        const value = await response.json();
+        if (!response.ok) throw new Error(value.message);
+        return value;
+      }), refresh(),
+    ]).then(([value]) => { if (active) setPublicPerson(value.profile); })
+      .catch(error => active && setPublicError(error.message));
     return () => { active = false; };
-  }, [page.handle]);
+  }, [page.handle, refresh]);
   useEffect(() => {
     const token = new URLSearchParams(routeLocation.search).get("adminAccess");
     if (!data?.me.registered || !token || usedAdminAccess.current === token) return;
@@ -644,66 +617,32 @@ export default function App() {
       setBusy(false);
     }
   }
-  function undoCheckin() {
-    if (!pendingRef.current) return;
-    clearTimeout(pendingTimer.current);
-    clearInterval(countdownTimer.current);
-    pendingRef.current = null;
-    setPendingCheckin(null);
-    setBusy(false);
-    closeDialogs();
-    notify("ثبت لغو شد؛ چیزی برای دوستات فرستاده نشد.");
-  }
-  function checkin(status, visibility = audience) {
+  async function checkin(status, visibility = audience) {
     if (busy || pendingRef.current) return;
     clearTimeout(timer.current);
     setNotice("");
-    const queued = {
-      status,
-      visibility,
-      nonce: crypto.randomUUID(),
-      deadline: Date.now() + 3000,
-    };
+    const queued = { status, visibility, nonce: crypto.randomUUID() };
     pendingRef.current = queued;
-    setPendingCheckin({ ...queued, seconds: 3 });
+    setPendingCheckin(queued);
     setBusy(true);
     setEntered(true);
     setDialog(status === "done" ? "success" : "need");
-    countdownTimer.current = setInterval(
-      () =>
-        setPendingCheckin((current) =>
-          current
-            ? {
-                ...current,
-                seconds: Math.max(
-                  1,
-                  Math.ceil((queued.deadline - Date.now()) / 1000),
-                ),
-              }
-            : null,
-        ),
-      100,
-    );
-    pendingTimer.current = setTimeout(async () => {
-      pendingRef.current = null;
-      clearInterval(countdownTimer.current);
-      setPendingCheckin({ ...queued, seconds: 0, saving: true });
-      try {
-        const result = await api("checkin", queued);
-        setData((current) => ({ ...current, stats: result.stats }));
-        if (result.matches?.length) {
-          setMoment(result.matches[0]);
-          setDialog((current) => current === "story" ? current : "moment");
-          refresh();
-        }
-      } catch (error) {
-        setDialog(null);
-        notify(error.message);
-      } finally {
-        setPendingCheckin(null);
-        setBusy(false);
+    try {
+      const result = await api("checkin", queued);
+      setData(current => ({ ...current, stats: result.stats }));
+      if (result.matches?.length) {
+        setMoment(result.matches[0]);
+        setDialog(current => current === "story" ? current : "moment");
+        refresh();
       }
-    }, 3000);
+    } catch (error) {
+      setDialog(null);
+      notify(error.message);
+    } finally {
+      pendingRef.current = null;
+      setPendingCheckin(null);
+      setBusy(false);
+    }
   }
   async function connectHandle(handle) {
     const result = await perform("connection-request", {
@@ -1468,17 +1407,18 @@ export default function App() {
               {screen === "publicProfile" && (
                 <PublicProfile
                   profile={publicPerson}
+                  error={publicError}
                   data={data}
                   busy={busy}
                   onBack={() => goBack("home")}
                   onConnect={async () => {
-                    const value = await perform("connection-request", {
-                      handle: publicPerson.handle,
-                    });
+                    const connection = data.friends.find(friend => friend.id === publicPerson.id);
+                    if (connection?.status === "accepted") { setSelectedFriend(connection); setDialog("friend"); return; }
+                    const accepting = connection?.status === "pending" && connection.incoming;
+                    const value = await perform(accepting ? "connection-respond" : "connection-request", accepting ? { id: connection.connectionId, accept: true } : { handle: publicPerson.handle });
                     if (value) {
                       await refresh();
-                      notify("درخواستت رفت پیش دوستت!");
-                      navigate("friends");
+                      notify(accepting ? "حالا با هم دوستید!" : "درخواستت رفت پیش دوستت!");
                     }
                   }}
                   onJoin={async () => {
@@ -1931,13 +1871,9 @@ export default function App() {
             {(dialog === "need" || dialog === "success") && (
               <>
                 <div className="reaction-toolbar">
-                  <span>
-                    <Drop size={17} weight="duotone" />
-                    {pendingCheckin && !pendingCheckin.saving
-                      ? "فرصت لغو داری"
-                      : busy
-                        ? "در حال ثبت…"
-                        : "ثبت شد"}
+                  <span role="status" aria-live="polite">
+                    {pendingCheckin ? <Drop size={17} weight="duotone" /> : <Check size={17} />}
+                    {pendingCheckin ? "در حال ثبت…" : "ثبت شد"}
                   </span>
                   <button
                     className="checkin-share"
@@ -1991,20 +1927,6 @@ export default function App() {
                   )}
                 </div>
                 <div className="checkin-footer">
-                  <div className="checkin-status-slot">
-                    {pendingCheckin && !pendingCheckin.saving ? (
-                      <CheckinUndo
-                        pending={pendingCheckin}
-                        onUndo={undoCheckin}
-                        inline
-                      />
-                    ) : (
-                      <p className="checkin-save-status" role="status">
-                        {busy ? <Drop size={18} /> : <Check size={18} />}
-                        {busy ? "داریم ثبت می‌کنیم…" : "ثبت شد."}
-                      </p>
-                    )}
-                  </div>
                   <div className="success-buttons">
                     <Button lilac onClick={() => setDialog(null)}>
                       {dialog === "need" ? "باشه، الان برمی‌گردم" : "چه حس خوبی!"}
@@ -2576,7 +2498,6 @@ export default function App() {
             <Suspense fallback={<LoadingSection />}>
               <Stories
                 data={pendingCheckin?.status === "done" ? { ...data, stats: { ...data.stats, today: data.stats.today + 1, week: data.stats.week + 1 } } : data}
-                undo={pendingCheckin && !pendingCheckin.saving ? <CheckinUndo pending={pendingCheckin} onUndo={undoCheckin} inline /> : null}
                 pendingInvite={invitation}
                 initialMoment={dialog === "momentStory" ? moment : null}
                 initialKind={dialog === "story" ? storyKind : null}
@@ -2587,11 +2508,6 @@ export default function App() {
             </Suspense>
           </StoryDialog>
         )}
-        {pendingCheckin &&
-          !pendingCheckin.saving &&
-          !["need", "success", "story", "momentStory"].includes(dialog) && (
-            <CheckinUndo pending={pendingCheckin} onUndo={undoCheckin} />
-          )}
         <div
           className={`toast ${notice ? "visible" : ""}`}
           role="status"

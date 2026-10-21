@@ -133,9 +133,6 @@
 /* Reactions and story controls use UI sizes; exported PNG text is unchanged. */
 .dialog .success-subtitle { font-size: var(--ui-help); color: var(--ui-muted); line-height: 1.8; }
 .dialog .reaction-toolbar > span { font-size: var(--ui-meta); color: #75644d; }
-.undo-checkin strong { font-size: 13px; line-height: 1.7; }
-.undo-checkin > div > span { font-size: 12px; line-height: 1.7; color: #766443; }
-.undo-checkin button { font-size: 12px; min-height: 44px; }
 .full-story-overlay .story-editor > header h1 { font-size: 17px; }
 .full-story-overlay .story-editor :is(.story-format button, .story-style-controls button) { font-size: 12px; line-height: 1.6; }
 .full-story-overlay .story-editor .story-caption-field { font-size: 12px; line-height: 1.7; color: var(--ui-muted); }
@@ -144,8 +141,6 @@
 .full-story-overlay .story-editor .story-export-actions .button { font-size: 13px; min-height: 44px; }
 .full-story-overlay .story-editor .story-secondary-buttons > button { font-size: 12px; min-height: 36px; }
 .full-story-overlay .story-editor { grid-template-rows: 44px 34px 30px minmax(0, 1fr) auto auto; }
-.full-story-overlay .story-editor.with-undo { grid-template-rows: 44px 58px 34px 30px minmax(0, 1fr) auto auto; }
-.full-story-overlay .story-undo-slot .undo-inline { min-height: 54px; }
 .app-shell .push-permission-dialog :is(p, li) { font-size: 13px; line-height: 1.85; }
 .app-shell .notification-settings small, .app-shell .notification-item small { font-size: 12px; line-height: 1.85; color: var(--ui-muted); }
 .app-shell .device-push-card p { font-size: 13px; color: var(--ui-muted); }
@@ -153,7 +148,6 @@
 
 @media (min-width: 900px), (min-width: 650px) and (max-height: 500px) {
   .full-story-overlay .story-editor { grid-template-rows: 44px 34px 30px minmax(0, 1fr) auto; }
-  .full-story-overlay .story-editor.with-undo { grid-template-rows: 40px 58px 34px 30px minmax(0, 1fr) auto; gap: 5px 22px; padding-block: 6px; }
 }
 @media (max-width: 370px) {
   .app-shell .stats-hero-card { flex-wrap: wrap; justify-content: center; }

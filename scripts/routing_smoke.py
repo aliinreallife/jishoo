@@ -133,8 +133,7 @@ def main():
         print('PASS: Old links, PWA/TWA launch URLs, refreshed app pages and stored group notifications resolve correctly.', flush=True)
 
         go('/home')
-        # Keep the three-second window deterministic while the browser performs
-        # navigation assertions; the app's actual timer implementation is intact.
+        # Recording starts immediately; navigating away never schedules a second write.
         clock_time = datetime(2026, 10, 17, 12, 0, 0)
         page.clock.install(time=clock_time)
         page.clock.pause_at(clock_time + timedelta(seconds=1))
@@ -146,16 +145,15 @@ def main():
         expect(page.get_by_role('dialog')).to_have_count(0)
         page.get_by_role('button', name='پروفایل من', exact=True).click()
         expect(page).to_have_url(BASE + '/profile')
-        expect(page.locator('.undo-checkin')).to_be_visible()
-        page.get_by_role('button', name='لغو ثبت', exact=True).click()
-        assert not [r for r in requests if r[0] == 'checkin']
+        expect(page.locator('.undo-checkin')).to_have_count(0)
+        assert len([r for r in requests if r[0] == 'checkin']) == 1
         page.clock.resume()
         go('/stories/need', '/stories/need')
         expect(page.get_by_role('button', name='ذخیره PNG', exact=True)).to_be_enabled(timeout=30000)
         page.reload(wait_until='domcontentloaded')
         expect(page.get_by_role('button', name='ذخیره PNG', exact=True)).to_be_enabled(timeout=30000)
         page.screenshot(path=str(ARTIFACTS / 'routing-story-clean-url.png'))
-        print('PASS: Pending undo survives page navigation without a write; story selection survives refresh.', flush=True)
+        print('PASS: Check-ins send once immediately without undo; navigation and story selection survive refresh.', flush=True)
 
         data['me']['registered'] = False
         go('/?invite=TEST-INVITE', '/join?invite=TEST-INVITE')
