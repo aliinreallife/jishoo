@@ -51,6 +51,9 @@ jobs:
       - name: Verify production build
         run: npm run build
 
+      - name: Check bundle budgets
+        run: npm run check:bundle
+
       - name: Check Vercel token is configured
         env:
           HAS_TOKEN: ${{ secrets.VERCEL_TOKEN != '' }}
