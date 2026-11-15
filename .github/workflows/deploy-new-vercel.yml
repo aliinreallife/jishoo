@@ -1,0 +1,112 @@
+name: Deploy Jishoo to new Vercel account
+
+# New account does not have a GitHub Login Connection. Use the existing
+# script that deploys source directly through Vercel's API.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Deployment target
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - production
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jishoo-new-vercel-\${{ github.ref }}-\${{ github.event.inputs.target || 'preview' }}
+  cancel-in-progress: false
+
+jobs:
+  verify-and-deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      VERCEL_TEAM_ID: team_NBXGtqtzzMa8AuKa2lZppNuF
+      VERCEL_TARGET: \${{ github.event_name == 'workflow_dispatch' && inputs.target == 'production' && 'production' || 'preview' }}
+    steps:
+      - name: Check out the trusted main branch
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Run tests
+        run: npm test
+
+      - name: Verify production build
+        run: npm run build
+
+      - name: Check Vercel token is configured
+        env:
+          HAS_TOKEN: \${{ secrets.VERCEL_TOKEN != '' }}
+        run: |
+          if [[ "$HAS_TOKEN" != true ]]; then
+            echo "::error::Add VERCEL_TOKEN under repository Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      # Do not publish a production app with an empty database, missing
+      # session encryption key or broken Google sign-in. No secret values
+      # are returned or written to the job log.
+      - name: Check production environment variable names
+        if: env.VERCEL_TARGET == 'production'
+        env:
+          VERCEL_TOKEN: \${{ secrets.VERCEL_TOKEN }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          team = os.environ["VERCEL_TEAM_ID"]
+          req = urllib.request.Request(
+              f"https://api.vercel.com/v10/projects/jishoo/env?teamId={team}",
+              headers={"Authorization": "Bearer " + os.environ["VERCEL_TOKEN"]},
+          )
+          with urllib.request.urlopen(req, timeout=30) as response:
+              data = json.load(response)
+          keys = {
+              item["key"] for item in data.get("envs", [])
+              if "production" in item.get("target", [])
+          }
+          required = {
+              "DATABASE_URL", "APP_SECRET", "PUBLIC_APP_URL",
+              "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "CRON_SECRET",
+          }
+          missing = sorted(required - keys)
+          if missing:
+              raise SystemExit("Missing production Vercel variables: " + ", ".join(missing))
+          print("Production environment variable names are present (values not inspected).")
+          PY
+
+      - name: Deploy Jishoo without Git integration
+        env:
+          VERCEL_TOKEN: \${{ secrets.VERCEL_TOKEN }}
+        run: python3 scripts/deploy_vercel.py
+
+      - name: Publish deployment URL
+        if: success()
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          with open(".vercel/deployment.json", encoding="utf-8") as f:
+              d = json.load(f)
+          print("## Jishoo deployment")
+          print(f"- Target: **{__import__('os').environ['VERCEL_TARGET']}**")
+          print(f"- State: **{d['readyState']}**")
+          print(f"- Project: \`{d['projectId']}\`")
+          print(f"- URL: https://{d['url']}")
+          print("- Note: API/database, Google sign-in and push must be verified after configuration.")
+          PY
