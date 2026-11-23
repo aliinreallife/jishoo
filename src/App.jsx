@@ -293,7 +293,6 @@ export default function App() {
     [busy, setBusy] = useState(false),
     [invitation, setInvitation] = useState(null),
     [inviteError, setInviteError] = useState(""),
-    [promoLanding, setPromoLanding] = useState(Boolean(arrivingPromo)),
     [moment, setMoment] = useState(null),
     [selectedFriend, setSelectedFriend] = useState(null),
     [dialogCircle, setSelectedCircle] = useState(""),
@@ -314,6 +313,7 @@ export default function App() {
     [inviteLanding, setInviteLanding] = useState(() =>
       Boolean(new URLSearchParams(location.search).get("invite")),
     );
+  const promoLanding = Boolean(arrivingPromo || sessionStorage.getItem("jishoo:promo"));
   const selectedCircle = page.circleId || dialogCircle;
   const { dialog, setDialog: setDialogState, overlay, closeAll: closeDialogs } = useDialogHistory(routeLocation, routerNavigate,
     page.screen === "settings" && data ? (data.me.registered ? "settings" : "guestSettings") : null, data?.me.id);
@@ -378,7 +378,6 @@ export default function App() {
       setLoadError(error.message);
     }
   }, []);
-  useEffect(() => { if (arrivingPromo) setPromoLanding(true); }, [arrivingPromo]);
   useEffect(() => {
     if (!publicPage && !data) refresh();
   }, [publicPage, refresh]);
@@ -564,7 +563,7 @@ export default function App() {
   function openAuth() {
     setDialog("auth");
   }
-  function exitPromo() { setPromoLanding(false); routerNavigate("/home", { replace: true }); }
+  function exitPromo() { routerNavigate("/home", { replace: true }); }
   function openMapVisibility() {
     visibilityReturn.current = page.screen === "settings" ? "settings" : null;
     setDialogState("mapVisibility");
