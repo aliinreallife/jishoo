@@ -1061,7 +1061,7 @@ export default function App() {
             <PairArt size={210} />
             <p>با این لینک می‌تونی ۳۰ روز پرمیوم جیشو بگیری. این هدیه فقط برای ۹۲ حساب مختلفه و برای هر نفر یک‌بار فعال می‌شه.</p>
             {promoInfo && <p className="invite-landing-gift">
-              {fa(promoInfo.remaining)} جای باقی‌مونده از {fa(92)} نفر
+              {fa(promoInfo.remaining)} جای باقی‌مونده از {fa(promoInfo.maxUses)} نفر
             </p>}
             {data.testing && <p className="auth-demo-note">
               پرمیوم در دورهٔ آزمایشی رایگانه؛ روزهای هدیه‌ات برای بعدش محفوظ می‌مونه.
