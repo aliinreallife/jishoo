@@ -282,7 +282,7 @@ export default function App() {
   const page = readPage(routeLocation.pathname + routeLocation.search + routeLocation.hash);
   const screen = page.screen === "settings" ? "profile" : page.screen;
   const groupCode = new URLSearchParams(routeLocation.search).get("group") || "";
-  const arrivingPromo = new URLSearchParams(routeLocation.search).get("promo") || "";
+  const arrivingPromo = new URLSearchParams(routeLocation.search).get("promo");
   const publicPage = ["terms", "privacy", "support", "install"].includes(screen);
   const [data, setData] = useState(null),
     [loadError, setLoadError] = useState(""),
@@ -293,7 +293,7 @@ export default function App() {
     [busy, setBusy] = useState(false),
     [invitation, setInvitation] = useState(null),
     [inviteError, setInviteError] = useState(""),
-    [promoLanding, setPromoLanding] = useState(() => Boolean(new URLSearchParams(location.search).get("promo"))),
+    [promoLanding, setPromoLanding] = useState(Boolean(arrivingPromo)),
     [moment, setMoment] = useState(null),
     [selectedFriend, setSelectedFriend] = useState(null),
     [dialogCircle, setSelectedCircle] = useState(""),
@@ -378,9 +378,7 @@ export default function App() {
       setLoadError(error.message);
     }
   }, []);
-  useEffect(() => {
-    if (arrivingPromo && !new URLSearchParams(routeLocation.search).has("invite")) setPromoLanding(true);
-  }, [arrivingPromo]);
+  useEffect(() => { if (arrivingPromo) setPromoLanding(true); }, [arrivingPromo]);
   useEffect(() => {
     if (!publicPage && !data) refresh();
   }, [publicPage, refresh]);
@@ -566,6 +564,7 @@ export default function App() {
   function openAuth() {
     setDialog("auth");
   }
+  function exitPromo() { setPromoLanding(false); routerNavigate("/home", { replace: true }); }
   function openMapVisibility() {
     visibilityReturn.current = page.screen === "settings" ? "settings" : null;
     setDialogState("mapVisibility");
@@ -1005,16 +1004,8 @@ export default function App() {
               userId={me.id}
               testing={data.testing}
               onAuth={openAuth}
-              onDone={message => {
-                setPromoLanding(false);
-                refresh();
-                notify(message);
-                routerNavigate("/home", { replace: true });
-              }}
-              onDismiss={() => {
-                setPromoLanding(false);
-                routerNavigate("/home", { replace: true });
-              }}
+              onDone={message => { refresh(); notify(message); exitPromo(); }}
+              onDismiss={exitPromo}
             />
           </Suspense>
         ) : inviteLanding ? (
