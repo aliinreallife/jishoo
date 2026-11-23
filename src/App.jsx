@@ -1004,16 +1004,11 @@ export default function App() {
               registered={me.registered}
               userId={me.id}
               testing={data.testing}
-              onAuth={() => { setEntered(true); openAuth(); }}
-              onDone={(gift, already) => {
+              onAuth={openAuth}
+              onDone={message => {
                 setPromoLanding(false);
-                setEntered(true);
                 refresh();
-                notify(already
-                  ? "این هدیه قبلاً برای همین حساب فعال شده 💛"
-                  : gift.banked
-                    ? "۳۰ روز پرمیوم هدیه‌ات ذخیره شد و بعد از دورهٔ آزمایشی شروع می‌شه 💛"
-                    : "۳۰ روز پرمیوم جیشو برات فعال شد 💛");
+                notify(message);
                 routerNavigate("/home", { replace: true });
               }}
               onDismiss={() => {
