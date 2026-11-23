@@ -173,8 +173,9 @@ export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, on
     markers.forEach(item => {
       const first = item.points[0], multiple = item.count > 1;
       const localGroup = multiple && scope === "local";
+      const friend = !multiple && scope === "local" && first.isFriend;
       const element = document.createElement("div");
-      element.className = `live-map-marker ${first.status} ${multiple ? "map-mascot-group" : ""} ${first.isFriend ? "friend-marker" : ""} ${result.count <= 5 ? "sparse-map-marker" : ""} ${item.anchor ? "spread-map-marker" : ""} ${localGroup ? "local-map-group" : ""}`;
+      element.className = `live-map-marker ${first.status} ${multiple ? "map-mascot-group" : ""} ${friend ? "friend-marker" : ""} ${result.count <= 5 ? "sparse-map-marker" : ""} ${item.anchor ? "spread-map-marker" : ""} ${localGroup ? "local-map-group" : ""}`;
       const figure = document.createElement("span");
       if (!multiple && first.avatarImage) {
         const photo = document.createElement("img"); photo.src = first.avatarImage; photo.alt = ""; photo.className = "map-profile-photo"; figure.append(photo);
@@ -184,9 +185,16 @@ export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, on
         const mascot = document.createElement("img"); mascot.src = `/assets/${multiple || first.status === "need" ? "shy-drop.webp" : "happy-drop.webp"}`; mascot.alt = ""; figure.append(mascot);
       }
       element.append(figure);
+      if (friend) {
+        const badge = document.createElement("span");
+        badge.className = "map-friend-heart";
+        badge.textContent = "♥";
+        badge.setAttribute("aria-hidden", "true");
+        element.append(badge);
+      }
       if (multiple) { const badge = document.createElement("span"); badge.className = "map-mascot-count"; badge.textContent = fa(item.count); element.append(badge); }
       else if (first.profileHandle || first.isFriend || first.isMe) { const name = document.createElement("strong"); name.textContent = first.name; element.append(name); }
-      const title = multiple ? `${fa(item.count)} نفر در این محدوده؛ برای جزئیات بزن` : `${first.name}؛ ${first.status === "need" ? "جیش داره" : "جیش کرده"}`;
+      const title = multiple ? `${fa(item.count)} نفر در این محدوده؛ برای جزئیات بزن` : `${first.name}${friend ? "، دوستت" : ""}؛ ${first.status === "need" ? "جیش داره" : "جیش کرده"}`;
       const anchor = item.anchor || item;
       const at = instance.containerPointToLatLng([anchor.x, anchor.y]);
       const iconSize = localGroup ? [68, 44] : item.anchor ? [49, 49] : [48, 57];

@@ -373,3 +373,22 @@
   background: #ffeaa5;
   color: #58436b;
 }
+
+.live-map-marker.friend-marker {
+  border-color: #8a64c1;
+  background: #eee0fc;
+  box-shadow: 0 0 0 2px #fff9ed, 0 4px 12px #6c4e975c;
+}
+
+.live-map-marker > .map-friend-heart {
+  position: absolute;
+  inset-block-end: -3px;
+  inset-inline-end: -4px;
+  width: 19px;
+  height: 19px;
+  border: 2px solid #fff9ed;
+  border-radius: 50%;
+  background: #684496;
+  color: #fff;
+  font: 12px/1 Arial, sans-serif;
+}
