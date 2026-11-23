@@ -394,6 +394,22 @@ export default async function handler(req, res) {
         inviteOnly: inviteOnly(),
       });
     }
+    if (action === "promo-info" && req.method === "GET") {
+      const code = normalizeCode(url.searchParams.get("code"));
+      if (!/^J-[0-9A-F]{12}$/.test(code))
+        fail(404, "کد هدیه معتبر نیست.", "promo_not_found");
+      const offers = await query(
+        "SELECT code,premium_days,active,GREATEST(max_uses-uses,0)::int AS remaining FROM promo_codes WHERE code=$1",
+        [code],
+      );
+      if (!offers[0] || !offers[0].active)
+        fail(404, "این کد هدیه فعال نیست.", "promo_not_found");
+      return json(res, 200, {
+        code,
+        premiumDays: offers[0].premium_days,
+        remaining: offers[0].remaining,
+      });
+    }
     if (action === "invite" && req.method === "GET")
       return json(res, 200, await inviteInfo(url.searchParams.get("code")));
     if (action === "owner-bootstrap")
