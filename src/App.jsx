@@ -27,6 +27,7 @@ import { currentRelease, releaseStorageKey } from "./current-release";
 import { ReleaseNotes } from "./components/ReleaseNotes";
 const DailyStreak = lazy(() => import("./components/DailyStreak"));
 const AuthWizard = lazy(() => import("./components/AuthWizard"));
+const PromoRedeem = lazy(() => import("./components/PromoRedeem"));
 import Button from "./components/Button";
 import { blockUpdates } from "./updates";
 import {
@@ -2431,11 +2432,14 @@ export default function App() {
                   </ul>
                   {data.testing && <p>در دورهٔ آزمایشی، این‌ها هم برای همه رایگان فعاله.</p>}
                 </section>
+                <Suspense fallback={null}>
+                  <PromoRedeem registered={me.registered} testing={data.testing} onRedeemed={refresh} notify={notify} />
+                </Suspense>
                 <div className="invite-rules premium-trial-notice">
                   <Heart size={19} weight="fill" />
                   <p>
-                    با دعوت: ۷ روز برای هر دو نفر. بعداً بدون دعوت: ۳ روز برای
-                    عضو جدید. عضویت فعلاً فقط با دعوته.
+                    با دعوت: ۷ روز برای هر دو نفر. بدون دعوت: ۳ روز برای عضو جدید.
+                    {data.inviteOnly ? " عضویت فعلاً با دعوته." : " فعلاً می‌تونی بدون دعوت عضو بشی."}
                   </p>
                 </div>
                 <Button
@@ -2444,7 +2448,7 @@ export default function App() {
                     me.registered ? navigate("invite") : openAuth();
                   }}
                 >
-                  {me.registered ? "یه دوست دعوت کنم" : "عضویت با دعوت"}
+                  {me.registered ? "یه دوست دعوت کنم" : data.inviteOnly ? "عضویت با دعوت" : "عضویت بدون دعوت"}
                 </Button>
               </>
             )}
