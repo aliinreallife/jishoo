@@ -8,7 +8,7 @@ const GoogleBanner = lazy(() => import("./GoogleAccount").then(module => ({ defa
 
 export default function AuthWizard({ invitation, onComplete, onGuest, onWaiting, notify, authInfo, inviteOnly = true }) {
   const [stage, setStage] = useState(
-      authInfo?.pendingGoogle ? (authInfo.waitlisted && !invitation?.code ? "waiting" : inviteOnly ? "invite" : "register") : "entry",
+      authInfo?.pendingGoogle ? (inviteOnly && authInfo.waitlisted && !invitation?.code ? "waiting" : inviteOnly ? "invite" : "register") : "entry",
     ),
     [phone, setPhone] = useState(authInfo?.waitlistPhone || ""),
     [challenge, setChallenge] = useState(null),
@@ -392,7 +392,7 @@ export default function AuthWizard({ invitation, onComplete, onGuest, onWaiting,
         <>
           {ticket === "google" && (
             <div className="pending-google-note">
-              گوگل و دعوتت تایید شدن؛ اینجا فقط اسمت رو بنویس.
+              گوگلت تایید شد؛ اینجا فقط اسمت رو بنویس.
               <span dir="ltr">{authInfo?.pendingGoogle}</span>
             </div>
           )}
