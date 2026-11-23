@@ -24,6 +24,7 @@ import { Avatar } from "./Character";
 import { PushPermission } from "./HomeNotifications";
 import { Mascot, PairArt } from "./Mascot";
 import { api, copyText, fa, relativeTime } from "../api";
+import { promoLink } from "../promo-link";
 import StreakMilestones from "./StreakMilestones";
 import {
   enablePush,
@@ -483,6 +484,13 @@ export function Admin({ data, notify, refresh }) {
                 <span>{fa(promo.uses)} از {fa(promo.max_uses)} استفاده · {fa(promo.premium_days)} روز</span>
                 <button type="button" disabled={busy} onClick={() => copyText(promo.code).then(() => notify("کد کپی شد."))}>
                   <Copy size={18} /> کپی
+                </button>
+                <button type="button" disabled={busy} onClick={() =>
+                  copyText(promoLink(data.publicUrl, promo.code))
+                    .then(() => notify("لینک هدیه کپی شد."))
+                    .catch(error => notify(error.message))
+                }>
+                  <Copy size={18} /> کپی لینک
                 </button>
                 {promo.active
                   ? <button type="button" disabled={busy} onClick={() => setConfirmation({
