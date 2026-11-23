@@ -28,6 +28,7 @@ import { ReleaseNotes } from "./components/ReleaseNotes";
 const DailyStreak = lazy(() => import("./components/DailyStreak"));
 const AuthWizard = lazy(() => import("./components/AuthWizard"));
 const PromoRedeem = lazy(() => import("./components/PromoRedeem"));
+const PromoLanding = lazy(() => import("./components/PromoLanding"));
 import Button from "./components/Button";
 import { blockUpdates } from "./updates";
 import {
@@ -1053,43 +1054,27 @@ export default function App() {
             />
           </Suspense>
         ) : promoLanding && !inviteLanding ? (
-          <section className="invite-landing promo-landing" aria-label="هدیهٔ ویژهٔ جیشو">
-            <Brand small />
-            <Mascot size={135} mood="happy" />
-            <span className="little-pill">هدیهٔ ویژهٔ جیشو 💛</span>
-            <h1>۳۰ روز پرمیوم، هدیهٔ تو!</h1>
-            <PairArt size={210} />
-            <p>با این لینک می‌تونی ۳۰ روز پرمیوم جیشو بگیری. این هدیه فقط برای ۹۲ حساب مختلفه و برای هر نفر یک‌بار فعال می‌شه.</p>
-            {promoInfo && <p className="invite-landing-gift">
-              {fa(promoInfo.remaining)} جای باقی‌مونده از {fa(promoInfo.maxUses)} نفر
-            </p>}
-            {data.testing && <p className="auth-demo-note">
-              پرمیوم در دورهٔ آزمایشی رایگانه؛ روزهای هدیه‌ات برای بعدش محفوظ می‌مونه.
-            </p>}
-            {promoError && <p className="form-error" role="alert">{promoError}</p>}
-            {me.registered ? (
-              promoRedeeming ? <p>داریم هدیه‌ات رو فعال می‌کنیم…</p>
-              : promoError ? <Button lilac onClick={() => {
-                  promoAttempt.current = "";
-                  setPromoError("");
-                  setPromoRetry(value => value + 1);
-                }}>تلاش دوباره برای فعال‌سازی</Button>
-              : <p>در حال بررسی هدیهٔ حسابت…</p>
-            ) : (
-              <Button lilac disabled={Boolean(promoInfo && promoInfo.remaining === 0)}
-                onClick={() => { setEntered(true); openAuth(); }}>
-                ورود یا عضویت و گرفتن هدیه <Heart size={19} />
-              </Button>
-            )}
-            <button className="guest-enter-link" onClick={() => {
-              setPromoLanding(false);
-              promoPending.current = "";
-              sessionStorage.removeItem("jishoo:promo");
-              routerNavigate("/home", { replace: true });
-            }}>
-              فعلاً برم تو جیشو <CaretLeft size={16} />
-            </button>
-          </section>
+          <Suspense fallback={<LoadingSection />}>
+            <PromoLanding
+              offer={promoInfo}
+              error={promoError}
+              registered={me.registered}
+              testing={data.testing}
+              redeeming={promoRedeeming}
+              onAuth={() => { setEntered(true); openAuth(); }}
+              onRetry={() => {
+                promoAttempt.current = "";
+                setPromoError("");
+                setPromoRetry(value => value + 1);
+              }}
+              onDismiss={() => {
+                setPromoLanding(false);
+                promoPending.current = "";
+                sessionStorage.removeItem("jishoo:promo");
+                routerNavigate("/home", { replace: true });
+              }}
+            />
+          </Suspense>
         ) : inviteLanding ? (
           <section className={`invite-landing ${inviteRecognition ? "invite-status-screen" : ""}`}>
             <Brand small />
