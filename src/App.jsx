@@ -385,6 +385,58 @@ export default function App() {
     }
   }, []);
   useEffect(() => {
+    if (!arrivingPromo || new URLSearchParams(routeLocation.search).has("invite")) return;
+    setPromoLanding(true);
+    const code = normalizePromoCode(arrivingPromo);
+    if (!code) {
+      promoPending.current = "";
+      sessionStorage.removeItem("jishoo:promo");
+      setPromoError("لینک هدیه معتبر نیست.");
+      return;
+    }
+    promoPending.current = code;
+    sessionStorage.setItem("jishoo:promo", code);
+    setPromoInfo(null);
+    setPromoError("");
+    let active = true;
+    api("promo-info", undefined, { code })
+      .then(offer => { if (active) setPromoInfo(offer); })
+      .catch(error => { if (active) setPromoError(error.message); });
+    return () => { active = false; };
+  }, [arrivingPromo]);
+  useEffect(() => {
+    if (!data?.me.registered || !promoPending.current) return;
+    const code = promoPending.current;
+    const claimKey = data.me.id + ":" + code;
+    if (promoAttempt.current === claimKey) return;
+    promoAttempt.current = claimKey;
+    setPromoRedeeming(true);
+    api("promo-redeem", { code })
+      .then(async gift => {
+        promoPending.current = "";
+        sessionStorage.removeItem("jishoo:promo");
+        setPromoError("");
+        await refresh();
+        notify(gift.banked
+          ? "۳۰ روز پرمیوم هدیه‌ات ذخیره شد و بعد از دورهٔ آزمایشی شروع می‌شه 💛"
+          : "۳۰ روز پرمیوم جیشو برات فعال شد 💛");
+        setPromoLanding(false);
+        const params = new URLSearchParams(location.search);
+        params.delete("promo");
+        routerNavigate("/home" + (params.size ? "?" + params : ""), { replace: true });
+      })
+      .catch(error => {
+        if (error.code === "promo_already_redeemed") {
+          promoPending.current = "";
+          sessionStorage.removeItem("jishoo:promo");
+          setPromoLanding(false);
+          routerNavigate("/home", { replace: true });
+          notify("این هدیه قبلاً برای همین حساب فعال شده 💛");
+        } else setPromoError(error.message);
+      })
+      .finally(() => setPromoRedeeming(false));
+  }, [data?.me.id, data?.me.registered, arrivingPromo, promoRetry]);
+  useEffect(() => {
     if (!publicPage && !data) refresh();
   }, [publicPage, refresh]);
   useEffect(() => {
