@@ -7,7 +7,7 @@ import { happy, shy } from "blobatar/expression";
 import { MapPin, NavigationArrow, ShieldCheck, X, Plus, Minus, Drop, Eye, EyeSlash, GlobeHemisphereWest, UsersThree, CrownSimple, ArrowClockwise, WifiSlash, MagnifyingGlassPlus, CaretDown, UserCircle as UserProfileIcon } from "@phosphor-icons/react";
 import { api, relativeTime, fa } from "../api";
 import { Avatar } from "./Character";
-import { mapPresentation, nearestLongitude } from "../map-presentation";
+import { mapPresentation, nearestLongitude, spreadLocalGroups } from "../map-presentation";
 import { CuteHeatLayer } from "../map-heat";
 import { visibilityMode, visibilityLabel } from "../map-visibility";
 import { stableActivity } from "../stable-activity";
@@ -169,10 +169,12 @@ export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, on
     });
     layers.current.clearLayers();
     if (result.mode === "heat") { new CuteHeatLayer(items).addTo(layers.current); return; }
-    result.groups.forEach(item => {
+    const markers = scope === "local" ? spreadLocalGroups(result.groups, viewport.size.x, viewport.size.y) : result.groups;
+    markers.forEach(item => {
       const first = item.points[0], multiple = item.count > 1;
+      const localGroup = multiple && scope === "local";
       const element = document.createElement("div");
-      element.className = `live-map-marker ${first.status} ${multiple ? "map-mascot-group" : ""} ${first.isFriend ? "friend-marker" : ""} ${result.count <= 5 ? "sparse-map-marker" : ""}`;
+      element.className = `live-map-marker ${first.status} ${multiple ? "map-mascot-group" : ""} ${first.isFriend ? "friend-marker" : ""} ${result.count <= 5 ? "sparse-map-marker" : ""} ${item.anchor ? "spread-map-marker" : ""} ${localGroup ? "local-map-group" : ""}`;
       const figure = document.createElement("span");
       if (!multiple && first.avatarImage) {
         const photo = document.createElement("img"); photo.src = first.avatarImage; photo.alt = ""; photo.className = "map-profile-photo"; figure.append(photo);
@@ -185,8 +187,14 @@ export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, on
       if (multiple) { const badge = document.createElement("span"); badge.className = "map-mascot-count"; badge.textContent = fa(item.count); element.append(badge); }
       else if (first.profileHandle || first.isFriend || first.isMe) { const name = document.createElement("strong"); name.textContent = first.name; element.append(name); }
       const title = multiple ? `${fa(item.count)} نفر در این محدوده؛ برای جزئیات بزن` : `${first.name}؛ ${first.status === "need" ? "جیش داره" : "جیش کرده"}`;
-      const at = instance.containerPointToLatLng([item.x, item.y]);
-      const marker = L.marker(at, { title, alt: title, icon: L.divIcon({ html: element, className: "map-avatar-icon", iconSize: [48, 57], iconAnchor: [24, 29] }) })
+      const anchor = item.anchor || item;
+      const at = instance.containerPointToLatLng([anchor.x, anchor.y]);
+      const iconSize = localGroup ? [68, 44] : item.anchor ? [49, 49] : [48, 57];
+      const iconAnchor = [
+        Math.round(iconSize[0] / 2 + anchor.x - item.x),
+        Math.round(iconSize[1] / 2 + anchor.y - item.y),
+      ];
+      const marker = L.marker(at, { title, alt: title, icon: L.divIcon({ html: element, className: "map-avatar-icon", iconSize, iconAnchor }) })
         .addTo(layers.current).on("click", (event) => {
           if (event.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
           if (multiple && instance.getZoom() < 18) { instance.setView(at, Math.min(18, instance.getZoom() + 2)); return; }
@@ -196,7 +204,7 @@ export default function Nearby({ me, data, refreshAccount, onAuth, onConnect, on
       target.setAttribute("aria-label", title);
       target.addEventListener("keydown", event => { if (event.key === " ") { event.preventDefault(); marker.fire("click"); } });
     });
-  }, [items, presentation]);
+  }, [items, presentation, scope]);
 
   async function locate() {
     if (!navigator.geolocation) { setGeoError("این مرورگر از مکان‌یابی پشتیبانی نمی‌کنه."); return; }

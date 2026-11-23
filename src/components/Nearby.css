@@ -337,3 +337,39 @@
 .map-calm-state > div { min-height:48px; }
 .map-profile-private { margin:8px 0 0; font-size:12px; line-height:1.8; color:#827689; }
 .map-group-people button { min-height:44px; padding:6px 12px; border:1px solid #dcd0ec; border-radius:12px; background:#f1e9fa; color:#745a92; font:600 12px Vazirmatn,sans-serif; cursor:pointer; }
+
+.spread-map-marker strong {
+  visibility: hidden;
+}
+
+.map-avatar-icon:hover .spread-map-marker strong,
+.map-avatar-icon:focus-visible .spread-map-marker strong {
+  visibility: visible;
+}
+
+.live-map-marker.local-map-group {
+  width: 68px;
+  height: 44px;
+  gap: 4px;
+  border-radius: 24px;
+  background: #f5e7fe;
+}
+
+.local-map-group > span:first-child {
+  width: 30px;
+  height: 30px;
+  background: none;
+}
+
+.local-map-group .map-mascot-count {
+  position: static;
+  width: auto;
+  min-width: 22px;
+  height: 23px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 12px;
+  box-shadow: none;
+  background: #ffeaa5;
+  color: #58436b;
+}
