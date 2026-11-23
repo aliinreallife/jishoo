@@ -32,3 +32,46 @@ export function mapPresentation(points, zoom, width, height) {
   const heat = zoom < 18 && count > 5 && (groups.some((group) => group.count >= 6) || (crowded >= 8 && crowded > count / 2));
   return { mode: heat ? "heat" : "characters", groups, visible, count };
 }
+
+// Spread small local groups in screen space. Stable participant keys keep
+// the visual arrangement in place when a refresh returns a new check-in.
+export function spreadLocalGroups(groups, width, height) {
+  const placed = [];
+  return groups.flatMap((group) => {
+    if (group.points.length < 2 || group.points.length > 5 || group.count !== group.points.length) {
+      placed.push(group);
+      return group;
+    }
+
+    const points = [...group.points].sort((a, b) => String(a.markerKey || a.id).localeCompare(String(b.markerKey || b.id)));
+    let seed = 0;
+    for (const point of points) {
+      for (const char of String(point.markerKey || point.id)) seed = (Math.imul(seed, 31) + char.codePointAt(0)) >>> 0;
+    }
+
+    const step = (2 * Math.PI) / points.length;
+    const radius = 34 / Math.sin(step / 2);
+    const padding = Math.ceil(radius) + 27;
+    if (width < 2 * padding || height < 2 * padding) {
+      placed.push(group);
+      return group;
+    }
+
+    const x = Math.max(padding, Math.min(width - padding, group.x));
+    const y = Math.max(padding, Math.min(height - padding, group.y));
+    const blocked = placed.concat(groups.filter(other => other !== group));
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const rotation = (seed % 360) * Math.PI / 180 + attempt * step / 8;
+      const pins = points.map((point, index) => {
+        const angle = rotation + index * step;
+        return { points: [point], count: 1, x: x + Math.cos(angle) * radius, y: y + Math.sin(angle) * radius, anchor: group };
+      });
+      if (pins.every(pin => blocked.every(other => Math.hypot(pin.x - other.x, pin.y - other.y) >= 56))) {
+        placed.push(...pins);
+        return pins;
+      }
+    }
+    placed.push(group);
+    return group;
+  });
+}

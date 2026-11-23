@@ -6,7 +6,7 @@ import Button from "./Button";
 import { api, getInvite, fa, inviteGiftLabel } from "../api";
 const GoogleBanner = lazy(() => import("./GoogleAccount").then(module => ({ default: module.GoogleBanner })));
 
-export default function AuthWizard({ invitation, onComplete, onGuest, onWaiting, notify, authInfo, inviteOnly = true }) {
+export default function AuthWizard({ invitation, onComplete, onGuest, onWaiting, notify, authInfo, inviteOnly = true, promoSignup = false }) {
   const [stage, setStage] = useState(
       authInfo?.pendingGoogle ? (inviteOnly && authInfo.waitlisted && !invitation?.code ? "waiting" : inviteOnly ? "invite" : "register") : "entry",
     ),
@@ -138,9 +138,9 @@ export default function AuthWizard({ invitation, onComplete, onGuest, onWaiting,
         setStage("connect");
       } else {
         onComplete(result);
-        notify(
-          `خوش اومدی ${result.me.name}! ${fa(result.bonusDays)} روز پرمیوم هدیه‌ات محفوظه.`,
-        );
+        notify(!promoSignup && result.bonusDays > 0
+          ? `خوش اومدی ${result.me.name}! ${fa(result.bonusDays)} روز پرمیوم هدیه‌ات محفوظه.`
+          : `خوش اومدی ${result.me.name}!`);
       }
     } catch (e) {
       if (mounted.current) setError(e.message);
@@ -235,7 +235,7 @@ export default function AuthWizard({ invitation, onComplete, onGuest, onWaiting,
               </div>
             </div>
           )}
-          {stage === "phone" && invite && <div className="invite-auth-summary"><Avatar person={invite.inviter} size={42} /><p>{invite.inviter ? `با دعوت ${invite.inviter.name}` : "دعوتت تایید شد"}<strong>{inviteGiftLabel(invite)}</strong></p><button className="text-link" onClick={() => { setStage("invite"); setInvite(null); }}>تغییر دعوت</button></div>}
+          {stage === "phone" && invite && <div className="invite-auth-summary"><Avatar person={invite.inviter} size={42} /><p>{invite.inviter ? `با دعوت ${invite.inviter.name}` : "دعوتت تایید شد"}{!promoSignup && <strong>{inviteGiftLabel(invite)}</strong>}</p><button className="text-link" onClick={() => { setStage("invite"); setInvite(null); }}>تغییر دعوت</button></div>}
           {authInfo?.pendingGoogle ? (
             <div className="pending-google-note">
               گوگلت تایید شد.<span dir="ltr">{authInfo.pendingGoogle}</span>برای
@@ -442,7 +442,7 @@ export default function AuthWizard({ invitation, onComplete, onGuest, onWaiting,
                   {invite.inviter
                     ? `با دعوت ${invite.inviter.name}`
                     : "دعوتِ شروع جیشو"}
-                  <strong>دعوت تایید شده · {inviteGiftLabel(invite)}</strong>
+                  <strong>{promoSignup ? "دعوت تایید شده" : `دعوت تایید شده · ${inviteGiftLabel(invite)}`}</strong>
                 </p>
               </div>
             )}
@@ -475,10 +475,12 @@ export default function AuthWizard({ invitation, onComplete, onGuest, onWaiting,
             </a>{" "}
             رو می‌پذیری.
           </p>
-          <p className="auth-demo-note">
-            این روزها پرمیوم مهمون مایی. روزهای هدیه‌ات محفوظه و بعد از آزمایش
-            شروع می‌شه.
-          </p>
+          {!promoSignup && (
+            <p className="auth-demo-note">
+              این روزها پرمیوم مهمون مایی. روزهای هدیه‌ات محفوظه و بعد از آزمایش
+              شروع می‌شه.
+            </p>
+          )}
         </>
       )}
     </div>

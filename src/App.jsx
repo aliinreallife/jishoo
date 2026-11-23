@@ -462,7 +462,7 @@ export default function App() {
   }, [data?.friends]);
   useEffect(() => {
     if (!entered || !data?.me.registered) return;
-    if (["friends", "circle", "notifications", "stats", "streak"].includes(screen)) refresh();
+    if (["friends", "circle", "notifications", "stats", "streak", "invite"].includes(screen)) refresh();
   }, [screen, selectedCircle, entered, data?.me.registered, refresh]);
   useEffect(() => {
     const resume = () => {
@@ -1001,7 +1001,6 @@ export default function App() {
               code={arrivingPromo}
               registered={me.registered}
               userId={me.id}
-              testing={data.testing}
               onAuth={openAuth}
               onDone={message => { refresh(); notify(message); exitPromo(); }}
               onDismiss={exitPromo}
@@ -1716,13 +1715,14 @@ export default function App() {
                     title="یه دوست بیار تو جمع"
                     back={() => goBack("profile")}
                   />
-                  <div className="invite-character-pair">
-                    <PairArt size={295} />
-                  </div>
+                  {data.invitationQuota?.limit !== 3 && (
+                    <div className="invite-character-pair">
+                      <PairArt size={295} />
+                    </div>
+                  )}
                   <h2>با دعوت تو، ۷ روز هدیه برای هر دوتون!</h2>
                   <p className="invite-page-description">
-                    عضویت فعلاً با دعوت و گوگله. دوستت می‌تونه اول مهمان
-                    باشه؛ اسم فقط موقع ساخت حساب لازمه.
+                    هر دوستی که با لینک تو عضو بشه، یکی از دعوت‌هات رو استفاده می‌کنه.
                   </p>
                   {me.registered && (
                     <Suspense fallback={null}><InvitationQuota data={data} onShare={shareInvite} /></Suspense>
@@ -1747,7 +1747,7 @@ export default function App() {
                         </button>
                       </div>
                       <Button lilac onClick={shareInvite}>
-                        <ShareNetwork size={20} /> فرستادن لینک دعوت
+                        <ShareNetwork size={20} /> {data.invitationQuota?.remaining === 0 ? "فرستادن لینک پروفایل" : "فرستادن لینک دعوت"}
                       </Button>
                       <div className="invite-story-icon">
                         <span>کارت دعوتت</span>
@@ -1845,6 +1845,7 @@ export default function App() {
                 invitation={invitation}
                 authInfo={data.auth}
                 inviteOnly={data.inviteOnly}
+                promoSignup={promoLanding && !inviteLanding}
                 onComplete={completeAuth}
                 onWaiting={saved => setData(current => ({ ...current, auth: { ...current.auth, waitlisted: true, waitlistPhone: saved.phone } }))}
                 onGuest={() => { setEntered(true); setInviteLanding(false); navigate("home"); }}

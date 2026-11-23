@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { compareVersions, validRelease, updateRequired } from "../src/update-rules.js";
 import { dailyStreak } from "../lib/streaks.js";
 import { streakMilestones, earnedStreakMilestones, shareableStreakMilestone } from "../lib/streak-milestones.js";
-import { mapPresentation, nearestLongitude } from "../src/map-presentation.js";
+import { mapPresentation, nearestLongitude, spreadLocalGroups } from "../src/map-presentation.js";
 import { invitationForest, invitationPath } from "../src/invitation-tree.js";
 import { observabilityPage, redactMetricEvent } from "../src/observability.js";
 import { canonicalPath, readPage, screenPath, notificationPath } from "../src/routing.js";
@@ -165,6 +165,29 @@ test("viewport counts use people weights and longitude wrapping without changing
   const before=JSON.stringify(points),result=mapPresentation(points,14,393,550);
   assert.equal(result.count,7);assert.equal(JSON.stringify(points),before);
   assert.equal(nearestLongitude(179,-179),-181);assert.equal(nearestLongitude(-179,179),181);
+});
+test("small local groups fan out in screen space without moving the approximate anchors", () => {
+  const points = [
+    { id: "checkin-a", markerKey: "a", x: 20, y: 30, lat: 35.7, lng: 51.4 },
+    { id: "checkin-b", markerKey: "b", x: 20, y: 30, lat: 35.7, lng: 51.4 },
+  ];
+  const before = JSON.stringify(points);
+  const spread = (items) => spreadLocalGroups(mapPresentation(items, 15, 320, 410).groups, 320, 410);
+  const pins = spread(points);
+  assert.equal(pins.length, 2);
+  assert.ok(Math.hypot(pins[0].x - pins[1].x, pins[0].y - pins[1].y) >= 67);
+  for (const pin of pins) {
+    assert.equal(pin.anchor.x, 20);
+    assert.equal(pin.anchor.y, 30);
+    assert.ok(pin.x >= 27 && pin.x <= 293 && pin.y >= 27 && pin.y <= 383);
+  }
+  const positions = (items) => items.map(pin => [pin.x, pin.y]);
+  assert.deepEqual(positions(spread(points.toReversed().map(point => ({ ...point, id: "new-" + point.id })))), positions(pins));
+  assert.equal(JSON.stringify(points), before);
+  const crowded = Array.from({ length: 6 }, (_, index) => ({ ...points[0], id: "p" + index }));
+  assert.deepEqual(spread(crowded).map(pin => pin.count), [6]);
+  const weighted = [{ ...points[0], count: 8 }, points[1]];
+  assert.deepEqual(spread(weighted).map(pin => pin.count), [9]);
 });
 const streakDays=(start,count)=>Array.from({length:count},(_,i)=>new Date(Date.parse(start+"T12:00:00Z")+i*86400000).toISOString().slice(0,10));
 const streakAt=day=>new Date(day+"T12:00:00Z");

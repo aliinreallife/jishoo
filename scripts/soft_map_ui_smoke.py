@@ -1,5 +1,5 @@
 """Synthetic UI checks for cute density maps, consent, viewport counts and streaks."""
-import json,subprocess
+import json,math,subprocess
 from pathlib import Path
 from urllib.parse import parse_qs,urlsplit
 from datetime import datetime,timezone
@@ -14,8 +14,8 @@ def main():
  data['stats']['streak']=json.loads(subprocess.check_output(['node','--input-type=module','-e','import {dailyStreak} from "./lib/streaks.js";import {dayKey,addDays} from "./lib/calendar.js";const now=new Date();console.log(JSON.stringify(dailyStreak(Array.from({length:21},(_,i)=>dayKey(addDays(now,-i))),now)));'],cwd=ROOT))
  now=datetime.now(timezone.utc).isoformat();phase={'kind':'one'};requests=[];errors=[];held=[];hold={'enabled':False}
  def rows():
-  n={'empty':0,'one':1,'few':3,'dense':30}[phase['kind']]
-  return [{'id':'map-'+str(i),'markerKey':str(i),'name':'یه همسایه','avatarSeed':'anon-'+str(i),'lat':35.7+(i%6-2)*.002,'lng':51.4+(i//6-2)*.002,'status':'need' if i%3==0 else 'done','createdAt':now,'isFriend':False,'isMe':False} for i in range(n)]
+  n={'empty':0,'one':1,'same':2,'few':3,'dense':30}[phase['kind']]
+  return [{'id':'map-'+str(i),'markerKey':str(i),'name':'یه همسایه','avatarSeed':'anon-'+str(i),'lat':35.7005 if phase['kind']=='same' else 35.7+(i%6-2)*.002,'lng':51.4005 if phase['kind']=='same' else 51.4+(i//6-2)*.002,'status':'need' if i%3==0 else 'done','createdAt':now,'isFriend':phase['kind']=='same' and i==0,'isMe':False,**({'profileHandle':'qa_friend','name':'رفیق آزمایشی'} if phase['kind']=='same' and i==0 else {})} for i in range(n)]
  def mock(route):
   request=route.request;qs=parse_qs(urlsplit(request.url).query);action=qs.get('action',[''])[0];body=request.post_data_json if request.method=='POST' else None
   requests.append((action,body));result=data
@@ -58,6 +58,25 @@ def main():
   assert not page.locator('canvas.jishoo-heatmap-layer').count()
   page.get_by_role('button',name='مکان من',exact=True).click();page.wait_for_timeout(400)
   print('PASS: First-time choices preserve hidden defaults; viewing needs no publishing consent, and a lone participant stays a character even when zoomed out.',flush=True)
+  phase['kind']='same';page.evaluate('window.dispatchEvent(new Event("focus"))')
+  overlapping=page.locator('.leaflet-marker-icon:has(.spread-map-marker)')
+  expect(overlapping).to_have_count(2)
+  expect(page.locator('.nearby-count')).to_contain_text('۲ نفر در این نما')
+  expect(page.locator('.map-mascot-count')).to_have_count(0)
+  a,b=[pin.bounding_box() for pin in overlapping.all()]
+  assert math.hypot(a['x']-b['x'],a['y']-b['y']) >= 66, (a,b)
+  friend=overlapping.filter(has=page.locator('.map-friend-heart'))
+  expect(friend).to_have_count(1)
+  expect(friend).to_have_attribute('aria-label', 'رفیق آزمایشی، دوستت؛ جیش داره')
+  friend.click()
+  expect(page.locator('.map-profile-action')).to_contain_text('پروفایل دوستت')
+  page.get_by_role('button',name='بستن جزئیات نقشه',exact=True).click()
+  overlapping.filter(has_not=page.locator('.map-friend-heart')).click()
+  expect(page.locator('.map-profile-private')).to_be_visible()
+  page.get_by_role('button',name='بستن جزئیات نقشه',exact=True).click()
+  assert [pin.bounding_box() for pin in overlapping.all()]==[a,b]
+  page.screenshot(path=str(ARTIFACTS/'soft-map-same-spot.png'))
+  print('PASS: Two nearby participants at the same point get distinct tap targets, an explicit friend badge, and an anonymous pin.',flush=True)
   phase['kind']='dense';page.evaluate('window.dispatchEvent(new Event("focus"))')
   expect(page.locator('canvas.jishoo-heatmap-layer')).to_be_visible(timeout=20000)
   expect(page.locator('.nearby-map-pane')).to_have_attribute('data-presentation','heat')

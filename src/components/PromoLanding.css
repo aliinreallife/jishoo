@@ -1,0 +1,25 @@
+.invite-fullscreen .promo-landing {
+  gap: 14px;
+  padding-top: max(26px, env(safe-area-inset-top));
+}
+
+.promo-landing > .promo-welcome-art {
+  display: block;
+  width: min(232px, 57vw, 33dvh);
+  height: auto;
+  margin: 5px 0 0;
+}
+
+.promo-landing > h1 {
+  font-size: clamp(24px, 5vw, 31px);
+  line-height: 1.4;
+}
+
+.promo-landing > .promo-availability {
+  font-size: 13px;
+  color: #745c29;
+}
+
+.promo-landing > .button {
+  margin-top: 7px;
+}
