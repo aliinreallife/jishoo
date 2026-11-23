@@ -26,7 +26,8 @@ export async function checkBundle() {
   const app = entry("App");
   const routes = [
     { name: "landing", roots: ["index.html"], js: 100000, css: 4500 },
-    { name: "home", roots: ["index.html", app, "src/components/HomeNotifications.jsx", entry("CheckinReminder")], js: 151000, css: 34000 },
+    // Launch-link routing adds ~99 bytes gzip to home after moving the full promotion UI and logic to a lazy chunk.
+    { name: "home", roots: ["index.html", app, "src/components/HomeNotifications.jsx", entry("CheckinReminder")], js: 151200, css: 34000 },
     { name: "profile", roots: ["index.html", app, entry("DailyStreak"), entry("SharedMemories"), entry("SetupProgress")], js: 158000, css: 36500 },
   ];
   const reports = [];
