@@ -109,6 +109,7 @@ const HomeNotifications = lazy(() => import("./components/HomeNotifications"));
 const SetupProgress = lazy(() => import("./components/SetupProgress"));
 const CheckinReminder = lazy(() => import("./components/CheckinReminder"));
 import { api, apiRevision, getInvite, fa, relativeTime, inviteUrl, copyText, inviteGiftLabel } from "./api";
+import { normalizePromoCode } from "./promo-link";
 
 const assets = `${import.meta.env.BASE_URL}assets/`;
 function LoadingSection() { return <LoadingScreen compact message="داریم این قسمت رو آماده می‌کنیم…" />; }
@@ -281,6 +282,7 @@ export default function App() {
   const page = readPage(routeLocation.pathname + routeLocation.search + routeLocation.hash);
   const screen = page.screen === "settings" ? "profile" : page.screen;
   const groupCode = new URLSearchParams(routeLocation.search).get("group") || "";
+  const arrivingPromo = new URLSearchParams(routeLocation.search).get("promo") || "";
   const publicPage = ["terms", "privacy", "support", "install"].includes(screen);
   const [data, setData] = useState(null),
     [loadError, setLoadError] = useState(""),
@@ -291,6 +293,11 @@ export default function App() {
     [busy, setBusy] = useState(false),
     [invitation, setInvitation] = useState(null),
     [inviteError, setInviteError] = useState(""),
+    [promoLanding, setPromoLanding] = useState(() => Boolean(new URLSearchParams(location.search).get("promo"))),
+    [promoInfo, setPromoInfo] = useState(null),
+    [promoError, setPromoError] = useState(""),
+    [promoRedeeming, setPromoRedeeming] = useState(false),
+    [promoRetry, setPromoRetry] = useState(0),
     [moment, setMoment] = useState(null),
     [selectedFriend, setSelectedFriend] = useState(null),
     [dialogCircle, setSelectedCircle] = useState(""),
@@ -314,7 +321,7 @@ export default function App() {
   const selectedCircle = page.circleId || dialogCircle;
   const { dialog, setDialog: setDialogState, overlay, closeAll: closeDialogs } = useDialogHistory(routeLocation, routerNavigate,
     page.screen === "settings" && data ? (data.me.registered ? "settings" : "guestSettings") : null, data?.me.id);
-  const updateBlocked = !publicPage && ((!data && !loadError) || Boolean(dialog) || busy || Boolean(pendingCheckin) || inviteLanding || ["stories", "groupJoin"].includes(screen));
+  const updateBlocked = !publicPage && ((!data && !loadError) || Boolean(dialog) || busy || Boolean(pendingCheckin) || inviteLanding || promoLanding || ["stories", "groupJoin"].includes(screen));
   useLayoutEffect(() => {
     if (updateBlocked) return blockUpdates();
   }, [updateBlocked]);
@@ -341,6 +348,8 @@ export default function App() {
     visibilityReturn = useRef(null),
     visibilityPrompted = useRef(new Set()),
     lastRefresh = useRef(0),
+    promoPending = useRef(normalizePromoCode(new URLSearchParams(location.search).get("promo")) || sessionStorage.getItem("jishoo:promo") || ""),
+    promoAttempt = useRef(""),
     inviteFromUrl = useRef(
       new URLSearchParams(location.search).get("invite") ||
         sessionStorage.getItem("jishoo:invite") ||
@@ -501,7 +510,7 @@ export default function App() {
     if (!data.me.registered) setDialog("auth");
   }, [data?.me.id]);
   useEffect(() => {
-    if (!data || !entered || inviteLanding || page.screen === "settings" || releaseHandled.current || ["nearby", "terms", "privacy", "support", "install"].includes(screen)) return;
+    if (!data || !entered || inviteLanding || promoLanding || page.screen === "settings" || releaseHandled.current || ["nearby", "terms", "privacy", "support", "install"].includes(screen)) return;
     const seen = localStorage.getItem(releaseStorageKey);
     if (seen === currentRelease.version) { releaseHandled.current = true; return; }
     if (!seen && !returningVisitor.current && !data.me.registered) {
@@ -510,7 +519,7 @@ export default function App() {
       return;
     }
     if (!dialog && !pendingCheckin) setDialog("whatsNew");
-  }, [data?.me.id, entered, inviteLanding, dialog, pendingCheckin, screen]);
+  }, [data?.me.id, entered, inviteLanding, promoLanding, dialog, pendingCheckin, screen]);
   useEffect(() => {
     if (screen !== "nearby" || !data || data.me.mapVisibilityReviewed !== false || dialog || pendingCheckin || visibilityPrompted.current.has(data.me.id)) return;
     visibilityPrompted.current.add(data.me.id);
@@ -524,7 +533,7 @@ export default function App() {
     routerNavigate(location.pathname + (params.size ? "?" + params : "") + location.hash, { replace: true, state: routeLocation.state });
     if (outcome === "continue") {
       setDialog("auth");
-      notify("گوگلت تایید شد؛ دعوت داری یا بریم فهرست انتظار؟");
+      notify(data.inviteOnly ? "گوگلت تایید شد؛ دعوت داری یا بریم فهرست انتظار؟" : "گوگلت تایید شد؛ فقط اسمت رو وارد کن.");
     } else if (outcome === "invite_required") {
       setDialog("auth");
       notify("با این گوگل هنوز عضو نشدی؛ اول دعوتت رو وارد کن.");
@@ -929,7 +938,7 @@ export default function App() {
     );
   return (
     <div
-      className={`desktop-stage ${inviteLanding ? "invite-fullscreen" : ""}`}
+      className={`desktop-stage ${inviteLanding || promoLanding ? "invite-fullscreen" : ""}`}
     >
       <aside className="desktop-brand" aria-hidden="true">
         <div className="desktop-brand-top">
@@ -963,7 +972,7 @@ export default function App() {
         </div>
       </aside>
       <main
-        className={`app-shell ${!entered ? "welcome-shell" : ""} ${inviteLanding ? "invite-fullscreen-shell" : ""}`}
+        className={`app-shell ${!entered ? "welcome-shell" : ""} ${inviteLanding || promoLanding ? "invite-fullscreen-shell" : ""}`}
         dir="rtl"
       >
         {!data ? (
