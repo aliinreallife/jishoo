@@ -110,7 +110,6 @@ const HomeNotifications = lazy(() => import("./components/HomeNotifications"));
 const SetupProgress = lazy(() => import("./components/SetupProgress"));
 const CheckinReminder = lazy(() => import("./components/CheckinReminder"));
 import { api, apiRevision, getInvite, fa, relativeTime, inviteUrl, copyText, inviteGiftLabel } from "./api";
-import { normalizePromoCode } from "./promo-link";
 
 const assets = `${import.meta.env.BASE_URL}assets/`;
 function LoadingSection() { return <LoadingScreen compact message="داریم این قسمت رو آماده می‌کنیم…" />; }
@@ -295,10 +294,6 @@ export default function App() {
     [invitation, setInvitation] = useState(null),
     [inviteError, setInviteError] = useState(""),
     [promoLanding, setPromoLanding] = useState(() => Boolean(new URLSearchParams(location.search).get("promo"))),
-    [promoInfo, setPromoInfo] = useState(null),
-    [promoError, setPromoError] = useState(""),
-    [promoRedeeming, setPromoRedeeming] = useState(false),
-    [promoRetry, setPromoRetry] = useState(0),
     [moment, setMoment] = useState(null),
     [selectedFriend, setSelectedFriend] = useState(null),
     [dialogCircle, setSelectedCircle] = useState(""),
@@ -349,8 +344,6 @@ export default function App() {
     visibilityReturn = useRef(null),
     visibilityPrompted = useRef(new Set()),
     lastRefresh = useRef(0),
-    promoPending = useRef(normalizePromoCode(new URLSearchParams(location.search).get("promo")) || sessionStorage.getItem("jishoo:promo") || ""),
-    promoAttempt = useRef(""),
     inviteFromUrl = useRef(
       new URLSearchParams(location.search).get("invite") ||
         sessionStorage.getItem("jishoo:invite") ||
@@ -386,57 +379,8 @@ export default function App() {
     }
   }, []);
   useEffect(() => {
-    if (!arrivingPromo || new URLSearchParams(routeLocation.search).has("invite")) return;
-    setPromoLanding(true);
-    const code = normalizePromoCode(arrivingPromo);
-    if (!code) {
-      promoPending.current = "";
-      sessionStorage.removeItem("jishoo:promo");
-      setPromoError("لینک هدیه معتبر نیست.");
-      return;
-    }
-    promoPending.current = code;
-    sessionStorage.setItem("jishoo:promo", code);
-    setPromoInfo(null);
-    setPromoError("");
-    let active = true;
-    api("promo-info", undefined, { code })
-      .then(offer => { if (active) setPromoInfo(offer); })
-      .catch(error => { if (active) setPromoError(error.message); });
-    return () => { active = false; };
+    if (arrivingPromo && !new URLSearchParams(routeLocation.search).has("invite")) setPromoLanding(true);
   }, [arrivingPromo]);
-  useEffect(() => {
-    if (!data?.me.registered || !promoPending.current) return;
-    const code = promoPending.current;
-    const claimKey = data.me.id + ":" + code;
-    if (promoAttempt.current === claimKey) return;
-    promoAttempt.current = claimKey;
-    setPromoRedeeming(true);
-    api("promo-redeem", { code })
-      .then(async gift => {
-        promoPending.current = "";
-        sessionStorage.removeItem("jishoo:promo");
-        setPromoError("");
-        await refresh();
-        notify(gift.banked
-          ? "۳۰ روز پرمیوم هدیه‌ات ذخیره شد و بعد از دورهٔ آزمایشی شروع می‌شه 💛"
-          : "۳۰ روز پرمیوم جیشو برات فعال شد 💛");
-        setPromoLanding(false);
-        const params = new URLSearchParams(location.search);
-        params.delete("promo");
-        routerNavigate("/home" + (params.size ? "?" + params : ""), { replace: true });
-      })
-      .catch(error => {
-        if (error.code === "promo_already_redeemed") {
-          promoPending.current = "";
-          sessionStorage.removeItem("jishoo:promo");
-          setPromoLanding(false);
-          routerNavigate("/home", { replace: true });
-          notify("این هدیه قبلاً برای همین حساب فعال شده 💛");
-        } else setPromoError(error.message);
-      })
-      .finally(() => setPromoRedeeming(false));
-  }, [data?.me.id, data?.me.registered, arrivingPromo, promoRetry]);
   useEffect(() => {
     if (!publicPage && !data) refresh();
   }, [publicPage, refresh]);
@@ -1056,21 +1000,24 @@ export default function App() {
         ) : promoLanding && !inviteLanding ? (
           <Suspense fallback={<LoadingSection />}>
             <PromoLanding
-              offer={promoInfo}
-              error={promoError}
+              code={arrivingPromo}
               registered={me.registered}
+              userId={me.id}
               testing={data.testing}
-              redeeming={promoRedeeming}
               onAuth={() => { setEntered(true); openAuth(); }}
-              onRetry={() => {
-                promoAttempt.current = "";
-                setPromoError("");
-                setPromoRetry(value => value + 1);
+              onDone={(gift, already) => {
+                setPromoLanding(false);
+                setEntered(true);
+                refresh();
+                notify(already
+                  ? "این هدیه قبلاً برای همین حساب فعال شده 💛"
+                  : gift.banked
+                    ? "۳۰ روز پرمیوم هدیه‌ات ذخیره شد و بعد از دورهٔ آزمایشی شروع می‌شه 💛"
+                    : "۳۰ روز پرمیوم جیشو برات فعال شد 💛");
+                routerNavigate("/home", { replace: true });
               }}
               onDismiss={() => {
                 setPromoLanding(false);
-                promoPending.current = "";
-                sessionStorage.removeItem("jishoo:promo");
                 routerNavigate("/home", { replace: true });
               }}
             />
