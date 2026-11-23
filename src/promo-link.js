@@ -1,8 +1,6 @@
-// Promo links share the existing /join entrypoint, but are not invitations.
-export const normalizePromoCode = (value) => {
-  const code = String(value || "").trim().toUpperCase();
-  return /^J-[0-9A-F]{12}$/.test(code) ? code : null;
-};
+import { normalizePromoCode } from "../lib/promo-codes.js";
+
+export { normalizePromoCode };
 
 export const promoLink = (publicUrl, value) => {
   const code = normalizePromoCode(value);

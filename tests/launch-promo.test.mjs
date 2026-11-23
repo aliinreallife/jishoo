@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { resolvePromoCode } from "../lib/promo-codes.js";
 import { inviteOnly } from "../lib/core.js";
 import { normalizePromoCode, promoLink } from "../src/promo-link.js";
 import { canonicalPath, readPage } from "../src/routing.js";
@@ -37,4 +38,15 @@ test("the Premium campaign link shares the existing /join entrypoint without ove
   assert.throws(() => promoLink("https://jishoo.vercel.app", "bad"), /Invalid promotional code/);
   assert.equal(readPage("/join?promo=" + code).screen, "home");
   assert.equal(canonicalPath("/join?invite=J-6AD6A2824D92"), "/join?invite=J-6AD6A2824D92");
+});
+
+test("the four-character promo uses the existing campaign and its redemption history", () => {
+  const campaign = "J-123456789ABC";
+  assert.equal(normalizePromoCode(" jsho "), "JSHO");
+  assert.equal(promoLink("https://jishoo.vercel.app", "jsho"), "https://jishoo.vercel.app/join?promo=JSHO");
+  assert.equal(resolvePromoCode("jsho", campaign), campaign);
+  assert.equal(resolvePromoCode(campaign, campaign), campaign);
+  assert.equal(resolvePromoCode("JSHO"), null);
+  assert.equal(resolvePromoCode("JSHO", "JSHO"), null);
+  assert.equal(resolvePromoCode("ZZZZ", campaign), null);
 });

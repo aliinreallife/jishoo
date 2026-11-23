@@ -100,7 +100,7 @@ def main():
   loading.screenshot(path=str(ARTIFACTS/'loading-070.png'));held.pop().fulfill(json=data);hold['enabled']=False;expect(loading.locator('.need-card')).to_be_visible();loading.close()
   print('PASS: Loading keeps a visible brand and progress copy on the same background as the installed icon.',flush=True)
   data['me']['registered']=False;data['auth'].update(pendingGoogle=None,waitlisted=False);data.update(inviteOnly=False,testing=True)
-  promo='/join?promo=J-123456789ABC'
+  promo='/join?promo=JSHO'
   page.goto(BASE+promo)
   landing=page.locator('.promo-landing')
   expect(landing.get_by_role('heading',name='۳۰ روز دسترسی هدیه')).to_be_visible()
@@ -116,7 +116,7 @@ def main():
   wizard.get_by_label('اسمت',exact=True).fill('عضو تازه')
   wizard.get_by_role('button',name='ساخت حساب من',exact=True).click()
   expect(page.locator('.toast')).to_contain_text('۳۰ روز پرمیوم هدیه‌ات ذخیره شد')
-  assert [body for action,body in calls if action=='promo-redeem']==[{'code':'J-123456789ABC'}]
+  assert [body for action,body in calls if action=='promo-redeem']==[{'code':'JSHO'}]
   print('PASS: Promo signup shows gift copy, skips the invite during open signup, and redeems after registration.',flush=True)
   assert not errors,errors
   browser.close()

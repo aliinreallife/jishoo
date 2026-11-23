@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { api } from "../api";
+import { LAUNCH_PROMO_ALIAS } from "../../lib/promo-codes.js";
 
 // The promotion belongs to an authenticated account, never to a browser session.
 // The server checks eligibility, enforces capacity, and applies the entitlement.
@@ -39,7 +40,7 @@ export default function PromoRedeem({ registered, testing, onRedeemed, notify })
         value={code}
         disabled={busy}
         onChange={event => setCode(event.target.value.toUpperCase())}
-        placeholder="J-XXXXXXXXXXXX"
+        placeholder={LAUNCH_PROMO_ALIAS}
         required
       />
       {error && <p className="form-error" role="alert">{error}</p>}

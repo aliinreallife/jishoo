@@ -1,3 +1,4 @@
+import { normalizePromoCode, resolvePromoCode } from "../lib/promo-codes.js";
 import { activitySummary } from "../lib/activity-summary.js";
 import { reminderPreferences } from "../lib/reminders.js";
 import { joinWaitlist } from "../lib/waitlist.js";
@@ -395,12 +396,13 @@ export default async function handler(req, res) {
       });
     }
     if (action === "promo-info" && req.method === "GET") {
-      const code = normalizeCode(url.searchParams.get("code"));
-      if (!/^J-[0-9A-F]{12}$/.test(code))
+      const code = normalizePromoCode(url.searchParams.get("code"));
+      const canonical = resolvePromoCode(code, process.env.LAUNCH_PROMO_CODE);
+      if (!canonical)
         fail(404, "کد هدیه معتبر نیست.", "promo_not_found");
       const offers = await query(
         "SELECT code,premium_days,max_uses,active,GREATEST(max_uses-uses,0)::int AS remaining FROM promo_codes WHERE code=$1",
-        [code],
+        [canonical],
       );
       if (!offers[0] || !offers[0].active)
         fail(404, "این کد هدیه فعال نیست.", "promo_not_found");
