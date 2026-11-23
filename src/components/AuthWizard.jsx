@@ -167,11 +167,11 @@ export default function AuthWizard({ invitation, onComplete, onGuest, onWaiting,
         <div className="auth-entry-step">
           <PairArt size={170} />
           <h2>بیا تو جیشو</h2>
-          <p className="dialog-description">با گوگل ادامه بده. اگر قبلاً عضو شدی، مستقیم وارد حسابت می‌شی؛ برای عضویت تازه، دعوت یه دوست لازمه.</p>
+          <p className="dialog-description">با گوگل ادامه بده. اگر قبلاً عضو شدی، مستقیم وارد حسابت می‌شی؛ {inviteOnly ? "برای عضویت تازه، دعوت یه دوست لازمه." : "فعلاً برای عضویت تازه نیازی به دعوت نداری."}</p>
           {invitation?.inviter && <div className="invite-auth-summary"><Avatar person={invitation.inviter} size={42} /><p>با دعوت {invitation.inviter.name}<strong>دعوتت رو بعد از گوگل بررسی می‌کنیم.</strong></p></div>}
           <Suspense fallback={null}><GoogleBanner auth={authInfo} intent="signup" inviteCode={invitation?.code || code} notify={notify} /></Suspense>
           <button className="text-link auth-guest-action" onClick={onGuest}>فعلاً مهمان باشم</button>
-          <p className="auth-demo-note">دعوت نداری؟ بعد از گوگل می‌تونی وارد فهرست انتظار بشی. مهمان هم می‌تونی جیش ثبت کنی و استوری بسازی.</p>
+          {inviteOnly && <p className="auth-demo-note">دعوت نداری؟ بعد از گوگل می‌تونی وارد فهرست انتظار بشی. مهمان هم می‌تونی جیش ثبت کنی و استوری بسازی.</p>}
         </div>
       ) : stage === "waiting" ? (
         <div className="auth-waiting-step">
