@@ -99,12 +99,48 @@ def main():
   assert loading.locator('.app-shell > .jishoo-loading').evaluate('e=>getComputedStyle(e).backgroundColor')=='rgb(255, 249, 230)'
   loading.screenshot(path=str(ARTIFACTS/'loading-070.png'));held.pop().fulfill(json=data);hold['enabled']=False;expect(loading.locator('.need-card')).to_be_visible();loading.close()
   print('PASS: Loading keeps a visible brand and progress copy on the same background as the installed icon.',flush=True)
+  data['me']['registered']=True
+  ticket_page=ctx.new_page()
+  ticket_page.set_viewport_size({'width':320,'height':740})
+  ticket_page.clock.install()
+  ticket_page.add_init_script(
+   "window.tornTickets = 0; const animate = Element.prototype.animate;"
+   "Element.prototype.animate = function (...args) {"
+   "if (this.classList.contains('invite-ticket-face')) window.tornTickets++;"
+   "return animate.apply(this, args); };"
+  )
+  ticket_page.goto(BASE+'/invite')
+  ticket=ticket_page.locator('.invite-ticket')
+  stubs=ticket.locator('.invite-ticket-stub')
+  expect(stubs).to_have_count(3)
+  expect(ticket.locator('[data-used=true]')).to_have_count(0)
+  box=ticket.bounding_box()
+  assert box['x'] >= 0 and box['x']+box['width'] <= 320, box
+  ticket_page.screenshot(path=str(ARTIFACTS/'invite-ticket-320.png'))
+  data['invitationQuota'].update(used=1,remaining=2)
+  ticket_page.clock.fast_forward(61000)
+  expect(ticket.locator('[data-used=true]')).to_have_count(1)
+  expect(ticket_page.locator('.invitation-quota-card')).to_contain_text('۲ دعوت باقی مونده')
+  assert ticket_page.evaluate('window.tornTickets')==1
+  ticket_page.emulate_media(reduced_motion='reduce')
+  data['invitationQuota'].update(used=3,remaining=0)
+  ticket_page.clock.fast_forward(61000)
+  expect(ticket.locator('[data-used=true]')).to_have_count(3)
+  expect(ticket_page.get_by_role('button',name='فرستادن لینک پروفایل')).to_be_visible()
+  assert ticket_page.evaluate('window.tornTickets')==1
+  ticket_page.reload()
+  expect(ticket.locator('[data-used=true]')).to_have_count(3)
+  assert ticket_page.evaluate('window.tornTickets')==0
+  ticket_page.close()
+  print('PASS: Three invite stubs fit a 320px screen, tear once per confirmed claim, and persist after reload.',flush=True)
+
   data['me']['registered']=False;data['auth'].update(pendingGoogle=None,waitlisted=False);data.update(inviteOnly=False,testing=True)
   promo='/join?promo=JSHO'
   page.goto(BASE+promo)
   landing=page.locator('.promo-landing')
   expect(landing.get_by_role('heading',name='۳۰ روز دسترسی هدیه')).to_be_visible()
   expect(landing).not_to_contain_text('پرمیوم')
+  expect(landing).not_to_contain_text('&#x20;')
   landing.get_by_role('button',name='ورود یا ساخت حساب').click()
   expect(page.get_by_role('button',name='ادامه با Google',exact=True)).to_be_visible()
   data['auth']['pendingGoogle']='promo-only@example.invalid'
