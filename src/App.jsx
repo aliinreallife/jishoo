@@ -1845,6 +1845,7 @@ export default function App() {
                 invitation={invitation}
                 authInfo={data.auth}
                 inviteOnly={data.inviteOnly}
+                promoSignup={promoLanding && !inviteLanding}
                 onComplete={completeAuth}
                 onWaiting={saved => setData(current => ({ ...current, auth: { ...current.auth, waitlisted: true, waitlistPhone: saved.phone } }))}
                 onGuest={() => { setEntered(true); setInviteLanding(false); navigate("home"); }}
