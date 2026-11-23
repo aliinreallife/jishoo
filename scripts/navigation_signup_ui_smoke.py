@@ -138,8 +138,11 @@ def main():
   promo='/join?promo=JSHO'
   page.goto(BASE+promo)
   landing=page.locator('.promo-landing')
-  expect(landing.get_by_role('heading',name='۳۰ روز دسترسی هدیه')).to_be_visible()
+  expect(landing.get_by_role('heading',name='به جیشو خوش اومدی')).to_be_visible()
   expect(landing).not_to_contain_text('پرمیوم')
+  expect(landing).not_to_contain_text('هدیه')
+  expect(landing.locator('img')).to_have_count(1)
+  expect(landing.locator('img')).to_have_attribute('src', re.compile(r'/promo-welcome\.webp$'))
   expect(landing).not_to_contain_text('&#x20;')
   landing.get_by_role('button',name='ورود یا ساخت حساب').click()
   expect(page.get_by_role('button',name='ادامه با Google',exact=True)).to_be_visible()
@@ -148,12 +151,13 @@ def main():
   wizard=page.locator('.auth-wizard')
   expect(wizard.get_by_role('heading',name='اسمت چیه؟',exact=True)).to_be_visible()
   expect(wizard).not_to_contain_text('پرمیوم')
+  expect(wizard).not_to_contain_text('هدیه')
   expect(wizard.get_by_label('کد دعوت عضویت')).to_have_count(0)
   wizard.get_by_label('اسمت',exact=True).fill('عضو تازه')
   wizard.get_by_role('button',name='ساخت حساب من',exact=True).click()
-  expect(page.locator('.toast')).to_contain_text('۳۰ روز پرمیوم هدیه‌ات ذخیره شد')
+  expect(page.locator('.toast')).to_contain_text('دسترسی ۳۰ روزه‌ات ثبت شد')
   assert [body for action,body in calls if action=='promo-redeem']==[{'code':'JSHO'}]
-  print('PASS: Promo signup shows gift copy, skips the invite during open signup, and redeems after registration.',flush=True)
+  print('PASS: Promo signup uses a single new illustration and neutral copy, skips the invite during open signup, and redeems after registration.',flush=True)
   assert not errors,errors
   browser.close()
 

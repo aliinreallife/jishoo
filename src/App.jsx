@@ -1001,7 +1001,6 @@ export default function App() {
               code={arrivingPromo}
               registered={me.registered}
               userId={me.id}
-              testing={data.testing}
               onAuth={openAuth}
               onDone={message => { refresh(); notify(message); exitPromo(); }}
               onDismiss={exitPromo}
