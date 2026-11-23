@@ -44,13 +44,15 @@ export default function PromoLanding({ code, registered, userId, testing, onAuth
       .then(gift => {
         pending.current = "";
         sessionStorage.removeItem("jishoo:promo");
-        onDone(gift, false);
+        onDone(gift.banked
+          ? "۳۰ روز پرمیوم هدیه‌ات ذخیره شد و بعد از دورهٔ آزمایشی شروع می‌شه 💛"
+          : "۳۰ روز پرمیوم جیشو برات فعال شد 💛");
       })
       .catch(e => {
         if (e.code === "promo_already_redeemed") {
           pending.current = "";
           sessionStorage.removeItem("jishoo:promo");
-          onDone(null, true);
+          onDone("این هدیه قبلاً برای همین حساب فعال شده 💛");
         } else setError(e.message);
       })
       .finally(() => setRedeeming(false));
