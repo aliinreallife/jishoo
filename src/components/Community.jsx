@@ -474,6 +474,29 @@ export function Admin({ data, notify, refresh }) {
               </div>
             ))}
           </div>
+          <div className="admin-invite-box">
+            <h2>کد هدیهٔ ۳۰روزهٔ جیشو</h2>
+            <p>این کد رو ۹۲ حساب متفاوت می‌تونن یک‌بار وارد کنن. ظرفیت روی سرور کنترل می‌شه.</p>
+            {(dashboard.promos || []).map(promo => (
+              <div className="admin-created-link" key={promo.code}>
+                <code dir="ltr">{promo.code}</code>
+                <span>{fa(promo.uses)} از {fa(promo.max_uses)} استفاده · {fa(promo.premium_days)} روز</span>
+                <button type="button" disabled={busy} onClick={() => copyText(promo.code).then(() => notify("کد کپی شد."))}>
+                  <Copy size={18} /> کپی
+                </button>
+                {promo.active
+                  ? <button type="button" disabled={busy} onClick={() => setConfirmation({
+                    title: "کد هدیه رو غیرفعال کنیم؟",
+                    target: promo.code,
+                    description: "استفاده‌های قبلی پابرجا می‌مونن؛ کسی دیگه نمی‌تونه این کد رو استفاده کنه.",
+                    label: "بله، غیرفعال بشه",
+                    danger: true,
+                    execute: async () => { await api("admin-promo-revoke", { code: promo.code, confirmed: true }); await load(); },
+                  })}>غیرفعال‌کردن</button>
+                  : <small>غیرفعال‌شده</small>}
+              </div>
+            ))}
+          </div>
           <h2 className="admin-section-title">آدمای جمع</h2>
           <input
             className="admin-search"
