@@ -29,7 +29,8 @@ jobs:
     timeout-minutes: 35
     env:
       VERCEL_TEAM_ID: team_NBXGtqtzzMa8AuKa2lZppNuF
-      VERCEL_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target == 'production' && 'production' || 'preview' }}
+      # Exactly one reviewed launch merge receives production; ordinary pushes stay preview.
+      VERCEL_TARGET: ${{ ((github.event_name == 'workflow_dispatch' && inputs.target == 'production') || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'release: Jishoo 92-user premium launch'))) && 'production' || 'preview' }}
     steps:
       - name: Check out the trusted main branch
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
