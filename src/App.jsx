@@ -27,6 +27,8 @@ import { currentRelease, releaseStorageKey } from "./current-release";
 import { ReleaseNotes } from "./components/ReleaseNotes";
 const DailyStreak = lazy(() => import("./components/DailyStreak"));
 const AuthWizard = lazy(() => import("./components/AuthWizard"));
+const PromoRedeem = lazy(() => import("./components/PromoRedeem"));
+const PromoLanding = lazy(() => import("./components/PromoLanding"));
 import Button from "./components/Button";
 import { blockUpdates } from "./updates";
 import {
@@ -280,6 +282,7 @@ export default function App() {
   const page = readPage(routeLocation.pathname + routeLocation.search + routeLocation.hash);
   const screen = page.screen === "settings" ? "profile" : page.screen;
   const groupCode = new URLSearchParams(routeLocation.search).get("group") || "";
+  const arrivingPromo = new URLSearchParams(routeLocation.search).get("promo");
   const publicPage = ["terms", "privacy", "support", "install"].includes(screen);
   const [data, setData] = useState(null),
     [loadError, setLoadError] = useState(""),
@@ -310,10 +313,11 @@ export default function App() {
     [inviteLanding, setInviteLanding] = useState(() =>
       Boolean(new URLSearchParams(location.search).get("invite")),
     );
+  const promoLanding = Boolean(arrivingPromo || sessionStorage.getItem("jishoo:promo"));
   const selectedCircle = page.circleId || dialogCircle;
   const { dialog, setDialog: setDialogState, overlay, closeAll: closeDialogs } = useDialogHistory(routeLocation, routerNavigate,
     page.screen === "settings" && data ? (data.me.registered ? "settings" : "guestSettings") : null, data?.me.id);
-  const updateBlocked = !publicPage && ((!data && !loadError) || Boolean(dialog) || busy || Boolean(pendingCheckin) || inviteLanding || ["stories", "groupJoin"].includes(screen));
+  const updateBlocked = !publicPage && ((!data && !loadError) || Boolean(dialog) || busy || Boolean(pendingCheckin) || inviteLanding || promoLanding || ["stories", "groupJoin"].includes(screen));
   useLayoutEffect(() => {
     if (updateBlocked) return blockUpdates();
   }, [updateBlocked]);
@@ -500,7 +504,7 @@ export default function App() {
     if (!data.me.registered) setDialog("auth");
   }, [data?.me.id]);
   useEffect(() => {
-    if (!data || !entered || inviteLanding || page.screen === "settings" || releaseHandled.current || ["nearby", "terms", "privacy", "support", "install"].includes(screen)) return;
+    if (!data || !entered || inviteLanding || promoLanding || page.screen === "settings" || releaseHandled.current || ["nearby", "terms", "privacy", "support", "install"].includes(screen)) return;
     const seen = localStorage.getItem(releaseStorageKey);
     if (seen === currentRelease.version) { releaseHandled.current = true; return; }
     if (!seen && !returningVisitor.current && !data.me.registered) {
@@ -509,7 +513,7 @@ export default function App() {
       return;
     }
     if (!dialog && !pendingCheckin) setDialog("whatsNew");
-  }, [data?.me.id, entered, inviteLanding, dialog, pendingCheckin, screen]);
+  }, [data?.me.id, entered, inviteLanding, promoLanding, dialog, pendingCheckin, screen]);
   useEffect(() => {
     if (screen !== "nearby" || !data || data.me.mapVisibilityReviewed !== false || dialog || pendingCheckin || visibilityPrompted.current.has(data.me.id)) return;
     visibilityPrompted.current.add(data.me.id);
@@ -523,7 +527,7 @@ export default function App() {
     routerNavigate(location.pathname + (params.size ? "?" + params : "") + location.hash, { replace: true, state: routeLocation.state });
     if (outcome === "continue") {
       setDialog("auth");
-      notify("گوگلت تایید شد؛ دعوت داری یا بریم فهرست انتظار؟");
+      notify(data.inviteOnly ? "گوگلت تایید شد؛ دعوت داری یا بریم فهرست انتظار؟" : "گوگلت تایید شد؛ فقط اسمت رو وارد کن.");
     } else if (outcome === "invite_required") {
       setDialog("auth");
       notify("با این گوگل هنوز عضو نشدی؛ اول دعوتت رو وارد کن.");
@@ -559,6 +563,7 @@ export default function App() {
   function openAuth() {
     setDialog("auth");
   }
+  function exitPromo() { routerNavigate("/home", { replace: true }); }
   function openMapVisibility() {
     visibilityReturn.current = page.screen === "settings" ? "settings" : null;
     setDialogState("mapVisibility");
@@ -928,7 +933,7 @@ export default function App() {
     );
   return (
     <div
-      className={`desktop-stage ${inviteLanding ? "invite-fullscreen" : ""}`}
+      className={`desktop-stage ${inviteLanding || promoLanding ? "invite-fullscreen" : ""}`}
     >
       <aside className="desktop-brand" aria-hidden="true">
         <div className="desktop-brand-top">
@@ -962,7 +967,7 @@ export default function App() {
         </div>
       </aside>
       <main
-        className={`app-shell ${!entered ? "welcome-shell" : ""} ${inviteLanding ? "invite-fullscreen-shell" : ""}`}
+        className={`app-shell ${!entered ? "welcome-shell" : ""} ${inviteLanding || promoLanding ? "invite-fullscreen-shell" : ""}`}
         dir="rtl"
       >
         {!data ? (
@@ -988,6 +993,18 @@ export default function App() {
                 navigate("circle", r.id);
                 notify("به گروه خوش اومدی.");
               }}
+            />
+          </Suspense>
+        ) : promoLanding && !inviteLanding ? (
+          <Suspense fallback={<LoadingSection />}>
+            <PromoLanding
+              code={arrivingPromo}
+              registered={me.registered}
+              userId={me.id}
+              testing={data.testing}
+              onAuth={openAuth}
+              onDone={message => { refresh(); notify(message); exitPromo(); }}
+              onDismiss={exitPromo}
             />
           </Suspense>
         ) : inviteLanding ? (
@@ -2431,11 +2448,14 @@ export default function App() {
                   </ul>
                   {data.testing && <p>در دورهٔ آزمایشی، این‌ها هم برای همه رایگان فعاله.</p>}
                 </section>
+                <Suspense fallback={null}>
+                  <PromoRedeem registered={me.registered} testing={data.testing} onRedeemed={refresh} notify={notify} />
+                </Suspense>
                 <div className="invite-rules premium-trial-notice">
                   <Heart size={19} weight="fill" />
                   <p>
-                    با دعوت: ۷ روز برای هر دو نفر. بعداً بدون دعوت: ۳ روز برای
-                    عضو جدید. عضویت فعلاً فقط با دعوته.
+                    با دعوت: ۷ روز برای هر دو نفر. بدون دعوت: ۳ روز برای عضو جدید.
+                    {data.inviteOnly ? " عضویت فعلاً با دعوته." : " فعلاً می‌تونی بدون دعوت عضو بشی."}
                   </p>
                 </div>
                 <Button
@@ -2444,7 +2464,7 @@ export default function App() {
                     me.registered ? navigate("invite") : openAuth();
                   }}
                 >
-                  {me.registered ? "یه دوست دعوت کنم" : "عضویت با دعوت"}
+                  {me.registered ? "یه دوست دعوت کنم" : data.inviteOnly ? "عضویت با دعوت" : "عضویت بدون دعوت"}
                 </Button>
               </>
             )}
